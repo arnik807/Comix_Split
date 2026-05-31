@@ -1,0 +1,361 @@
+﻿# ComicSplit — документация (актуальная)
+
+**Версия документа:** 1.1 (май 2026)  
+**Статус приложения:** рабочий MVP (Python + ONNX на CPU; опционально Go CLI и редактор :8000)
+
+Этот документ описывает **текущую** сборку: установку, настройку и **четыре** способа работы — **Gradio**, **Python CLI**, **редактор масок (FastAPI + Konva)** и **Go CLI**.
+
+Статус реализации по модулям: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).  
+Исторические материалы: `ComicSplit_Specification_v2.0.md`, `implementation_plan_mvp.md`.
+
+---
+
+## 1. Назначение
+
+**ComicSplit** — утилита для Windows, которая автоматически находит панели на страницах комикса и сохраняет каждую панель отдельным PNG с прозрачным фоном (альфа-канал).
+
+**Вход:**
+
+- одна страница: JPG, PNG;
+- архив: CBZ, ZIP;
+- папка с изображениями (лексикографический порядок файлов);
+- CBR — через Python (нужен `rarfile` и `unrar` в системе).
+
+**Выход:**
+
+- PNG-панели в указанной папке;
+- имена по шаблону из `config.yaml`, по умолчанию: `001_page_001_panel_01.png`;
+- для каждой страницы — превью `_visualization.jpg` в подпапке `page_NNN/`.
+
+**Режимы качества:**
+
+| Режим | В config | В Gradio | Скорость | Качество масок |
+|-------|----------|----------|----------|----------------|
+| **Fast** | `quality_mode: fast` | SAM выключен | Быстрее | Прямоугольник по bbox YOLO |
+| **Accurate** | `quality_mode: accurate` | «MobileSAM» включён | Медленнее | Контур панели точнее |
+
+---
+
+## 2. Требования
+
+| Параметр | Минимум |
+|----------|---------|
+| ОС | Windows 10/11 (64-bit) |
+| Python | 3.11 |
+| RAM | 8 GB (рекомендуется 16 GB для CBZ 50+ стр.) |
+| CPU | x64, без GPU (ONNX Runtime CPU) |
+| Диск | ~200 MB под venv + ~80 MB под модели INT8 |
+
+---
+
+## 3. Структура проекта
+
+```
+SPLIT_PANELS_DEV/
+├── main.py                 # Gradio UI (порт 7860)
+├── pipeline.py             # ML-пайплайн и CLI
+├── config.yaml             # Настройки по умолчанию
+├── requirements.txt
+├── test_page.jpg           # Тестовая страница
+├── exam_imgs/              # Примеры для benchmark
+├── models/                 # ONNX-модели (не в git)
+├── utils/
+│   ├── config.py           # Загрузка config.yaml
+│   ├── io_helpers.py       # CBZ/CBR/папка/ZIP, imdecode для кириллицы
+│   └── path_resolve.py     # Нормализация путей (API :8000)
+├── api/server.py           # Редактор масок (порт 8000)
+├── frontend/index.html     # Konva UI
+├── scripts/                # download_models.ps1, quantize_models.py
+├── cmd/comicsplit/         # Go CLI → comicsplit.exe
+├── internal/               # reader, worker, export (Go)
+├── ml_worker/main.py       # JSON IPC для Go
+├── benchmark.py            # Замеры на exam_imgs
+├── tests/                  # pytest
+├── packaging/comicsplit.spec
+└── spec_s/                 # Документация (этот файл, STATUS, спеки)
+```
+
+**Не хранить в репозитории** (см. `.gitignore`): `venv_*`, `output/`, `*.onnx`, `__pycache__`, `comicsplit.exe`, старые папки `output*`.
+
+---
+
+## 4. Установка (один раз)
+
+Все команды — из корня проекта в **PowerShell**.
+
+### 4.1. Виртуальное окружение
+
+```powershell
+cd D:\path\to\SPLIT_PANELS_DEV
+python -m venv venv_311
+.\venv_311\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Рекомендуется один каталог окружения: `venv_311`. Старые `venv`, `venv_310` можно удалить.
+
+### 4.2. Модели
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\download_models.ps1
+python scripts\quantize_models.py
+```
+
+Проверка: в `models/` должны быть три файла `*_int8.onnx` (см. `models/README.md`).
+
+### 4.3. Прокси (если Gradio не открывается)
+
+```powershell
+$env:NO_PROXY = "127.0.0.1,localhost"
+$env:no_proxy = "127.0.0.1,localhost"
+```
+
+---
+
+## 5. Конфигурация (`config.yaml`)
+
+| Параметр | Значение | Описание |
+|----------|----------|----------|
+| `quality_mode` | `fast` / `accurate` | YOLO или YOLO+SAM |
+| `reading_order` | `true` / `false` | Сортировать панели |
+| `reading_direction` | `ltr` / `rtl` | Западный комикс / манга |
+| `max_workers` | `4` | Параллельный analyze страниц в архиве |
+| `confidence_threshold` | `0.35` | Порог YOLO |
+| `output_pattern` | см. файл | Шаблон имён PNG |
+
+Пример имени: `{order:03d}_page_{page:03d}_panel_{panel:02d}.png` → `007_page_003_panel_02.png`.
+
+CLI и Gradio читают этот файл при запуске. В Gradio можно переопределить SAM и RTL чекбоксами.
+
+---
+
+## 6. Способ 1 — Gradio (графический интерфейс)
+
+Подходит для пробных прогонов, одной страницы или небольшого CBZ без командной строки.
+
+### 6.1. Запуск
+
+```powershell
+.\venv_311\Scripts\activate
+$env:NO_PROXY = "127.0.0.1,localhost"
+python main.py
+```
+
+В браузере: **http://127.0.0.1:7860**
+
+### 6.2. Интерфейс
+
+| Элемент | Действие |
+|---------|----------|
+| **Источник** | Загрузить JPG/PNG/CBZ/ZIP |
+| **Или путь к папке** | Вставить путь, например `D:\comics\pages` |
+| **Папка вывода** | По умолчанию `output` |
+| **MobileSAM** | Включить для режима Accurate |
+| **Порядок чтения** | Сортировка панелей |
+| **RTL** | Для манги (справа налево) |
+| **Запустить** | Старт обработки |
+| **Результат** | Текст: статус и список путей к PNG |
+
+### 6.3. Сценарий: одна страница
+
+1. Запустить `python main.py`.
+2. Загрузить `test_page.jpg` или свою страницу.
+3. Папка вывода: `output`.
+4. Нажать **Запустить**.
+5. Открыть папку `output\<имя_файла>\` — там PNG и `_visualization.jpg`.
+
+### 6.4. Сценарий: весь CBZ
+
+1. Загрузить свой `.cbz` **или** указать путь к папке (в репозитории готового CBZ нет; для теста папки — `exam_imgs`).
+2. Включить нужные опции (SAM, порядок чтения).
+3. **Запустить**.
+4. Результат: `output\<имя_комикса>\` — все панели с глобальной нумерацией `001_...`, `002_...`, подпапки `page_001/` с превью.
+
+### 6.5. Ограничения Gradio
+
+- Галерея превью в UI отключена (стабильность на Windows); пути к файлам — в поле «Результат».
+- Для пакетной автоматизации удобнее CLI (способ 2).
+
+---
+
+## 7. Способ 2 — CLI (`pipeline.py`)
+
+Подходит для скриптов, больших архивов и повторяемых задач.
+
+### 7.1. Одна страница
+
+```powershell
+.\venv_311\Scripts\activate
+python pipeline.py test_page.jpg output --order
+```
+
+| Флаг | Назначение |
+|------|------------|
+| `--sam` | MobileSAM (игнорирует `fast` в config, если указан) |
+| `--order` | Сортировка по порядку чтения |
+| `--rtl` | Порядок справа налево |
+
+**Результат:** `output\test_page\001_page_001_panel_01.png`, ...
+
+### 7.2. CBZ или папка
+
+```powershell
+python pipeline.py "D:\comics\book.cbz" output --order
+python pipeline.py "D:\comics\pages_folder" output --order --rtl
+```
+
+**Результат:** `output\book\` (или `output\pages_folder\`) — все панели всех страниц.
+
+### 7.3. Что происходит внутри
+
+```mermaid
+flowchart TD
+  A[Вход: файл / CBZ / папка] --> B[load_source]
+  B --> C[Для каждой страницы]
+  C --> D[YOLO: bbox панелей]
+  D --> E{SAM?}
+  E -->|да| F[Уточнение маски]
+  E -->|нет| G[Маска = bbox]
+  F --> H[Полигон + crop PNG]
+  G --> H
+  H --> I[output / имя_источника /]
+```
+
+---
+
+## 8. Структура выходных файлов
+
+Пример после обработки CBZ `MyComic.cbz` в папку `output`:
+
+```
+output/
+└── MyComic/
+    ├── 001_page_001_panel_01.png
+    ├── 002_page_001_panel_02.png
+    ├── 003_page_002_panel_01.png
+    ├── ...
+    ├── page_001/
+    │   └── _visualization.jpg    # маски на странице 1
+    ├── page_002/
+    │   └── _visualization.jpg
+    └── ...
+```
+
+- **Глобальный `order`** — сквозной номер панели во всём комиксе.
+- **page** — номер страницы в архиве (с 1).
+- **panel** — номер панели на странице (порядок чтения).
+
+PNG с альфа-каналом: фон прозрачный, панель вырезана по маске.
+
+---
+
+## 9. Способ 3 — редактор масок (порт 8000)
+
+Для ручной правки рамок после автодетекции.
+
+### 9.1. Запуск
+
+```powershell
+.\venv_311\Scripts\activate
+uvicorn api.server:app --reload --port 8000
+```
+
+Браузер: **http://localhost:8000**
+
+### 9.2. Путь к файлу
+
+| Рекомендация | Пример |
+|--------------|--------|
+| Относительный путь из корня проекта | `exam_imgs\01_Asterix_the_Gaul_page-0004.jpg` |
+| Абсолютный путь | `D:\comics\page.jpg` |
+
+На Windows при кириллице в пути сервер использует `utils/path_resolve.py` (исправление mojibake). Если видите «Файл не найден» с искажённым путём — укажите относительный путь к `exam_imgs` или `test_page.jpg`.
+
+### 9.3. Возможности UI
+
+- Загрузка страницы → YOLO-детекция
+- Режимы rect / polygon, перетаскивание вершин
+- Экспорт панелей в выбранную папку
+
+---
+
+## 10. Способ 4 — Go CLI (`comicsplit.exe`)
+
+Пакетная обработка без Gradio: Go читает архив/папку, вызывает `ml_worker` (Python).
+
+```powershell
+go build -o comicsplit.exe ./cmd/comicsplit
+.\comicsplit.exe --input exam_imgs --output panels --python .\venv_311\Scripts\python.exe --order
+.\comicsplit.exe --input "D:\comics\book.cbz" --output panels --python .\venv_311\Scripts\python.exe --order --sam
+```
+
+| Флаг | Назначение |
+|------|------------|
+| `--input` | CBZ, ZIP, папка с изображениями или один JPG/PNG |
+| `--output` | Папка для PNG |
+| `--python` | Путь к `python.exe` с установленными зависимостями |
+| `--order` | Сортировка панелей |
+| `--sam` | MobileSAM |
+| `--rtl` | Порядок справа налево |
+
+**Ограничения:** CBR — только через `pipeline.py`; в репозитории нет файла `comic.cbz` — укажите реальный путь.
+
+---
+
+## 11. Инструменты разработчика
+
+```powershell
+python benchmark.py --dataset exam_imgs
+python yolo_test.py test_page.jpg
+python sam_test.py test_page.jpg
+pytest -q
+pyinstaller packaging/comicsplit.spec
+```
+
+---
+
+## 12. Устранение неполадок
+
+| Симптом | Решение |
+|---------|---------|
+| `Модель не найдена` | Выполнить `download_models.ps1` и `quantize_models.py` |
+| Gradio: `localhost is not accessible` | `$env:NO_PROXY="127.0.0.1,localhost"`, перезапуск `main.py` |
+| Gradio: ошибка `charmap` / emoji | Обновить `main.py` и `pipeline.py` (логи без emoji); в консоли: `chcp 65001` |
+| Пустой результат / 0 панелей | Снизить `confidence_threshold` в config; попробовать `--sam` |
+| Медленно на больших страницах | Режим `fast`; для пакета — `max_workers` в config |
+| Кириллица в путях | CLI/Gradio: `imdecode`/`tofile`; :8000 — `path_resolve`, лучше `exam_imgs\...` |
+| :8000 «Файл не найден», путь `Âèäåî...` | Mojibake; относительный путь или обновлённый `api/server.py` |
+| `comicsplit.exe`: comic.cbz not found | В репо нет `comic.cbz`; `--input exam_imgs` или свой CBZ |
+| Gradio: `Gallery` / schema `bool` | Используется Gradio 5.x без Gallery; `show_api=False` в `main.py` |
+
+---
+
+## 13. Зависимости (ключевые версии)
+
+Зафиксированы в `requirements.txt`:
+
+- `gradio` 5.x, `starlette` &lt; 0.47 (не 1.0)
+- `onnxruntime`, `opencv-python`, `numpy`
+- `fastapi`, `uvicorn` — для опционального API
+- `PyYAML` — config
+
+После смены `requirements.txt` всегда: `pip install -r requirements.txt`.
+
+---
+
+## 14. Краткая шпаргалка
+
+| Задача | Команда |
+|--------|---------|
+| Gradio UI | `python main.py` → http://127.0.0.1:7860 |
+| Одна страница | `python pipeline.py test_page.jpg output --order` |
+| Папка примеров | `python pipeline.py exam_imgs output --order` |
+| CBZ целиком | `python pipeline.py D:\path\book.cbz output --order` |
+| Редактор масок | `uvicorn api.server:app --port 8000` |
+| Go batch | `.\comicsplit.exe --input exam_imgs --output panels --python .\venv_311\Scripts\python.exe` |
+| Точные маски | `--sam` или `quality_mode: accurate` |
+| Манга | `--rtl` или `reading_direction: rtl` |
+
+**Готовый результат** всегда лежит в **папке вывода** (`output/...`), в виде нумерованных PNG и превью по страницам.

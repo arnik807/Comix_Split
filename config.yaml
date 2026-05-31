@@ -1,0 +1,21 @@
+# config.yaml
+language: ru
+
+# Режим качества: fast = только YOLO, accurate = YOLO + MobileSAM
+quality_mode: fast        # fast | accurate
+
+# Порядок чтения: ltr = слева направо (западные), rtl = справа налево (манга)
+reading_order: true
+reading_direction: ltr    # ltr | rtl
+
+# Параллелизм (для Фазы 2 — Go воркер-пул)
+max_workers: 4
+
+# Пороги детекции
+confidence_threshold: 0.35
+iou_threshold: 0.45
+overlap_filter_threshold: 0.7
+
+# Паттерн имён файлов
+# Доступные переменные: {order}, {page}, {panel}
+output_pattern: "{order:03d}_page_{page:03d}_panel_{panel:02d}.png"

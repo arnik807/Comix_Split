@@ -1,0 +1,903 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ComicSplit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0e0e0f;
+            --surface: #18181b;
+            --surface2: #222228;
+            --border: #2e2e36;
+            --accent: #f0c040;
+            --accent2: #e05a2b;
+            --text: #f0ede8;
+            --muted: #6b6b7a;
+            --ok: #4ade80;
+            --err: #f87171;
+            --fw: 320px;
+            --fh: 56px;
+            --mono: 'Space Mono', monospace;
+            --sans: 'Syne', sans-serif;
+        }
+
+        html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+        #app {
+            display: grid;
+            grid-template-rows: var(--fh) 1fr;
+            grid-template-columns: var(--fw) 1fr;
+            grid-template-areas: "hd hd" "sb cv";
+            height: 100vh;
+        }
+
+        header {
+            grid-area: hd;
+            display: flex; align-items: center; gap: 14px;
+            padding: 0 22px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            z-index: 20;
+        }
+        .logo { font-size: 17px; font-weight: 800; letter-spacing: -.5px; color: var(--accent); }
+        .logo span { color: var(--text); }
+        .badge { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+        .sep { flex: 1; }
+        #status { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+        #status.ok   { color: var(--ok); }
+        #status.err  { color: var(--err); }
+        #status.busy { color: var(--accent); }
+
+        aside {
+            grid-area: sb;
+            display: flex; flex-direction: column;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            overflow-y: auto; overflow-x: hidden;
+        }
+        .sec { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+        .sec-title { font-size: 10px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+
+        label.lbl { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 5px; }
+
+        input[type=text] {
+            width: 100%; padding: 8px 10px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text);
+            font-family: var(--mono); font-size: 11px; outline: none;
+            transition: border-color .15s;
+        }
+        input[type=text]:focus { border-color: var(--accent); }
+
+        .trow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .trow:last-child { margin-bottom: 0; }
+        .tlbl { font-size: 12px; }
+
+        .tog { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
+        .tog input { opacity: 0; width: 0; height: 0; }
+        .sl { position: absolute; inset: 0; background: var(--border); border-radius: 18px; cursor: pointer; transition: background .2s; }
+        .sl::before { content: ''; position: absolute; width: 12px; height: 12px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform .2s; }
+        .tog input:checked + .sl { background: var(--accent); }
+        .tog input:checked + .sl::before { transform: translateX(16px); }
+
+        /* Polygon mode toggle — акцентный цвет другой */
+        .tog.poly input:checked + .sl { background: #a78bfa; }
+
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            width: 100%; padding: 9px 14px; border-radius: 7px;
+            font-family: var(--sans); font-size: 13px; font-weight: 600;
+            cursor: pointer; border: none; outline: none; transition: all .15s;
+        }
+        .btn:disabled { opacity: .38; cursor: not-allowed; }
+        .btn-p { background: var(--accent); color: #0e0e0f; }
+        .btn-p:hover:not(:disabled) { background: #f5d060; transform: translateY(-1px); }
+        .btn-s { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .btn-s:hover:not(:disabled) { border-color: var(--text); background: var(--surface2); }
+        .btn-e { background: var(--accent2); color: #fff; }
+        .btn-e:hover:not(:disabled) { background: #e86a3d; transform: translateY(-1px); }
+
+        .stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+        .sv { color: var(--text); font-weight: 700; }
+
+        /* Polygon mode hint */
+        .poly-hint {
+            font-family: var(--mono); font-size: 10px; color: #a78bfa;
+            background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.25);
+            border-radius: 5px; padding: 7px 9px; line-height: 1.5;
+            display: none;
+        }
+        .poly-hint.show { display: block; }
+
+        #panel-list { display: flex; flex-direction: column; gap: 5px; max-height: 320px; overflow-y: auto; }
+
+        .pi {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 9px; background: var(--surface2);
+            border: 1px solid var(--border); border-radius: 6px;
+            cursor: pointer; transition: all .15s; font-size: 11px;
+        }
+        .pi:hover { border-color: var(--accent); }
+        .pi.sel { border-color: var(--accent); background: rgba(240,192,64,.08); }
+        .pi.poly-mode { border-color: rgba(167,139,250,0.4); }
+        .pi.poly-mode.sel { border-color: #a78bfa; background: rgba(167,139,250,.08); }
+
+        .pdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .pinfo { flex: 1; font-family: var(--mono); }
+        .psub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+        .pact { opacity: 0; transition: opacity .15s; display: flex; gap: 4px; }
+        .pi:hover .pact { opacity: 1; }
+        .xbtn { background: none; border: none; cursor: pointer; padding: 1px 4px; border-radius: 3px; color: var(--muted); font-size: 13px; }
+        .xbtn:hover { color: var(--err); }
+        /* Polygon reset button */
+        .rbtn { background: none; border: none; cursor: pointer; padding: 1px 4px; border-radius: 3px; color: #a78bfa; font-size: 11px; }
+        .rbtn:hover { background: rgba(167,139,250,0.15); }
+
+        main {
+            grid-area: cv;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg); position: relative; overflow: hidden;
+        }
+        .empty { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); }
+        .empty-icon { font-size: 56px; opacity: .25; }
+        .empty-txt { font-size: 14px; }
+        #kv { width: 100%; height: 100%; }
+
+        .zc { position: absolute; bottom: 18px; right: 18px; display: flex; gap: 5px; }
+        .zbtn {
+            width: 30px; height: 30px; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 5px;
+            color: var(--text); font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color .15s;
+        }
+        .zbtn:hover { border-color: var(--accent); }
+        .zlbl {
+            height: 30px; padding: 0 9px; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 5px;
+            font-family: var(--mono); font-size: 11px; color: var(--muted);
+            display: flex; align-items: center;
+        }
+
+        /* Mode indicator in bottom-left */
+        #mode-indicator {
+            position: absolute; bottom: 18px; left: 18px;
+            font-family: var(--mono); font-size: 11px;
+            padding: 5px 10px; border-radius: 5px;
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--muted); display: none;
+        }
+        #mode-indicator.poly { border-color: #a78bfa; color: #a78bfa; display: flex; align-items: center; gap: 6px; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .sp { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+
+        #toast {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%) translateY(70px);
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 18px;
+            font-family: var(--mono); font-size: 12px;
+            transition: transform .3s; z-index: 999;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        #toast.ok  { border-color: var(--ok);  color: var(--ok); }
+        #toast.err { border-color: var(--err); color: var(--err); }
+
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: var(--surface); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+
+<body>
+<div id="app">
+
+    <header>
+        <div class="logo">Comic<span>Split</span></div>
+        <div class="badge">MVP · FastAPI + Konva</div>
+        <div class="sep"></div>
+        <div id="status">Готов к работе</div>
+    </header>
+
+    <aside>
+        <div class="sec">
+            <div class="sec-title">Источник</div>
+            <label class="lbl">Путь к изображению</label>
+            <input type="text" id="img-path" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
+        </div>
+
+        <div class="sec">
+            <div class="sec-title">Параметры детекции</div>
+            <div class="trow">
+                <span class="tlbl">Accurate (YOLO + SAM)</span>
+                <label class="tog"><input type="checkbox" id="use-sam"><span class="sl"></span></label>
+            </div>
+            <div class="trow">
+                <span class="tlbl">Порядок чтения</span>
+                <label class="tog"><input type="checkbox" id="reading-order" checked><span class="sl"></span></label>
+            </div>
+            <div class="trow">
+                <span class="tlbl">RTL (манга)</span>
+                <label class="tog"><input type="checkbox" id="rtl"><span class="sl"></span></label>
+            </div>
+        </div>
+
+        <!-- Режим редактирования -->
+        <div class="sec">
+            <div class="sec-title">Режим редактирования</div>
+            <div class="trow">
+                <span class="tlbl">Полигон (ломаная форма)</span>
+                <label class="tog poly">
+                    <input type="checkbox" id="poly-mode" onchange="togglePolyMode()">
+                    <span class="sl"></span>
+                </label>
+            </div>
+            <div class="poly-hint" id="poly-hint">
+                Drag вершины — переместить<br>
+                2× клик на ребро — добавить точку<br>
+                2× клик на вершину — удалить точку<br>
+                «Сброс» — вернуть прямоугольник
+            </div>
+        </div>
+
+        <div class="sec">
+            <button class="btn btn-p" id="btn-run" onclick="runDetection()">▶ Запустить детекцию</button>
+        </div>
+
+        <div class="sec" id="sec-stats" style="display:none">
+            <div class="sec-title">Результат</div>
+            <div class="stats">
+                <div>Панелей: <span class="sv" id="st-panels">0</span></div>
+                <div>Время: <span class="sv" id="st-time">—</span></div>
+            </div>
+        </div>
+
+        <div class="sec" id="sec-panels" style="display:none; flex:1">
+            <div class="sec-title">Панели <span id="p-count" style="color:var(--text)"></span></div>
+            <div id="panel-list"></div>
+            <div style="margin-top:10px">
+                <button class="btn btn-s" onclick="addPanel()">+ Добавить панель</button>
+            </div>
+        </div>
+
+        <div class="sec" id="sec-export" style="display:none">
+            <div class="sec-title">Экспорт</div>
+            <label class="lbl">Папка вывода</label>
+            <input type="text" id="out-dir" placeholder="C:\output\panels" style="margin-bottom:10px" />
+            <button class="btn btn-e" id="btn-exp" onclick="exportPanels()">↓ Экспортировать PNG</button>
+        </div>
+    </aside>
+
+    <main>
+        <div class="empty" id="empty">
+            <div class="empty-icon">🗂</div>
+            <div class="empty-txt">Укажите путь к странице и запустите детекцию</div>
+        </div>
+        <div id="kv" style="display:none"></div>
+        <div class="zc" id="zc" style="display:none">
+            <button class="zbtn" onclick="doZoom(-0.1)">−</button>
+            <div class="zlbl" id="zlbl">100%</div>
+            <button class="zbtn" onclick="doZoom(+0.1)">+</button>
+            <button class="zbtn" onclick="resetZoom()" title="Сбросить">⊙</button>
+        </div>
+        <div id="mode-indicator">◈ Режим полигона</div>
+    </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────
+const COLORS = [
+    '#f0c040','#e05a2b','#4ade80','#60a5fa','#c084fc',
+    '#fb923c','#34d399','#f472b6','#a3e635','#38bdf8',
+];
+const VERTEX_R  = 6;   // радиус вершины полигона
+const MIDPOINT_R = 4;  // радиус точки добавления на ребре
+
+// ── State ─────────────────────────────────────────────────────────────────
+const S = {
+    imgPath: '', imgW: 0, imgH: 0,
+    panels: [],   // [{panel_id, bbox, polygon, confidence, ...}]
+    selId: null,
+    scale: 1,
+    polyMode: false,  // глобальный тоггл режима полигона
+};
+
+let stage, imgLayer, panelLayer, kImg;
+let stW = 0, stH = 0;
+
+// Pan state
+let isPanning = false, panStart = {x:0,y:0}, panOrigin = {x:0,y:0};
+let spaceDown = false;
+
+// ── UI helpers ────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function setStatus(msg, cls='') { const el=$('status'); el.textContent=msg; el.className=cls; }
+
+function toast(msg, cls='ok') {
+    const t=$('toast'); t.textContent=msg; t.className=`show ${cls}`;
+    setTimeout(()=>t.className='', 3200);
+}
+
+function setBusy(busy) {
+    const btn=$('btn-run');
+    btn.disabled=busy;
+    btn.innerHTML=busy?'<div class="sp"></div><span>Обработка…</span>':'▶ Запустить детекцию';
+}
+
+function togglePolyMode() {
+    S.polyMode = $('poly-mode').checked;
+    $('poly-hint').className = 'poly-hint' + (S.polyMode ? ' show' : '');
+    const ind = $('mode-indicator');
+    ind.className = S.polyMode ? 'poly' : '';
+    if (stage) renderAll();
+}
+
+// ── Coord helpers ─────────────────────────────────────────────────────────
+function i2s(x, y) { return { x: kImg.x() + x*S.scale, y: kImg.y() + y*S.scale }; }
+function s2i(sx,sy) { return { x:(sx-kImg.x())/S.scale, y:(sy-kImg.y())/S.scale }; }
+
+// bbox → polygon (4 угла)
+function bboxToPoly(bbox) {
+    const [x1,y1,x2,y2] = bbox;
+    return [[x1,y1],[x2,y1],[x2,y2],[x1,y2]];
+}
+
+// polygon → bbox (bounding box)
+function polyToBbox(poly) {
+    const xs = poly.map(p=>p[0]), ys = poly.map(p=>p[1]);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
+// ── API ───────────────────────────────────────────────────────────────────
+async function runDetection() {
+    const path = $('img-path').value.trim();
+    if (!path) { toast('Укажите путь к изображению','err'); return; }
+    S.imgPath = path;
+    setBusy(true);
+    setStatus('Запускаю детекцию…','busy');
+
+    const t0 = performance.now();
+    try {
+        const r = await fetch('/api/process', {
+            method:'POST',
+            headers:{'Content-Type':'application/json; charset=utf-8'},
+            body: JSON.stringify({
+                image_path: path,
+                use_sam:       $('use-sam').checked,
+                reading_order: $('reading-order').checked,
+                rtl:           $('rtl').checked,
+            }),
+        });
+        if (!r.ok) { const e=await r.json(); throw new Error(e.detail||r.statusText); }
+        const data = await r.json();
+        const sec  = ((performance.now()-t0)/1000).toFixed(1);
+
+        // pipeline возвращает bbox + polygon (из SAM или прямоугольник)
+        // Если polygon пустой — инициализируем из bbox
+        S.panels = data.panels.map(p => ({
+            ...p,
+            polygon: (p.polygon && p.polygon.length>=3)
+                ? p.polygon
+                : bboxToPoly(p.bbox),
+        }));
+        S.selId = null;
+
+        if (data.resolved_path) {
+            S.imgPath = data.resolved_path;
+            $('img-path').value = data.resolved_path;
+        }
+
+        await initCanvas(S.imgPath);
+        renderAll();
+        rebuildList();
+
+        ['sec-stats','sec-panels','sec-export'].forEach(id=>$(id).style.display='');
+        $('st-panels').textContent = data.panels.length;
+        $('st-time').textContent   = `${sec}s`;
+        setStatus(`✓ ${data.panels.length} панелей за ${sec}s`,'ok');
+        toast(`Найдено ${data.panels.length} панелей`);
+    } catch(e) {
+        setStatus(`Ошибка: ${e.message}`,'err');
+        toast(e.message,'err');
+    } finally { setBusy(false); }
+}
+
+async function exportPanels() {
+    const outDir = $('out-dir').value.trim();
+    if (!outDir) { toast('Укажите папку вывода','err'); return; }
+    const btn=$('btn-exp');
+    btn.disabled=true; btn.innerHTML='<div class="sp"></div> Сохраняю…';
+    setStatus('Экспортирую…','busy');
+    try {
+        // Передаём bbox и polygon (если есть нетривиальный полигон — сервер вырежет по маске)
+        const panels = S.panels.map(p => {
+            const isRect = _isRectPoly(p.polygon, p.bbox);
+            return {
+                panel_id: p.panel_id,
+                bbox:     p.bbox,
+                polygon:  isRect ? null : p.polygon,  // null = прямоугольный crop
+            };
+        });
+        const r = await fetch('/api/export', {
+            method:'POST',
+            headers:{'Content-Type':'application/json; charset=utf-8'},
+            body: JSON.stringify({
+                image_path: S.imgPath,
+                panels,
+                output_dir: outDir,
+            }),
+        });
+        if (!r.ok) { const e=await r.json(); throw new Error(e.detail); }
+        const d = await r.json();
+        setStatus(`✓ Сохранено ${d.count} PNG`,'ok');
+        toast(`Экспорт: ${d.count} файлов`);
+    } catch(e) {
+        setStatus(`Ошибка: ${e.message}`,'err');
+        toast(e.message,'err');
+    } finally { btn.disabled=false; btn.innerHTML='↓ Экспортировать PNG'; }
+}
+
+// Проверяем: полигон является прямоугольником (bbox)?
+function _isRectPoly(poly, bbox) {
+    if (!poly || poly.length !== 4) return false;
+    const ref = bboxToPoly(bbox);
+    return poly.every((pt,i) => Math.abs(pt[0]-ref[i][0])<2 && Math.abs(pt[1]-ref[i][1])<2);
+}
+
+// ── Konva canvas ──────────────────────────────────────────────────────────
+async function initCanvas(imgPath) {
+    const container = $('kv');
+    container.style.display='';
+    $('empty').style.display='none';
+    $('zc').style.display='';
+
+    stW = container.clientWidth;
+    stH = container.clientHeight;
+
+    if (stage) stage.destroy();
+    stage      = new Konva.Stage({ container:'kv', width:stW, height:stH });
+    imgLayer   = new Konva.Layer();
+    panelLayer = new Konva.Layer();
+    stage.add(imgLayer, panelLayer);
+
+    const img = new Image();
+    img.src = `/api/image?path=${encodeURIComponent(imgPath)}`;
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; });
+
+    S.imgW = img.naturalWidth; S.imgH = img.naturalHeight;
+    const sx=stW/S.imgW, sy=stH/S.imgH;
+    S.scale = Math.min(sx,sy,1)*0.93;
+
+    kImg = new Konva.Image({
+        x: (stW-S.imgW*S.scale)/2, y: (stH-S.imgH*S.scale)/2,
+        image: img, width: S.imgW*S.scale, height: S.imgH*S.scale,
+    });
+    imgLayer.add(kImg); imgLayer.draw();
+    updateZlbl();
+
+    stage.on('click', e=>{ if(e.target===stage||e.target===kImg) select(null); });
+}
+
+// ── Render dispatcher ─────────────────────────────────────────────────────
+function renderAll() {
+    panelLayer.destroyChildren();
+    S.panels.forEach((panel,i) => {
+        if (S.polyMode) renderPolygonPanel(panel,i);
+        else            renderRectPanel(panel,i);
+    });
+    panelLayer.draw();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// RECT MODE
+// ══════════════════════════════════════════════════════════════════════════
+function renderRectPanel(panel, i) {
+    const col = COLORS[i%COLORS.length];
+    const [x1,y1,x2,y2] = panel.bbox;
+    const sp = i2s(x1,y1);
+    let pw = (x2-x1)*S.scale;
+    let ph = (y2-y1)*S.scale;
+
+    const g = new Konva.Group({ id: panel.panel_id });
+
+    const fill = new Konva.Rect({ x:sp.x, y:sp.y, width:pw, height:ph, fill:col, opacity:0.15 });
+    const box  = new Konva.Rect({ x:sp.x, y:sp.y, width:pw, height:ph, stroke:col, strokeWidth:2, draggable:true, name:'box' });
+    const lbl  = new Konva.Text({ x:sp.x+6, y:sp.y+5, text:panel.panel_id, fontSize:Math.max(11,13*S.scale), fontFamily:'Space Mono', fill:col, listening:false });
+
+    // 4 угловых маркера
+    const corners = [
+        {cx:x1,cy:y1,cur:'nwse-resize'}, {cx:x2,cy:y1,cur:'nesw-resize'},
+        {cx:x2,cy:y2,cur:'nwse-resize'}, {cx:x1,cy:y2,cur:'nesw-resize'},
+    ];
+    const handles = corners.map(({cx,cy,cur}) => {
+        const sp2 = i2s(cx,cy);
+        const h = new Konva.Rect({
+            x:sp2.x-6, y:sp2.y-6, width:12, height:12,
+            fill:col, opacity:0.9, cornerRadius:2, draggable:true, name:'corner',
+        });
+        h.on('mouseenter',()=>document.body.style.cursor=cur);
+        h.on('mouseleave',()=>document.body.style.cursor='default');
+        return h;
+    });
+
+    // Drag box → move
+    box.on('dragmove',()=>{
+        const pos=box.position();
+        const ip=s2i(pos.x,pos.y);
+        const bw=panel.bbox[2]-panel.bbox[0], bh=panel.bbox[3]-panel.bbox[1];
+        const nx1=Math.max(0,Math.min(ip.x,S.imgW-bw));
+        const ny1=Math.max(0,Math.min(ip.y,S.imgH-bh));
+        panel.bbox=[Math.round(nx1),Math.round(ny1),Math.round(nx1+bw),Math.round(ny1+bh)];
+        panel.polygon=bboxToPoly(panel.bbox);
+        _syncRect(panel,fill,box,lbl,handles); panelLayer.draw(); updItem(panel);
+    });
+
+    // Drag corners → resize
+    handles.forEach((h,ci)=>{
+        h.on('dragmove',()=>{
+            const hp=h.position();
+            const ip=s2i(hp.x+6,hp.y+6);
+            const ix=Math.round(Math.max(0,Math.min(ip.x,S.imgW)));
+            const iy=Math.round(Math.max(0,Math.min(ip.y,S.imgH)));
+            let [bx1,by1,bx2,by2]=panel.bbox;
+            if(ci===0){bx1=Math.min(ix,bx2-10);by1=Math.min(iy,by2-10);}
+            if(ci===1){bx2=Math.max(ix,bx1+10);by1=Math.min(iy,by2-10);}
+            if(ci===2){bx2=Math.max(ix,bx1+10);by2=Math.max(iy,by1+10);}
+            if(ci===3){bx1=Math.min(ix,bx2-10);by2=Math.max(iy,by1+10);}
+            panel.bbox=[bx1,by1,bx2,by2];
+            panel.polygon=bboxToPoly(panel.bbox);
+            _syncRect(panel,fill,box,lbl,handles); panelLayer.draw(); updItem(panel);
+        });
+    });
+
+    box.on('click',e=>{e.cancelBubble=true;select(panel.panel_id);});
+    box.on('mouseenter',()=>document.body.style.cursor='move');
+    box.on('mouseleave',()=>document.body.style.cursor='default');
+
+    g.add(fill,box,lbl,...handles);
+    panelLayer.add(g);
+}
+
+function _syncRect(panel,fill,box,lbl,handles) {
+    const [x1,y1,x2,y2]=panel.bbox;
+    const sp=i2s(x1,y1);
+    const pw=(x2-x1)*S.scale, ph=(y2-y1)*S.scale;
+    fill.position(sp); fill.size({width:pw,height:ph});
+    box.position(sp);  box.size({width:pw,height:ph});
+    lbl.position({x:sp.x+6,y:sp.y+5});
+    const corners=[{cx:x1,cy:y1},{cx:x2,cy:y1},{cx:x2,cy:y2},{cx:x1,cy:y2}];
+    handles.forEach((h,i)=>{const s2=i2s(corners[i].cx,corners[i].cy);h.position({x:s2.x-6,y:s2.y-6});});
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// POLYGON MODE
+// ══════════════════════════════════════════════════════════════════════════
+function renderPolygonPanel(panel, i) {
+    const col = COLORS[i%COLORS.length];
+    const poly = panel.polygon && panel.polygon.length>=3
+        ? panel.polygon : bboxToPoly(panel.bbox);
+    panel.polygon = poly;
+
+    const g = new Konva.Group({ id: panel.panel_id });
+
+    const kPoly = new Konva.Line({
+        points: _polyToFlat(poly), closed:true,
+        fill:col, opacity:0.15, listening:false,
+    });
+    const kStroke = new Konva.Line({
+        points: _polyToFlat(poly), closed:true,
+        stroke:col, strokeWidth:2, hitStrokeWidth:12, name:'stroke',
+    });
+
+    const [lcx,lcy] = _centroid(poly);
+    const lsp = i2s(lcx,lcy);
+    const lbl = new Konva.Text({
+        x:lsp.x-20, y:lsp.y-8,
+        text:panel.panel_id, fontSize:Math.max(11,13*S.scale),
+        fontFamily:'Space Mono', fill:col, listening:false,
+    });
+
+    const vtxGroup  = new Konva.Group({ name:'vtx-group' });
+    const midGroup  = new Konva.Group({ name:'mid-group' });
+
+    // ── Обновляем линии и лейбл без пересоздания вершин ──────────
+    function syncShapes() {
+        kPoly.points(_polyToFlat(panel.polygon));
+        kStroke.points(_polyToFlat(panel.polygon));
+        const [cc,cy2]=_centroid(panel.polygon);
+        const ls=i2s(cc,cy2);
+        lbl.position({x:ls.x-20,y:ls.y-8});
+    }
+
+    // ── Синхронизация позиций всех вершин-кружков ─────────────────
+    function syncVertexPositions() {
+        const vtxNodes = vtxGroup.find('.vtx');
+        vtxNodes.forEach((vtx, vi) => {
+            if (vi >= panel.polygon.length) return;
+            const vs = i2s(panel.polygon[vi][0], panel.polygon[vi][1]);
+            vtx.position(vs);
+        });
+    }
+
+    // ── Синхронизация midpoint-ов ─────────────────────────────────
+    function syncMidPositions() {
+        const midNodes = midGroup.find('.mid');
+        midNodes.forEach((mid, vi) => {
+            if (vi >= panel.polygon.length) return;
+            const nextPt = panel.polygon[(vi+1)%panel.polygon.length];
+            const mx = (panel.polygon[vi][0]+nextPt[0])/2;
+            const my = (panel.polygon[vi][1]+nextPt[1])/2;
+            const ms = i2s(mx,my);
+            mid.position(ms);
+        });
+    }
+
+    // ── Полная перестройка вершин (только при добавлении/удалении) ─
+    function rebuildVertices() {
+        vtxGroup.destroyChildren();
+        midGroup.destroyChildren();
+
+        panel.polygon.forEach((pt, vi) => {
+            const vs = i2s(pt[0],pt[1]);
+
+            const vtx = new Konva.Circle({
+                x:vs.x, y:vs.y, radius:VERTEX_R,
+                fill:col, stroke:'white', strokeWidth:1.5,
+                draggable:true, name:'vtx',
+            });
+
+            vtx.on('mouseenter',()=>document.body.style.cursor='crosshair');
+            vtx.on('mouseleave',()=>document.body.style.cursor='default');
+
+            vtx.on('dragmove',()=>{
+                // Обновляем только данные + формы, НЕ пересоздаём вершины
+                const ip = s2i(vtx.x(), vtx.y());
+                panel.polygon[vi] = [
+                    Math.round(Math.max(0, Math.min(ip.x, S.imgW))),
+                    Math.round(Math.max(0, Math.min(ip.y, S.imgH))),
+                ];
+                panel.bbox = polyToBbox(panel.polygon);
+                syncShapes();
+                syncMidPositions();
+                panelLayer.batchDraw();
+                updItem(panel);
+            });
+
+            vtx.on('dragend',()=>{
+                // После завершения drag — обновляем список
+                updItem(panel);
+            });
+
+            vtx.on('dblclick',()=>{
+                if(panel.polygon.length<=3){toast('Минимум 3 вершины','err');return;}
+                panel.polygon.splice(vi,1);
+                panel.bbox = polyToBbox(panel.polygon);
+                rebuildVertices();
+                syncShapes();
+                panelLayer.batchDraw();
+                updItem(panel);
+            });
+
+            vtxGroup.add(vtx);
+        });
+
+        // Midpoints
+        panel.polygon.forEach((pt, vi) => {
+            const nextPt = panel.polygon[(vi+1)%panel.polygon.length];
+            const mx = (pt[0]+nextPt[0])/2;
+            const my = (pt[1]+nextPt[1])/2;
+            const ms = i2s(mx,my);
+
+            const mid = new Konva.Circle({
+                x:ms.x, y:ms.y, radius:MIDPOINT_R,
+                fill:'white', opacity:0.5,
+                stroke:col, strokeWidth:1, name:'mid',
+            });
+
+            mid.on('mouseenter',()=>{ mid.opacity(0.9); document.body.style.cursor='copy'; panelLayer.batchDraw(); });
+            mid.on('mouseleave',()=>{ mid.opacity(0.5); document.body.style.cursor='default'; panelLayer.batchDraw(); });
+
+            mid.on('click',e=>{
+                e.cancelBubble=true;
+                panel.polygon.splice(vi+1,0,[Math.round(mx),Math.round(my)]);
+                panel.bbox = polyToBbox(panel.polygon);
+                rebuildVertices();
+                syncShapes();
+                panelLayer.batchDraw();
+                updItem(panel);
+            });
+
+            midGroup.add(mid);
+        });
+
+        panelLayer.batchDraw();
+    }
+
+    kStroke.on('click',e=>{ e.cancelBubble=true; select(panel.panel_id); });
+    kStroke.on('mouseenter',()=>document.body.style.cursor='pointer');
+    kStroke.on('mouseleave',()=>document.body.style.cursor='default');
+
+    g.add(kPoly, kStroke, lbl, vtxGroup, midGroup);
+    panelLayer.add(g);
+    rebuildVertices();
+}
+function _polyToFlat(poly) {
+    const flat=[];
+    poly.forEach(pt=>{ const s=i2s(pt[0],pt[1]); flat.push(s.x,s.y); });
+    return flat;
+}
+
+function _centroid(poly) {
+    const sx=poly.reduce((a,p)=>a+p[0],0)/poly.length;
+    const sy=poly.reduce((a,p)=>a+p[1],0)/poly.length;
+    return [sx,sy];
+}
+
+// Сброс полигона панели → прямоугольник
+function resetPolyToRect(pid) {
+    const panel = S.panels.find(p=>p.panel_id===pid);
+    if (!panel) return;
+    panel.polygon = bboxToPoly(panel.bbox);
+    renderAll(); rebuildList();
+    toast('Полигон сброшен до прямоугольника');
+}
+
+// ── Select panel ──────────────────────────────────────────────────────────
+function select(pid) {
+    S.selId=pid; rebuildList();
+    panelLayer.children.forEach(g=>{
+        const b=g.findOne('.box')||g.findOne('.stroke');
+        if(b){ b.strokeWidth(g.id()===pid?3:2); }
+    });
+    panelLayer.draw();
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────
+function rebuildList() {
+    $('p-count').textContent=`(${S.panels.length})`;
+    $('panel-list').innerHTML = S.panels.map((p,i)=>{
+        const col=COLORS[i%COLORS.length];
+        const sel=p.panel_id===S.selId;
+        const hasCustomPoly = p.polygon && !_isRectPoly(p.polygon,p.bbox);
+        const [x1,y1,x2,y2]=p.bbox;
+        const vtxCount = p.polygon ? p.polygon.length : 4;
+        const shape = hasCustomPoly ? `poly(${vtxCount}pts)` : 'rect';
+        return `<div class="pi ${sel?'sel':''} ${S.polyMode?'poly-mode':''}" id="pi-${p.panel_id}" onclick="select('${p.panel_id}')">
+            <div class="pdot" style="background:${col}"></div>
+            <div class="pinfo">
+                <div>${p.panel_id} <span style="color:var(--muted);font-size:9px">${shape}</span></div>
+                <div class="psub">${x1},${y1}→${x2},${y2} · ${Math.round(p.confidence*100)}%</div>
+            </div>
+            <div class="pact">
+                ${hasCustomPoly ? `<button class="rbtn" title="Сброс полигона" onclick="event.stopPropagation();resetPolyToRect('${p.panel_id}')">↺</button>` : ''}
+                <button class="xbtn" onclick="event.stopPropagation();delPanel('${p.panel_id}')">✕</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function updItem(panel) {
+    const el=document.getElementById(`pi-${panel.panel_id}`);
+    if(!el) return;
+    const sub=el.querySelector('.psub');
+    if(sub){
+        const [x1,y1,x2,y2]=panel.bbox;
+        sub.textContent=`${x1},${y1}→${x2},${y2} · ${Math.round(panel.confidence*100)}%`;
+    }
+    // Обновляем иконку shape
+    const nameEl=el.querySelector('.pinfo>div:first-child');
+    if(nameEl){
+        const hasCustomPoly=panel.polygon && !_isRectPoly(panel.polygon,panel.bbox);
+        const vtxCount=panel.polygon?panel.polygon.length:4;
+        const shape=hasCustomPoly?`poly(${vtxCount}pts)`:'rect';
+        nameEl.innerHTML=`${panel.panel_id} <span style="color:var(--muted);font-size:9px">${shape}</span>`;
+    }
+}
+
+function delPanel(pid) {
+    S.panels=S.panels.filter(p=>p.panel_id!==pid);
+    if(S.selId===pid) S.selId=null;
+    renderAll(); rebuildList();
+    $('st-panels').textContent=S.panels.length;
+}
+
+function addPanel() {
+    if(!stage){toast('Сначала запустите детекцию','err');return;}
+    const n=S.panels.length+1;
+    const pid=`p${String(n).padStart(3,'0')}_new`;
+    const bbox=[Math.round(S.imgW*.1),Math.round(S.imgH*.1),Math.round(S.imgW*.4),Math.round(S.imgH*.4)];
+    S.panels.push({ panel_id:pid, bbox, polygon:bboxToPoly(bbox), confidence:1.0, reading_order:n, source:'manual' });
+    renderAll(); rebuildList(); select(pid);
+    $('st-panels').textContent=S.panels.length;
+}
+
+// ── Zoom ──────────────────────────────────────────────────────────────────
+function doZoom(d) {
+    if(!kImg) return;
+    const ns=Math.max(0.15,Math.min(3,S.scale+d));
+    const r=ns/S.scale;
+    const cx=stW/2, cy=stH/2;
+    kImg.x(cx-(cx-kImg.x())*r);
+    kImg.y(cy-(cy-kImg.y())*r);
+    kImg.width(kImg.width()*r);
+    kImg.height(kImg.height()*r);
+    S.scale=ns;
+    imgLayer.draw(); renderAll(); updateZlbl();
+}
+
+function resetZoom() {
+    if(!kImg) return;
+    S.scale=Math.min(stW/S.imgW,stH/S.imgH,1)*0.93;
+    kImg.position({x:(stW-S.imgW*S.scale)/2,y:(stH-S.imgH*S.scale)/2});
+    kImg.size({width:S.imgW*S.scale,height:S.imgH*S.scale});
+    imgLayer.draw(); renderAll(); updateZlbl();
+}
+
+function updateZlbl(){$('zlbl').textContent=`${Math.round(S.scale*100)}%`;}
+
+// ── Scroll: Ctrl=zoom, Shift=pan X, plain=pan Y ───────────────────────────
+$('kv').addEventListener('wheel', e=>{
+    e.preventDefault();
+    if(e.ctrlKey){
+        if(!kImg) return;
+        const ns=Math.max(0.15,Math.min(3,S.scale+(e.deltaY<0?0.08:-0.08)));
+        const r=ns/S.scale;
+        const rect=$('kv').getBoundingClientRect();
+        const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+        kImg.x(mx-(mx-kImg.x())*r);
+        kImg.y(my-(my-kImg.y())*r);
+        kImg.width(kImg.width()*r);
+        kImg.height(kImg.height()*r);
+        S.scale=ns;
+        imgLayer.draw(); renderAll(); updateZlbl();
+    } else if(e.shiftKey){
+        if(!kImg) return;
+        kImg.x(kImg.x()-e.deltaY*0.8);
+        imgLayer.draw(); renderAll();
+    } else {
+        if(!kImg) return;
+        kImg.y(kImg.y()-e.deltaY*0.8);
+        imgLayer.draw(); renderAll();
+    }
+},{passive:false});
+
+// ── Space + drag = pan ────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+    if(e.key==='Delete' && S.selId) delPanel(S.selId);
+    if(e.key==='+'||e.key==='=') doZoom(0.1);
+    if(e.key==='-') doZoom(-0.1);
+    if(e.key==='0') resetZoom();
+    if(e.key===' '){ e.preventDefault(); spaceDown=true; $('kv').style.cursor='grab'; }
+});
+document.addEventListener('keyup',e=>{
+    if(e.key===' '){ spaceDown=false; isPanning=false; $('kv').style.cursor=''; }
+});
+$('kv').addEventListener('mousedown',e=>{
+    if(spaceDown&&kImg){ isPanning=true; panStart={x:e.clientX,y:e.clientY}; panOrigin={x:kImg.x(),y:kImg.y()}; $('kv').style.cursor='grabbing'; }
+});
+$('kv').addEventListener('mousemove',e=>{
+    if(!isPanning||!kImg) return;
+    kImg.x(panOrigin.x+(e.clientX-panStart.x));
+    kImg.y(panOrigin.y+(e.clientY-panStart.y));
+    imgLayer.draw(); renderAll();
+});
+$('kv').addEventListener('mouseup',()=>{
+    if(isPanning){ isPanning=false; $('kv').style.cursor=spaceDown?'grab':''; }
+});
+</script>
+</body>
+</html>

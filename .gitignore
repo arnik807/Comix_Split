@@ -1,0 +1,42 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments (оставьте один: venv_311)
+venv/
+venv_310/
+venv_311/
+
+# Результаты обработки
+output/
+output*/
+out_*/
+out_ui/
+
+# Сборка и артефакты
+*.exe
+comicsplit.exe
+benchmark_results.csv
+
+# Модели и бинарники ML (локально через scripts/*; лимит Git ~100 MB)
+models/**/*
+!models/**/
+!models/README.md
+!models/**/README*.md
+
+# IDE и ОС
+.vscode/
+.idea/
+*.log
+power_shel_error.txt
+Thumbs.db
+Desktop.ini
+
+# Временные файлы
+*.tmp
+~$*
