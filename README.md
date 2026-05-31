@@ -50,3 +50,7 @@ python pipeline.py exam_imgs output --order
 - `pipeline.py` — ML и CLI
 - `utils/` — config, чтение CBZ/папок
 - `api/` + `frontend/` — опциональный редактор масок (порт 8000)
+
+
+
+##Правка для коммита
