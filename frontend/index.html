@@ -117,6 +117,11 @@
             display: none;
         }
         .poly-hint.show { display: block; }
+        .det-hint {
+            font-size: 10px; color: var(--muted); line-height: 1.45;
+            margin-top: 8px; padding: 8px; background: var(--surface2);
+            border-radius: 6px; border: 1px solid var(--border);
+        }
 
         #panel-list { display: flex; flex-direction: column; gap: 5px; max-height: 320px; overflow-y: auto; }
 
@@ -147,6 +152,11 @@
             display: flex; align-items: center; justify-content: center;
             background: var(--bg); position: relative; overflow: hidden;
         }
+        main.batch-mode {
+            align-items: stretch; justify-content: stretch;
+            overflow-y: auto;
+        }
+        #view-split { width: 100%; height: 100%; position: relative; }
         .empty { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); }
         .empty-icon { font-size: 56px; opacity: .25; }
         .empty-txt { font-size: 14px; }
@@ -196,6 +206,72 @@
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: var(--surface); }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+            flex-shrink: 0;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 6px;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            font-family: var(--sans);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color .15s, border-color .15s;
+        }
+        .tab-btn:hover { color: var(--text); }
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: var(--surface);
+        }
+        .tab-panel { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+        .tab-panel.active { display: flex; }
+
+        select.inp {
+            width: 100%; padding: 8px 10px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text);
+            font-family: var(--mono); font-size: 11px;
+        }
+
+        #view-batch {
+            display: none;
+            flex-direction: column;
+            width: 100%; height: 100%;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        #view-batch.active { display: flex; }
+        .batch-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+        .batch-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+        #batch-log {
+            flex: 1; min-height: 200px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            font-family: var(--mono);
+            font-size: 11px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            color: var(--text);
+        }
+        .vlinks { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+        .vlinks a {
+            font-family: var(--mono); font-size: 11px;
+            color: var(--accent); text-decoration: none;
+        }
+        .vlinks a:hover { text-decoration: underline; }
+        video.preview { max-width: 100%; margin-top: 12px; border-radius: 8px; border: 1px solid var(--border); }
     </style>
 </head>
 
@@ -204,12 +280,19 @@
 
     <header>
         <div class="logo">Comic<span>Split</span></div>
-        <div class="badge">MVP · FastAPI + Konva</div>
+        <div class="badge">Split · Upscale · Video</div>
         <div class="sep"></div>
         <div id="status">Готов к работе</div>
     </header>
 
     <aside>
+        <div class="tab-bar">
+            <button type="button" class="tab-btn active" data-tab="split" onclick="switchTab('split')">Split</button>
+            <button type="button" class="tab-btn" data-tab="upscale" onclick="switchTab('upscale')">Upscale</button>
+            <button type="button" class="tab-btn" data-tab="video" onclick="switchTab('video')">Video</button>
+        </div>
+
+        <div id="tab-split" class="tab-panel active">
         <div class="sec">
             <div class="sec-title">Источник</div>
             <label class="lbl">Путь к изображению</label>
@@ -222,6 +305,7 @@
                 <span class="tlbl">Accurate (YOLO + SAM)</span>
                 <label class="tog"><input type="checkbox" id="use-sam"><span class="sl"></span></label>
             </div>
+            <p class="det-hint" id="sam-hint">Точные контуры SAM на холсте — только в режиме «Полигон»; экспорт по маске — при включённом полигоне или после правки формы.</p>
             <div class="trow">
                 <span class="tlbl">Порядок чтения</span>
                 <label class="tog"><input type="checkbox" id="reading-order" checked><span class="sl"></span></label>
@@ -243,10 +327,9 @@
                 </label>
             </div>
             <div class="poly-hint" id="poly-hint">
-                Drag вершины — переместить<br>
-                2× клик на ребро — добавить точку<br>
-                2× клик на вершину — удалить точку<br>
-                «Сброс» — вернуть прямоугольник
+                Экспорт по маске (PNG с прозрачностью) — только при включённом режиме или после правки формы.<br><br>
+                Drag вершины — переместить · 2× клик на ребро — добавить точку<br>
+                2× клик на вершину — удалить · «↺» — прямоугольник по bbox
             </div>
         </div>
 
@@ -276,9 +359,68 @@
             <input type="text" id="out-dir" placeholder="C:\output\panels" style="margin-bottom:10px" />
             <button class="btn btn-e" id="btn-exp" onclick="exportPanels()">↓ Экспортировать PNG</button>
         </div>
+        </div><!-- /tab-split -->
+
+        <div id="tab-upscale" class="tab-panel">
+            <div class="sec">
+                <div class="sec-title">Апскейл панелей</div>
+                <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+                    Папка с PNG после Split (например <code style="color:var(--accent)">output\mycomic\page_name</code>).
+                </p>
+                <label class="lbl">Папка с панелями</label>
+                <input type="text" id="up-panels" placeholder="output\mycomic" style="margin-bottom:10px" />
+                <label class="lbl">Папка вывода</label>
+                <input type="text" id="up-output" value="output_upscaled" style="margin-bottom:10px" />
+                <label class="lbl">Масштаб</label>
+                <select id="up-scale" class="inp" style="margin-bottom:12px">
+                    <option value="2" selected>x2</option>
+                    <option value="4">x4</option>
+                </select>
+                <button class="btn btn-p" id="btn-upscale" onclick="runUpscale()">▶ Запустить апскейл</button>
+            </div>
+        </div>
+
+        <div id="tab-video" class="tab-panel">
+            <div class="sec">
+                <div class="sec-title">Видео из панелей</div>
+                <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+                    16:9, анимация, MP4 на панель + storyboard. Долго на CPU.
+                </p>
+                <label class="lbl">Папка с панелями</label>
+                <input type="text" id="vid-panels" placeholder="output\mycomic" style="margin-bottom:10px" />
+                <label class="lbl">Папка вывода</label>
+                <input type="text" id="vid-output" value="story_out" style="margin-bottom:10px" />
+                <label class="lbl">Режим анимации</label>
+                <select id="vid-mode" class="inp" style="margin-bottom:10px">
+                    <option value="opencv_zoom">Zoom (OpenCV)</option>
+                    <option value="opencv_shake">Shake (OpenCV)</option>
+                    <option value="static">Статичный кадр</option>
+                    <option value="depthflow">Parallax (DepthFlow)</option>
+                </select>
+                <div class="trow">
+                    <span class="tlbl">Апскейл перед видео</span>
+                    <label class="tog"><input type="checkbox" id="vid-upscale" checked><span class="sl"></span></label>
+                </div>
+                <label class="lbl">Масштаб апскейла</label>
+                <select id="vid-scale" class="inp" style="margin-bottom:10px">
+                    <option value="2" selected>x2</option>
+                    <option value="4">x4</option>
+                </select>
+                <label class="lbl">Длина клипа (сек)</label>
+                <input type="text" id="vid-duration" value="3" style="margin-bottom:10px" />
+                <label class="lbl">FPS</label>
+                <input type="text" id="vid-fps" value="24" style="margin-bottom:10px" />
+                <div class="trow" style="margin-bottom:12px">
+                    <span class="tlbl">Собрать storyboard.mp4</span>
+                    <label class="tog"><input type="checkbox" id="vid-concat" checked><span class="sl"></span></label>
+                </div>
+                <button class="btn btn-e" id="btn-video" onclick="runVideo()">▶ Создать видео</button>
+            </div>
+        </div>
     </aside>
 
     <main>
+        <div id="view-split">
         <div class="empty" id="empty">
             <div class="empty-icon">🗂</div>
             <div class="empty-txt">Укажите путь к странице и запустите детекцию</div>
@@ -290,7 +432,16 @@
             <button class="zbtn" onclick="doZoom(+0.1)">+</button>
             <button class="zbtn" onclick="resetZoom()" title="Сбросить">⊙</button>
         </div>
-        <div id="mode-indicator">◈ Режим полигона</div>
+        <div id="mode-indicator" style="display:none">◈ Прямоугольники (bbox)</div>
+        </div><!-- /view-split -->
+
+        <div id="view-batch">
+            <div class="batch-title" id="batch-title">Пакетная обработка</div>
+            <div class="batch-desc" id="batch-desc">Результаты апскейла или сборки видео появятся здесь.</div>
+            <pre id="batch-log">Готов к работе.</pre>
+            <div class="vlinks" id="video-links"></div>
+            <video id="video-preview" class="preview" controls style="display:none"></video>
+        </div>
     </main>
 </div>
 
@@ -340,9 +491,24 @@ function setBusy(busy) {
 function togglePolyMode() {
     S.polyMode = $('poly-mode').checked;
     $('poly-hint').className = 'poly-hint' + (S.polyMode ? ' show' : '');
-    const ind = $('mode-indicator');
-    ind.className = S.polyMode ? 'poly' : '';
+    _updateModeIndicator();
     if (stage) renderAll();
+}
+
+function _updateModeIndicator() {
+    const ind = $('mode-indicator');
+    if (!stage || !S.panels.length) {
+        ind.style.display = 'none';
+        return;
+    }
+    ind.style.display = 'flex';
+    if (S.polyMode) {
+        ind.className = 'poly';
+        ind.textContent = '◈ Полигон — вырез по форме при экспорте';
+    } else {
+        ind.className = '';
+        ind.textContent = '▣ Прямоугольник — экспорт по bbox';
+    }
 }
 
 // ── Coord helpers ─────────────────────────────────────────────────────────
@@ -359,6 +525,148 @@ function bboxToPoly(bbox) {
 function polyToBbox(poly) {
     const xs = poly.map(p=>p[0]), ys = poly.map(p=>p[1]);
     return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
+// ── Tabs (Split / Upscale / Video) ────────────────────────────────────────
+let activeTab = 'split';
+
+function switchTab(name) {
+    activeTab = name;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === name);
+    });
+    ['split','upscale','video'].forEach(t => {
+        const p = $('tab-' + t);
+        if (p) p.classList.toggle('active', t === name);
+    });
+    const isSplit = name === 'split';
+    $('view-split').style.display = isSplit ? '' : 'none';
+    $('view-batch').classList.toggle('active', !isSplit);
+    document.querySelector('main').classList.toggle('batch-mode', !isSplit);
+    if (name === 'upscale') {
+        $('batch-title').textContent = 'Апскейл';
+        $('batch-desc').textContent = 'Real-ESRGAN NCNN (AMD Vulkan). Обработка может занять несколько минут.';
+    } else if (name === 'video') {
+        $('batch-title').textContent = 'Видео-креатор';
+        $('batch-desc').textContent = 'Harmonize 16:9 + анимация + ffmpeg. Для теста используйте режим static или opencv_zoom.';
+    }
+    setStatus(isSplit ? 'Редактор панелей' : (name === 'upscale' ? 'Апскейл' : 'Видео'), '');
+}
+
+function setBatchLog(text) {
+    $('batch-log').textContent = text;
+}
+
+function setVideoLinks(files, storyboard) {
+    const box = $('video-links');
+    box.innerHTML = '';
+    $('video-preview').style.display = 'none';
+    if (storyboard) {
+        const a = document.createElement('a');
+        a.href = `/api/video?path=${encodeURIComponent(storyboard)}`;
+        a.textContent = '▶ storyboard.mp4';
+        a.target = '_blank';
+        box.appendChild(a);
+        const v = $('video-preview');
+        v.src = a.href;
+        v.style.display = 'block';
+    }
+    (files || []).slice(0, 15).forEach(f => {
+        const a = document.createElement('a');
+        a.href = `/api/video?path=${encodeURIComponent(f)}`;
+        a.textContent = f.split(/[/\\]/).pop();
+        a.target = '_blank';
+        box.appendChild(a);
+    });
+}
+
+async function runUpscale() {
+    const panels_dir = $('up-panels').value.trim();
+    const output_dir = $('up-output').value.trim() || 'output_upscaled';
+    const scale = parseInt($('up-scale').value, 10) || 2;
+    if (!panels_dir) { toast('Укажите папку с панелями', 'err'); return; }
+
+    switchTab('upscale');
+    const btn = $('btn-upscale');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="sp"></div> Обработка…';
+    setStatus('Апскейл…', 'busy');
+    setBatchLog('Запуск апскейла…\nЭто может занять несколько минут.');
+
+    try {
+        const r = await fetch('/api/upscale', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({ panels_dir, output_dir, scale }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || r.statusText);
+
+        const lines = (data.files || []).join('\n');
+        const extra = data.count > (data.files || []).length
+            ? `\n… всего ${data.count} файлов` : '';
+        setBatchLog(
+            `Готово: ${data.count} панелей\nВыход: ${data.output_dir}\n\n${lines}${extra}`
+        );
+        setStatus(`✓ Апскейл: ${data.count} файлов`, 'ok');
+        toast(`Апскейл: ${data.count} файлов`);
+        if ($('vid-panels').value.trim() === '') $('vid-panels').value = panels_dir;
+    } catch (e) {
+        setBatchLog(`Ошибка:\n${e.message}`);
+        setStatus(`Ошибка: ${e.message}`, 'err');
+        toast(e.message, 'err');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '▶ Запустить апскейл';
+    }
+}
+
+async function runVideo() {
+    const panels_dir = $('vid-panels').value.trim();
+    const output_dir = $('vid-output').value.trim() || 'story_out';
+    if (!panels_dir) { toast('Укажите папку с панелями', 'err'); return; }
+
+    switchTab('video');
+    const btn = $('btn-video');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="sp"></div> Рендер…';
+    setStatus('Сборка видео…', 'busy');
+    setBatchLog('Запуск видео-пайплайна…\nПодождите.');
+
+    try {
+        const r = await fetch('/api/animate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({
+                panels_dir,
+                output_dir,
+                mode: $('vid-mode').value,
+                do_upscale: $('vid-upscale').checked,
+                scale: parseInt($('vid-scale').value, 10) || 2,
+                duration: parseFloat($('vid-duration').value) || 3,
+                fps: parseInt($('vid-fps').value, 10) || 24,
+                do_concat: $('vid-concat').checked,
+            }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || r.statusText);
+
+        const lines = (data.panel_videos || []).map(p => p).join('\n');
+        setBatchLog(
+            `Готово: ${data.panels_processed} панелей\nВыход: ${data.output_dir}\n\nКлипы:\n${lines}` +
+            (data.storyboard_path ? `\n\nРаскадровка:\n${data.storyboard_path}` : '')
+        );
+        setVideoLinks(data.panel_videos, data.storyboard_path);
+        setStatus(`✓ Видео: ${data.panels_processed} клипов`, 'ok');
+        toast(`Создано ${data.panels_processed} MP4`);
+    } catch (e) {
+        setBatchLog(`Ошибка:\n${e.message}`);
+        setStatus(`Ошибка: ${e.message}`, 'err');
+        toast(e.message, 'err');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '▶ Создать видео';
+    }
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
@@ -387,12 +695,18 @@ async function runDetection() {
 
         // pipeline возвращает bbox + polygon (из SAM или прямоугольник)
         // Если polygon пустой — инициализируем из bbox
-        S.panels = data.panels.map(p => ({
-            ...p,
-            polygon: (p.polygon && p.polygon.length>=3)
+        const samOn = $('use-sam').checked;
+        S.panels = data.panels.map(p => {
+            const polygon = (p.polygon && p.polygon.length >= 3)
                 ? p.polygon
-                : bboxToPoly(p.bbox),
-        }));
+                : bboxToPoly(p.bbox);
+            return {
+                ...p,
+                polygon,
+                polyEdited: false,
+                samContour: samOn && !_isRectPoly(polygon, p.bbox),
+            };
+        });
         S.selId = null;
 
         if (data.resolved_path) {
@@ -403,6 +717,7 @@ async function runDetection() {
         await initCanvas(S.imgPath);
         renderAll();
         rebuildList();
+        _updateModeIndicator();
 
         ['sec-stats','sec-panels','sec-export'].forEach(id=>$(id).style.display='');
         $('st-panels').textContent = data.panels.length;
@@ -422,15 +737,11 @@ async function exportPanels() {
     btn.disabled=true; btn.innerHTML='<div class="sp"></div> Сохраняю…';
     setStatus('Экспортирую…','busy');
     try {
-        // Передаём bbox и polygon (если есть нетривиальный полигон — сервер вырежет по маске)
-        const panels = S.panels.map(p => {
-            const isRect = _isRectPoly(p.polygon, p.bbox);
-            return {
-                panel_id: p.panel_id,
-                bbox:     p.bbox,
-                polygon:  isRect ? null : p.polygon,  // null = прямоугольный crop
-            };
-        });
+        const panels = S.panels.map(p => ({
+            panel_id: p.panel_id,
+            bbox:     p.bbox,
+            polygon:  _exportPolygon(p),
+        }));
         const r = await fetch('/api/export', {
             method:'POST',
             headers:{'Content-Type':'application/json; charset=utf-8'},
@@ -444,17 +755,46 @@ async function exportPanels() {
         const d = await r.json();
         setStatus(`✓ Сохранено ${d.count} PNG`,'ok');
         toast(`Экспорт: ${d.count} файлов`);
+        const outRoot = d.saved && d.saved[0] ? d.saved[0].replace(/[/\\][^/\\]+$/, '') : '';
+        if (outRoot) {
+            $('up-panels').value = outRoot;
+            $('vid-panels').value = outRoot;
+        }
     } catch(e) {
         setStatus(`Ошибка: ${e.message}`,'err');
         toast(e.message,'err');
     } finally { btn.disabled=false; btn.innerHTML='↓ Экспортировать PNG'; }
 }
 
-// Проверяем: полигон является прямоугольником (bbox)?
+// Проверяем: полигон совпадает с прямоугольником bbox (4 угла)?
 function _isRectPoly(poly, bbox) {
     if (!poly || poly.length !== 4) return false;
     const ref = bboxToPoly(bbox);
     return poly.every((pt,i) => Math.abs(pt[0]-ref[i][0])<2 && Math.abs(pt[1]-ref[i][1])<2);
+}
+
+/** Маска при экспорте: только режим «Полигон» или ручная правка; SAM без полигона → bbox. */
+function _exportPolygon(panel) {
+    const usePolyCut = S.polyMode || panel.polyEdited;
+    if (!usePolyCut) return null;
+    if (!panel.polygon || panel.polygon.length < 3) return null;
+    if (_isRectPoly(panel.polygon, panel.bbox)) return null;
+    return panel.polygon;
+}
+
+function _markPolyEdited(panel) {
+    panel.polyEdited = true;
+}
+
+function _panelShapeLabel(p) {
+    if (p.polyEdited && p.polygon && !_isRectPoly(p.polygon, p.bbox)) {
+        return `poly(${p.polygon.length}pts)`;
+    }
+    if (p.samContour && !S.polyMode) return 'sam→bbox';
+    if (p.polygon && !_isRectPoly(p.polygon, p.bbox)) {
+        return S.polyMode ? `poly(${p.polygon.length}pts)` : 'sam→bbox';
+    }
+    return 'rect';
 }
 
 // ── Konva canvas ──────────────────────────────────────────────────────────
@@ -671,6 +1011,7 @@ function renderPolygonPanel(panel, i) {
                     Math.round(Math.max(0, Math.min(ip.y, S.imgH))),
                 ];
                 panel.bbox = polyToBbox(panel.polygon);
+                _markPolyEdited(panel);
                 syncShapes();
                 syncMidPositions();
                 panelLayer.batchDraw();
@@ -678,7 +1019,6 @@ function renderPolygonPanel(panel, i) {
             });
 
             vtx.on('dragend',()=>{
-                // После завершения drag — обновляем список
                 updItem(panel);
             });
 
@@ -686,6 +1026,7 @@ function renderPolygonPanel(panel, i) {
                 if(panel.polygon.length<=3){toast('Минимум 3 вершины','err');return;}
                 panel.polygon.splice(vi,1);
                 panel.bbox = polyToBbox(panel.polygon);
+                _markPolyEdited(panel);
                 rebuildVertices();
                 syncShapes();
                 panelLayer.batchDraw();
@@ -715,6 +1056,7 @@ function renderPolygonPanel(panel, i) {
                 e.cancelBubble=true;
                 panel.polygon.splice(vi+1,0,[Math.round(mx),Math.round(my)]);
                 panel.bbox = polyToBbox(panel.polygon);
+                _markPolyEdited(panel);
                 rebuildVertices();
                 syncShapes();
                 panelLayer.batchDraw();
@@ -752,6 +1094,7 @@ function resetPolyToRect(pid) {
     const panel = S.panels.find(p=>p.panel_id===pid);
     if (!panel) return;
     panel.polygon = bboxToPoly(panel.bbox);
+    panel.polyEdited = false;
     renderAll(); rebuildList();
     toast('Полигон сброшен до прямоугольника');
 }
@@ -772,18 +1115,18 @@ function rebuildList() {
     $('panel-list').innerHTML = S.panels.map((p,i)=>{
         const col=COLORS[i%COLORS.length];
         const sel=p.panel_id===S.selId;
-        const hasCustomPoly = p.polygon && !_isRectPoly(p.polygon,p.bbox);
+        const shape = _panelShapeLabel(p);
+        const showReset = p.polyEdited || (S.polyMode && p.polygon && !_isRectPoly(p.polygon, p.bbox));
         const [x1,y1,x2,y2]=p.bbox;
-        const vtxCount = p.polygon ? p.polygon.length : 4;
-        const shape = hasCustomPoly ? `poly(${vtxCount}pts)` : 'rect';
+        const conf = Math.round((p.confidence ?? 1) * 100);
         return `<div class="pi ${sel?'sel':''} ${S.polyMode?'poly-mode':''}" id="pi-${p.panel_id}" onclick="select('${p.panel_id}')">
             <div class="pdot" style="background:${col}"></div>
             <div class="pinfo">
                 <div>${p.panel_id} <span style="color:var(--muted);font-size:9px">${shape}</span></div>
-                <div class="psub">${x1},${y1}→${x2},${y2} · ${Math.round(p.confidence*100)}%</div>
+                <div class="psub">${x1},${y1}→${x2},${y2} · ${conf}%</div>
             </div>
             <div class="pact">
-                ${hasCustomPoly ? `<button class="rbtn" title="Сброс полигона" onclick="event.stopPropagation();resetPolyToRect('${p.panel_id}')">↺</button>` : ''}
+                ${showReset ? `<button class="rbtn" title="Сброс полигона" onclick="event.stopPropagation();resetPolyToRect('${p.panel_id}')">↺</button>` : ''}
                 <button class="xbtn" onclick="event.stopPropagation();delPanel('${p.panel_id}')">✕</button>
             </div>
         </div>`;
@@ -796,14 +1139,11 @@ function updItem(panel) {
     const sub=el.querySelector('.psub');
     if(sub){
         const [x1,y1,x2,y2]=panel.bbox;
-        sub.textContent=`${x1},${y1}→${x2},${y2} · ${Math.round(panel.confidence*100)}%`;
+        sub.textContent=`${x1},${y1}→${x2},${y2} · ${Math.round((panel.confidence ?? 1)*100)}%`;
     }
-    // Обновляем иконку shape
     const nameEl=el.querySelector('.pinfo>div:first-child');
     if(nameEl){
-        const hasCustomPoly=panel.polygon && !_isRectPoly(panel.polygon,panel.bbox);
-        const vtxCount=panel.polygon?panel.polygon.length:4;
-        const shape=hasCustomPoly?`poly(${vtxCount}pts)`:'rect';
+        const shape=_panelShapeLabel(panel);
         nameEl.innerHTML=`${panel.panel_id} <span style="color:var(--muted);font-size:9px">${shape}</span>`;
     }
 }
@@ -820,7 +1160,11 @@ function addPanel() {
     const n=S.panels.length+1;
     const pid=`p${String(n).padStart(3,'0')}_new`;
     const bbox=[Math.round(S.imgW*.1),Math.round(S.imgH*.1),Math.round(S.imgW*.4),Math.round(S.imgH*.4)];
-    S.panels.push({ panel_id:pid, bbox, polygon:bboxToPoly(bbox), confidence:1.0, reading_order:n, source:'manual' });
+    S.panels.push({
+        panel_id: pid, bbox, polygon: bboxToPoly(bbox),
+        confidence: 1.0, reading_order: n, source: 'manual',
+        polyEdited: false, samContour: false,
+    });
     renderAll(); rebuildList(); select(pid);
     $('st-panels').textContent=S.panels.length;
 }

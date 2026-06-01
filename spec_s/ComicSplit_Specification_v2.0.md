@@ -9,7 +9,7 @@
 **Проект:** ComicSplit — десктопная утилита автоматического сплитирования панелей комиксов  
 **Версия спецификации:** 2.0 (документ не менялся по сути; **статус фаз** обновлён май 2026)  
 **Дата:** 2026  
-**Статус реализации:** MVP Python **работает**; фазы 1–2 **частично**; Wails/gRPC **не начаты**
+**Статус реализации (31.05.2026):** Split MVP + Anim MVP (CLI/Gradio/:8000); фазы 1–2 **частично**; Wails/gRPC **не начаты**. Детали: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
 ---
 
@@ -680,7 +680,8 @@ comicsplit/
 | 1 | PoC | Python ML-пайплайн | 🟡 ~80% | `pipeline.py`, `benchmark.py`, Gradio; критерий &lt;600 ms/стр. не закрыт |
 | 2 | Core | Go-оркестратор + CLI | 🟡 Частично | `comicsplit.exe`, `ml_worker`, CBZ/папка; без CBR в Go |
 | 3 | Integration | Полный пайплайн Go+Python | ⬜ Не начато | gRPC, единый worker pool |
-| 4 | UI | Wails + редактор масок | 🟡 Частично | Konva в браузере (`:8000`), не Wails |
+| 4 | UI | Wails + редактор масок | 🟡 Частично | Gradio 3 вкладки; Konva `:8000` (Split/Upscale/Video); не Wails |
+| — | Anim (отд. спека) | Оживление панелей | 🟡 MVP | `anim_pipeline`, NCNN, DepthFlow; TPSMM не в UI |
 
 ---
 

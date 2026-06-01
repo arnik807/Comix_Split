@@ -36,7 +36,7 @@ if sys.stderr.encoding.lower() != "utf-8":
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from pipeline import process_page, _json_convert, Panel  # noqa: E402
+from pipeline import analyze_page, _json_convert, Panel  # noqa: E402
 from utils.config import get_config, load_config  # noqa: E402
 from utils.path_resolve import resolve_dir_path, resolve_file_path  # noqa: E402
 
@@ -67,14 +67,28 @@ class ExportRequest(BaseModel):
     output_dir: str
 
 
+class UpscaleRequest(BaseModel):
+    panels_dir: str
+    output_dir: str = "output_upscaled"
+    scale: int = 2
+
+
+class AnimateRequest(BaseModel):
+    panels_dir: str
+    output_dir: str = "story_out"
+    mode: str = "opencv_zoom"
+    do_upscale: bool = True
+    scale: int = 2
+    duration: float = 3.0
+    fps: int = 24
+    do_concat: bool = True
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # App
 # ══════════════════════════════════════════════════════════════════════════════
 
-app = FastAPI(title="ComicSplit API", version="1.0.0")
-
-_SESSION_OUTPUT = ROOT / "out_ui"
-_SESSION_OUTPUT.mkdir(exist_ok=True)
+app = FastAPI(title="ComicSplit API", version="1.1.0")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -145,7 +159,8 @@ def api_process(req: ProcessRequest):
         img_path = resolve_file_path(req.image_path, ROOT)
     except OSError:
         img_path = pathlib.Path(req.image_path)
-    if _imread(str(img_path)) is None:
+    img = _imread(str(img_path))
+    if img is None:
         raise HTTPException(
             404,
             detail=(
@@ -156,9 +171,8 @@ def api_process(req: ProcessRequest):
         )
 
     try:
-        panels: List[Panel] = process_page(
-            source_path=str(img_path),
-            output_dir=str(_SESSION_OUTPUT),
+        page_result = analyze_page(
+            img,
             use_sam=req.use_sam,
             reading_order=req.reading_order,
             rtl=req.rtl,
@@ -166,12 +180,14 @@ def api_process(req: ProcessRequest):
     except Exception as exc:
         raise HTTPException(500, detail=str(exc))
 
+    panels: List[Panel] = page_result.panels
     result = json.loads(json.dumps([asdict(p) for p in panels], default=_json_convert))
     return JSONResponse(
         {
             "panels": result,
             "page": img_path.name,
             "resolved_path": str(img_path),
+            "timings_ms": page_result.timings_ms,
         }
     )
 
@@ -202,7 +218,10 @@ def api_export(req: ExportRequest):
     """
     Нарезает и сохраняет панели.
     - polygon задан (≥3 точек) → вырезает по маске, BGRA (прозрачный фон)
-    - только bbox              → прямоугольный crop, BGR
+    - polygon is None          → прямоугольный crop по bbox, BGR
+
+    Веб-редактор передаёт polygon только в режиме «Полигон» или после ручной правки;
+    контуры SAM при обычной раскройке не отправляются (только bbox).
     """
     try:
         img_path = resolve_file_path(req.image_path, ROOT)
@@ -238,6 +257,104 @@ def api_export(req: ExportRequest):
             saved.append(str(out_path))
 
     return JSONResponse({"saved": saved, "count": len(saved)})
+
+
+@app.post("/api/upscale")
+def api_upscale(req: UpscaleRequest):
+    """Апскейл всех PNG/JPG в папке через Real-ESRGAN NCNN."""
+    try:
+        panels_dir = resolve_dir_path(req.panels_dir, ROOT)
+    except OSError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+
+    from anim.io_utils import list_images
+    from anim.upscale import upscale_folder
+    from utils.anim_config import load_anim_config
+
+    images = list_images(panels_dir)
+    if not images:
+        raise HTTPException(404, detail=f"Нет изображений в: {req.panels_dir}")
+
+    try:
+        out_base = resolve_dir_path(req.output_dir, ROOT)
+    except OSError:
+        out_base = pathlib.Path(req.output_dir)
+
+    cfg = load_anim_config()
+    cfg.upscale.enabled = True
+    cfg.upscale.scale = int(req.scale)
+
+    try:
+        results = upscale_folder(panels_dir, out_base, cfg)
+    except Exception as exc:
+        raise HTTPException(500, detail=str(exc)) from exc
+
+    files = [str(p.resolve()) for p in results]
+    return JSONResponse(
+        {
+            "ok": True,
+            "count": len(files),
+            "output_dir": str(out_base.resolve()),
+            "files": files[:100],
+        }
+    )
+
+
+@app.post("/api/animate")
+def api_animate(req: AnimateRequest):
+    """Панели → harmonize + анимация → MP4 (+ storyboard)."""
+    try:
+        panels_dir = resolve_dir_path(req.panels_dir, ROOT)
+    except OSError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+
+    from anim.io_utils import list_images
+    from anim_pipeline import process_folder
+    from utils.anim_config import load_anim_config
+
+    if not list_images(panels_dir):
+        raise HTTPException(404, detail=f"Нет изображений в: {req.panels_dir}")
+
+    try:
+        out_base = resolve_dir_path(req.output_dir, ROOT)
+    except OSError:
+        out_base = pathlib.Path(req.output_dir)
+
+    cfg = load_anim_config()
+    cfg.upscale.enabled = bool(req.do_upscale)
+    cfg.upscale.scale = int(req.scale)
+    cfg.harmonize.enabled = True
+    cfg.animation.mode = str(req.mode)
+    cfg.animation.duration = float(req.duration)
+    cfg.animation.fps = int(req.fps)
+    cfg.render.concat_panels = bool(req.do_concat)
+
+    try:
+        result = process_folder(panels_dir, out_base, cfg)
+    except Exception as exc:
+        raise HTTPException(500, detail=str(exc)) from exc
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "panels_processed": result.panels_processed,
+            "output_dir": str(out_base.resolve()),
+            "panel_videos": result.panel_videos,
+            "storyboard_path": result.storyboard_path,
+        }
+    )
+
+
+@app.get("/api/video")
+def api_video(path: str):
+    """Отдаёт MP4 для предпросмотра в браузере."""
+    try:
+        p = resolve_file_path(path, ROOT)
+    except OSError:
+        raise HTTPException(404, detail=f"Файл не найден: {path}")
+    if not p.is_file() or p.suffix.lower() != ".mp4":
+        raise HTTPException(404, detail="Ожидается .mp4")
+    return FileResponse(str(p), media_type="video/mp4")
 
 
 # ══════════════════════════════════════════════════════════════════════════════

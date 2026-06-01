@@ -12,7 +12,9 @@
 | OpenCV fast-path каскад | ❌ |
 | `process_source` + параллельный analyze | ✅ |
 | Gradio UI | ✅ (5.x, без Gallery) |
-| FastAPI + Konva | ✅ частично (`api/`, :8000) |
+| FastAPI + Konva + anim API | ✅ (`api/` v1.1, :8000, 3 вкладки UI) |
+| Anim pipeline (upscale/video) | ✅ (`anim/`, `anim_pipeline.py`, Gradio) |
+| TPSMM / segment в anim | ❌ |
 | `config.yaml` + Pydantic/YAML | ✅ |
 | pytest | ✅ (`tests/`) |
 | PyInstaller spec | ✅ (сборка вручную) |

@@ -51,6 +51,8 @@ python scripts\quantize_animate_models.py --verify
 
 ### ffmpeg
 
-Нужен для сборки MP4. Должен быть в PATH или указан явно в будущем `anim/render.py`.
+Для сборки MP4. Рекомендуется bundled:
 
-Скачать: https://ffmpeg.org/download.html
+`models/anim/ffmpeg/bin/ffmpeg.exe` (скрипт `download_animate_models.ps1`).
+
+Или системный `ffmpeg` в PATH — подхватывается `utils/anim_config.py`.

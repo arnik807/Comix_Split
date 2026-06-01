@@ -1,4 +1,4 @@
-# СПЕЦИФИКАЦИЯ ПРОЕКТА: Система оживления панелей комикса
+﻿# СПЕЦИФИКАЦИЯ ПРОЕКТА: Система оживления панелей комикса
 ### Универсальный промпт-документ для разработки с LLM-ассистентом
 
 ---
@@ -12,6 +12,39 @@
 4. **Сборка** — объединение обработанных панелей в видео-раскадровку
 
 **Конечный результат:** из набора статичных панелей комикса получить короткие MP4-клипы на каждую панель, пригодные для нелинейного монтажа, с последующей сборкой в единую раскадровку.
+
+---
+
+## ✅ СТАТУС РЕАЛИЗАЦИИ (май 2026)
+
+См. также [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), [ComicSplit_Documentation.md](ComicSplit_Documentation.md).
+
+| Модуль / функция | Файл | Статус |
+|------------------|------|--------|
+| Апскейл NCNN (Real-ESRGAN Vulkan) | `anim/upscale.py` | ✅ |
+| Гармонизация 16:9 | `anim/harmonize.py` | ✅ blurred_pillarbox, dominant_color, smart_crop, auto |
+| OpenCV zoom / shake / static | `anim/animate_opencv.py` | ✅ |
+| DepthFlow parallax | `anim/animate_depthflow.py` | ✅ CLI 0.9.x (`input … preset … main --render`) |
+| ffmpeg → MP4, concat | `anim/render.py` | ✅ |
+| Оркестратор CLI | `anim_pipeline.py` | ✅ |
+| Конфиг | `config_animate.yaml`, `utils/anim_config.py` | ✅ |
+| Gradio вкладки Upscale / Video | `main.py` | ✅ |
+| REST API | `api/server.py` → `/api/upscale`, `/api/animate` | ✅ |
+| Веб UI Upscale / Video | `frontend/index.html` | ✅ |
+| Сегментация (`segment.py`) | — | ❌ не реализовано |
+| TPSMM motion transfer | модели в `models/anim/tpsmm/` | 🟡 ONNX есть, **не в пайплайне** |
+| LivePortrait | — | ❌ |
+| MiDaS в anim-пайплайне | ONNX в `models/anim/depth/` | 🟡 для TPSMM/будущего; DepthFlow оценивает глубину сам |
+
+**Точки входа:**
+
+```powershell
+python anim_pipeline.py <panels_dir> <output_dir> --mode opencv_zoom --scale 2
+uvicorn api.server:app --port 8000   # вкладки Upscale / Video
+python main.py                       # Gradio Upscale / Video
+```
+
+**Модели:** `scripts/download_animate_models.ps1`, `scripts/quantize_animate_models.py --verify`
 
 ---
 
@@ -315,13 +348,12 @@ python -m samexporter.export_sam2 --checkpoint sam2_hiera_tiny.pt --output sam2_
 # Установка (portable Windows)
 # Скачать с https://github.com/BrokenSource/DepthFlow/releases
 
-# Запуск (примеры команд)
-depthflow run --input panel.png --output panel_animated.mp4 \
-    --duration 3 --fps 24 \
-    --animation zoom --intensity 0.3
+# Запуск (DepthFlow 0.9.x — цепочка команд, не `run`)
+python -m depthflow input --image panel.png zoom --intensity 0.75 \
+    main --render --output panel_animated.mp4 --time 3 --fps 24
 
-depthflow run --input panel.png --output panel_animated.mp4 \
-    --animation dolly --depth-model midas
+python -m depthflow input --image panel.png dolly \
+    main --render --output panel_animated.mp4 --time 3 --fps 24
 ```
 
 #### Режим B: TPSMM Motion Transfer
@@ -448,15 +480,18 @@ comic_animator/
 │   ├── harmonized/                      # После 16:9 гармонизации
 │   ├── animated/                        # MP4 клипы панелей
 │   └── storyboard.mp4                   # Финальная раскадровка
-├── src/
+├── anim/
 │   ├── upscale.py
 │   ├── harmonize.py
-│   ├── segment.py
-│   ├── animate.py
-│   └── render.py
-├── pipeline.py                          # Главный оркестратор пайплайна
-├── config.yaml                          # Настройки (scale, fps, duration, mode)
-└── requirements.txt
+│   ├── animate_opencv.py
+│   ├── animate_depthflow.py
+│   ├── render.py
+│   └── io_utils.py
+├── anim_pipeline.py                     # CLI оркестратор
+├── config_animate.yaml                  # Настройки anim
+├── main.py                              # Gradio (вкладки Upscale / Video)
+├── api/server.py                        # REST upscale / animate
+└── requirements.txt                     # + depthflow (pip)
 ```
 
 ---
@@ -520,16 +555,15 @@ render:
 
 ---
 
-## 🚀 ПЕРВООЧЕРЕДНЫЕ ШАГИ ДЛЯ РАЗРАБОТЧИКА
+## 🚀 СЛЕДУЮЩИЕ ШАГИ (после MVP)
 
-1. **Проверить Vulkan** на AMD iGPU → запустить `VulkanCapsViewer`, убедиться что версия ≥ 1.3
-2. **Установить Upscayl** → проверить апскейл одной тестовой панели моделью Digital Art
-3. **Реализовать `harmonize.py`** → режим Blurred Pillarbox (чистый OpenCV, 0 зависимостей)
-4. **Установить DepthFlow portable** → протестировать parallax на одной панели
-5. **Установить TPSMM-ONNX** → протестировать motion transfer с простым driving video
-6. **Установить MobileSAM** → протестировать сегментацию персонажа
-7. **Написать `pipeline.py`** → объединить все модули с config.yaml
-8. **Нагрузочный тест** → обработать 10 панелей подряд, измерить время и RAM
+1. **TPSMM** — подключить `models/anim/tpsmm/*_int8.onnx` в `anim_pipeline` (режим `tpsmm`)
+2. **`segment.py`** — MobileSAM для отделения персонажа (опционально к TPSMM)
+3. **Нагрузочный тест** — 10+ панелей, замер RAM/времени на Ryzen 5600H
+4. **PyInstaller** — единый EXE с anim-моделями (модели вне git)
+5. **LivePortrait** — только если появится лёгкий CPU-путь (низкий приоритет)
+
+**Уже сделано (не повторять):** harmonize, upscale NCNN, OpenCV/DepthFlow, `anim_pipeline.py`, Gradio/API/UI, скрипты загрузки моделей.
 
 ---
 
@@ -545,5 +579,5 @@ render:
 
 ---
 
-*Документ составлен по итогам технического исследования. Версия 1.0*
-*Стек протестирован на совместимость с AMD Ryzen 5 5600H + Radeon iGPU + 16GB RAM*
+*Документ: исследование v1.0 + статус реализации v1.1 (май 2026)*  
+*MVP проверен на AMD Ryzen 5 5600H + Radeon iGPU + 16GB RAM, Windows, Python 3.11*

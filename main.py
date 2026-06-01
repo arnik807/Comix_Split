@@ -1,4 +1,4 @@
-﻿# main.py — Gradio UI for ComicSplit MVP
+﻿# main.py — Gradio UI: Split / Upscale / Video
 from __future__ import annotations
 
 import os
@@ -10,14 +10,11 @@ if sys.stdout.encoding.lower() != "utf-8":
 if sys.stderr.encoding.lower() != "utf-8":
     sys.stderr.reconfigure(encoding="utf-8")
 
-
-# Обход системного прокси на Windows (иначе Gradio не видит localhost)
 os.environ.setdefault("NO_PROXY", "127.0.0.1,localhost")
 os.environ.setdefault("no_proxy", "127.0.0.1,localhost")
 
 
 def _patch_gradio_client_schema() -> None:
-    """gradio_client: JSON Schema с additionalProperties=true/false ломает парсер."""
     import gradio_client.utils as gc_utils
 
     _orig_get_type = gc_utils.get_type
@@ -45,10 +42,19 @@ import gradio as gr
 
 from pipeline import process_page, process_source
 from utils.config import get_config, load_config
+from utils.anim_config import load_anim_config
+
+
+def _resolve_path(file_path, folder: str | None) -> str | None:
+    if file_path:
+        return str(file_path)
+    if folder and Path(folder).exists():
+        return folder
+    return None
 
 
 def run_comicsplit(
-    source_path: str,
+    source_path: str | None,
     output_dir: str,
     use_sam: bool,
     reading_order: bool,
@@ -100,70 +106,285 @@ def run_comicsplit(
     return f"Готово: {len(images)} панелей → {panel_dir}\n\nФайлы:\n{files}"
 
 
-def _defaults():
+def run_upscale_only(
+    panels_dir: str,
+    output_dir: str,
+    scale: int,
+) -> str:
+    if not panels_dir or not Path(panels_dir).is_dir():
+        return "Укажите существующую папку с PNG/JPG панелями."
+
+    from anim.io_utils import list_images
+    from anim.upscale import upscale_folder
+
+    cfg = load_anim_config()
+    cfg.upscale.enabled = True
+    cfg.upscale.scale = int(scale)
+
+    out = Path(output_dir or "output_upscaled")
+    out.mkdir(parents=True, exist_ok=True)
+
+    try:
+        results = upscale_folder(panels_dir, out, cfg)
+    except Exception as exc:
+        return f"Ошибка апскейла: {exc}"
+
+    if not results:
+        return f"В папке нет изображений: {panels_dir}"
+
+    lines = "\n".join(str(p) for p in results[:50])
+    extra = ""
+    if len(results) > 50:
+        extra = f"\n... и ещё {len(results) - 50} файлов"
+    return f"Готово: {len(results)} панелей → {out.resolve()}\n\n{lines}{extra}"
+
+
+def run_video_pipeline(
+    panels_dir: str,
+    output_dir: str,
+    mode: str,
+    do_upscale: bool,
+    scale: int,
+    duration: float,
+    fps: int,
+    do_concat: bool,
+) -> str:
+    if not panels_dir or not Path(panels_dir).is_dir():
+        return "Укажите существующую папку с PNG/JPG панелями."
+
+    from anim.io_utils import list_images
+    from anim_pipeline import process_folder
+
+    images = list_images(panels_dir)
+    if not images:
+        return f"В папке нет изображений: {panels_dir}"
+
+    cfg = load_anim_config()
+    cfg.upscale.enabled = bool(do_upscale)
+    cfg.upscale.scale = int(scale)
+    cfg.harmonize.enabled = True
+    cfg.animation.mode = mode
+    cfg.animation.duration = float(duration)
+    cfg.animation.fps = int(fps)
+    cfg.render.concat_panels = bool(do_concat)
+
+    out = Path(output_dir or "story_out")
+    out.mkdir(parents=True, exist_ok=True)
+
+    try:
+        result = process_folder(panels_dir, out, cfg)
+    except Exception as exc:
+        return f"Ошибка видео-пайплайна: {exc}"
+
+    lines = "\n".join(result.panel_videos[:30])
+    extra = ""
+    if len(result.panel_videos) > 30:
+        extra = f"\n... и ещё {len(result.panel_videos) - 30} клипов"
+    msg = (
+        f"Готово: {result.panels_processed} панелей → {out.resolve()}\n"
+        f"Режим: {mode}, апскейл: {'да' if do_upscale else 'нет'} (x{scale})\n\n"
+        f"Клипы:\n{lines}{extra}"
+    )
+    if result.storyboard_path:
+        msg += f"\n\nРаскадровка:\n{result.storyboard_path}"
+    return msg
+
+
+def _split_defaults():
     cfg = get_config()
     return cfg.use_sam, cfg.reading_order, cfg.rtl
 
 
-use_sam_def, order_def, rtl_def = _defaults()
+def _anim_defaults():
+    ac = load_anim_config()
+    return (
+        ac.upscale.scale,
+        ac.animation.mode,
+        ac.animation.duration,
+        ac.animation.fps,
+        ac.upscale.enabled,
+        ac.render.concat_panels,
+    )
+
+
+use_sam_def, order_def, rtl_def = _split_defaults()
+scale_def, mode_def, dur_def, fps_def, upscale_def, concat_def = _anim_defaults()
 load_config()
+
+ANIM_MODES = [
+    ("Zoom (OpenCV)", "opencv_zoom"),
+    ("Shake (OpenCV)", "opencv_shake"),
+    ("Статичный кадр", "static"),
+    ("Parallax (DepthFlow)", "depthflow"),
+]
 
 with gr.Blocks(title="ComicSplit") as demo:
     gr.Markdown(
         "# ComicSplit\n"
-        "Детекция и вырезка панелей: страница (JPG/PNG), CBZ/ZIP или папка."
+        "Раскройка панелей, апскейл и сборка видео-раскадровки."
     )
 
-    with gr.Row():
-        with gr.Column(scale=1):
-            source = gr.File(
-                label="Источник (JPG/PNG, CBZ, ZIP)",
-                type="filepath",
+    with gr.Tabs():
+        # ── Split ─────────────────────────────────────────────────────
+        with gr.Tab("Split — раскройка"):
+            gr.Markdown(
+                "Страница (JPG/PNG), CBZ/ZIP или папка со страницами → PNG-панели."
             )
-            folder_path = gr.Textbox(
-                label="Или путь к папке со страницами",
-                placeholder="D:\\comics\\pages",
-            )
-            output_dir = gr.Textbox(label="Папка вывода", value="output")
-            use_sam = gr.Checkbox(
-                label="MobileSAM (режим Accurate)",
-                value=use_sam_def,
-            )
-            reading_order = gr.Checkbox(
-                label="Сортировать по порядку чтения",
-                value=order_def,
-            )
-            rtl = gr.Checkbox(
-                label="Порядок справа-налево (манга)",
-                value=rtl_def,
-            )
-            run_btn = gr.Button("▶ Запустить", variant="primary")
+            with gr.Row():
+                with gr.Column(scale=1):
+                    source = gr.File(
+                        label="Источник (JPG/PNG, CBZ, ZIP)",
+                        type="filepath",
+                    )
+                    folder_path = gr.Textbox(
+                        label="Или путь к папке со страницами",
+                        placeholder="D:\\comics\\pages",
+                    )
+                    split_output = gr.Textbox(label="Папка вывода", value="output")
+                    use_sam = gr.Checkbox(
+                        label="MobileSAM (режим Accurate)",
+                        value=use_sam_def,
+                    )
+                    reading_order = gr.Checkbox(
+                        label="Сортировать по порядку чтения",
+                        value=order_def,
+                    )
+                    rtl = gr.Checkbox(
+                        label="Порядок справа-налево (манга)",
+                        value=rtl_def,
+                    )
+                    split_btn = gr.Button("Запустить раскройку", variant="primary")
 
-        with gr.Column(scale=2):
-            status = gr.Textbox(
-                label="Результат (пути к PNG)",
-                interactive=False,
-                lines=20,
+                with gr.Column(scale=2):
+                    split_status = gr.Textbox(
+                        label="Результат",
+                        interactive=False,
+                        lines=18,
+                    )
+
+            split_btn.click(
+                fn=lambda f, folder, o, s, ro, rt: run_comicsplit(
+                    _resolve_path(f, folder), o, s, ro, rt
+                ),
+                inputs=[
+                    source,
+                    folder_path,
+                    split_output,
+                    use_sam,
+                    reading_order,
+                    rtl,
+                ],
+                outputs=split_status,
             )
 
-    def _resolve_path(file_path, folder):
-        if file_path:
-            return file_path
-        if folder and Path(folder).exists():
-            return folder
-        return None
+        # ── Upscale ───────────────────────────────────────────────────
+        with gr.Tab("Upscale — апскейл"):
+            gr.Markdown(
+                "Папка с PNG-панелями (например `output\\имя_комикса`) → апскейл Real-ESRGAN NCNN."
+            )
+            with gr.Row():
+                with gr.Column(scale=1):
+                    up_input = gr.Textbox(
+                        label="Папка с панелями",
+                        placeholder="output\\mycomic",
+                    )
+                    up_output = gr.Textbox(
+                        label="Папка вывода",
+                        value="output_upscaled",
+                    )
+                    up_scale = gr.Radio(
+                        label="Масштаб",
+                        choices=[2, 4],
+                        value=scale_def,
+                    )
+                    up_btn = gr.Button("Запустить апскейл", variant="primary")
 
-    run_btn.click(
-        fn=lambda f, folder, o, s, ro, rt: run_comicsplit(
-            _resolve_path(f, folder), o, s, ro, rt
-        ),
-        inputs=[source, folder_path, output_dir, use_sam, reading_order, rtl],
-        outputs=status,
-    )
+                with gr.Column(scale=2):
+                    up_status = gr.Textbox(
+                        label="Результат",
+                        interactive=False,
+                        lines=18,
+                    )
+
+            up_btn.click(
+                fn=run_upscale_only,
+                inputs=[up_input, up_output, up_scale],
+                outputs=up_status,
+            )
+
+        # ── Video ───────────────────────────────────────────────────
+        with gr.Tab("Video — оживление"):
+            gr.Markdown(
+                "Папка с панелями → 16:9, анимация, MP4 на каждую панель + `storyboard.mp4`."
+            )
+            with gr.Row():
+                with gr.Column(scale=1):
+                    vid_input = gr.Textbox(
+                        label="Папка с панелями",
+                        placeholder="output\\mycomic",
+                    )
+                    vid_output = gr.Textbox(
+                        label="Папка вывода",
+                        value="story_out",
+                    )
+                    vid_mode = gr.Dropdown(
+                        label="Режим анимации",
+                        choices=ANIM_MODES,
+                        value=mode_def,
+                    )
+                    vid_upscale = gr.Checkbox(
+                        label="Апскейл перед видео",
+                        value=upscale_def,
+                    )
+                    vid_scale = gr.Radio(
+                        label="Масштаб апскейла",
+                        choices=[2, 4],
+                        value=scale_def,
+                    )
+                    vid_duration = gr.Slider(
+                        label="Длина клипа (сек)",
+                        minimum=1,
+                        maximum=10,
+                        step=0.5,
+                        value=dur_def,
+                    )
+                    vid_fps = gr.Slider(
+                        label="FPS",
+                        minimum=12,
+                        maximum=30,
+                        step=1,
+                        value=fps_def,
+                    )
+                    vid_concat = gr.Checkbox(
+                        label="Собрать storyboard.mp4",
+                        value=concat_def,
+                    )
+                    vid_btn = gr.Button("Создать видео", variant="primary")
+
+                with gr.Column(scale=2):
+                    vid_status = gr.Textbox(
+                        label="Результат",
+                        interactive=False,
+                        lines=18,
+                    )
+
+            vid_btn.click(
+                fn=run_video_pipeline,
+                inputs=[
+                    vid_input,
+                    vid_output,
+                    vid_mode,
+                    vid_upscale,
+                    vid_scale,
+                    vid_duration,
+                    vid_fps,
+                    vid_concat,
+                ],
+                outputs=vid_status,
+            )
 
 
 if __name__ == "__main__":
-    # starlette>=1.0 ломает Jinja2; show_api=False обходит баг gradio_client schema
     demo.launch(
         server_name="127.0.0.1",
         server_port=7860,

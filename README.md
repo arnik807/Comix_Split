@@ -1,8 +1,8 @@
-# ComicSplit
+﻿# ComicSplit
 
-Автоматическая нарезка панелей комиксов на CPU (YOLO + опционально MobileSAM). Windows, Python 3.11.
+Автоматическая нарезка панелей комиксов (YOLO + MobileSAM) и опциональное **оживление** панелей (апскейл, 16:9, MP4). Windows, Python 3.11.
 
-**Полная документация:** [spec_s/ComicSplit_Documentation.md](spec_s/ComicSplit_Documentation.md) — установка, Gradio, CLI, выходные файлы, troubleshooting.
+**Полная документация:** [spec_s/ComicSplit_Documentation.md](spec_s/ComicSplit_Documentation.md)
 
 ## Быстрый старт
 
@@ -10,11 +10,11 @@
 python -m venv venv_311
 .\venv_311\Scripts\activate
 pip install -r requirements.txt
-.\scripts\download_models.ps1
-python scripts\quantize_models.py
+.\scripts\split_models_craft_scripts\download_models.ps1
+python scripts\split_models_craft_scripts\quantize_models.py
 ```
 
-### Gradio (интерфейс в браузере)
+### Gradio (Split + Upscale + Video)
 
 ```powershell
 $env:NO_PROXY = "127.0.0.1,localhost"
@@ -23,34 +23,54 @@ python main.py
 
 → http://127.0.0.1:7860
 
-### CLI (командная строка)
+### CLI split
 
 ```powershell
 python pipeline.py test_page.jpg output --order
 python pipeline.py exam_imgs output --order
-# или свой CBZ: python pipeline.py D:\comics\book.cbz output --order
 ```
 
 → PNG в `output\<имя_источника>\`
+
+### Веб-редактор (Split / Upscale / Video)
+
+```powershell
+uvicorn api.server:app --reload --port 8000
+```
+
+→ http://127.0.0.1:8000
+
+### Anim (из готовых панелей)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\download_animate_models.ps1
+python scripts\quantize_animate_models.py --verify
+
+python anim_pipeline.py output\exam_imgs story_out --mode opencv_zoom --scale 2
+```
+
+→ `story_out/animated/*.mp4`, `story_out/storyboard.mp4`
 
 ## Документация
 
 | Файл | Содержание |
 |------|------------|
-| [spec_s/ComicSplit_Documentation.md](spec_s/ComicSplit_Documentation.md) | **Актуальное руководство** (Gradio, CLI, :8000, Go) |
-| [spec_s/IMPLEMENTATION_STATUS.md](spec_s/IMPLEMENTATION_STATUS.md) | Статус модулей и фаз |
-| [spec_s/ComicSplit_Specification_v2.0.md](spec_s/ComicSplit_Specification_v2.0.md) | Целевая архитектура (Go, Wails, gRPC) |
-| [spec_s/README.md](spec_s/README.md) | Индекс документации |
-| [config.yaml](config.yaml) | Параметры по умолчанию |
-| [models/README.md](models/README.md) | Загрузка ONNX-моделей |
+| [spec_s/ComicSplit_Documentation.md](spec_s/ComicSplit_Documentation.md) | **Руководство пользователя** |
+| [spec_s/IMPLEMENTATION_STATUS.md](spec_s/IMPLEMENTATION_STATUS.md) | Статус модулей |
+| [spec_s/comic_panel_animation_spec.md](spec_s/comic_panel_animation_spec.md) | Спека anim + статус |
+| [spec_s/README.md](spec_s/README.md) | Индекс `spec_s/` |
+| [CHANGELOG.md](CHANGELOG.md) | История изменений |
+| [config.yaml](config.yaml) | Split |
+| [config_animate.yaml](config_animate.yaml) | Anim |
+| [models/README.md](models/README.md) | Модели |
 
 ## Структура (основное)
 
-- `main.py` — Gradio UI
-- `pipeline.py` — ML и CLI
-- `utils/` — config, чтение CBZ/папок
-- `api/` + `frontend/` — опциональный редактор масок (порт 8000)
-
-
-
-##Правка для коммита
+| Путь | Назначение |
+|------|------------|
+| `main.py` | Gradio :7860 |
+| `pipeline.py` | Split ML + CLI |
+| `anim_pipeline.py` | Anim CLI |
+| `anim/` | upscale, harmonize, render, animate_* |
+| `api/` + `frontend/` | Веб :8000 |
+| `utils/` | config, io, paths |

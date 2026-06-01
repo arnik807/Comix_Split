@@ -1,9 +1,9 @@
 ﻿# ComicSplit — документация (актуальная)
 
-**Версия документа:** 1.1 (май 2026)  
-**Статус приложения:** рабочий MVP (Python + ONNX на CPU; опционально Go CLI и редактор :8000)
+**Версия документа:** 1.2 (31 мая 2026)  
+**Статус приложения:** рабочий MVP — split (YOLO+SAM) + anim (апскейл, 16:9, видео); Gradio и веб-редактор на :8000; опционально Go CLI.
 
-Этот документ описывает **текущую** сборку: установку, настройку и **четыре** способа работы — **Gradio**, **Python CLI**, **редактор масок (FastAPI + Konva)** и **Go CLI**.
+Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video), **Go CLI**.
 
 Статус реализации по модулям: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).  
 Исторические материалы: `ComicSplit_Specification_v2.0.md`, `implementation_plan_mvp.md`.
@@ -52,30 +52,29 @@
 
 ```
 SPLIT_PANELS_DEV/
-├── main.py                 # Gradio UI (порт 7860)
-├── pipeline.py             # ML-пайплайн и CLI
-├── config.yaml             # Настройки по умолчанию
+├── main.py                 # Gradio :7860 — Split / Upscale / Video
+├── pipeline.py             # Split ML + CLI
+├── anim_pipeline.py        # Anim: upscale → 16:9 → MP4
+├── config.yaml             # Split
+├── config_animate.yaml     # Anim
 ├── requirements.txt
-├── test_page.jpg           # Тестовая страница
-├── exam_imgs/              # Примеры для benchmark
-├── models/                 # ONNX-модели (не в git)
-├── utils/
-│   ├── config.py           # Загрузка config.yaml
-│   ├── io_helpers.py       # CBZ/CBR/папка/ZIP, imdecode для кириллицы
-│   └── path_resolve.py     # Нормализация путей (API :8000)
-├── api/server.py           # Редактор масок (порт 8000)
-├── frontend/index.html     # Konva UI
-├── scripts/                # download_models.ps1, quantize_models.py
-├── cmd/comicsplit/         # Go CLI → comicsplit.exe
-├── internal/               # reader, worker, export (Go)
-├── ml_worker/main.py       # JSON IPC для Go
-├── benchmark.py            # Замеры на exam_imgs
-├── tests/                  # pytest
-├── packaging/comicsplit.spec
-└── spec_s/                 # Документация (этот файл, STATUS, спеки)
+├── test_page.jpg
+├── exam_imgs/
+├── models/                 # split ONNX (не в git)
+├── models/anim/            # NCNN, MiDaS, TPSMM, ffmpeg (не в git)
+├── anim/                   # upscale, harmonize, render, animate_*
+├── utils/                  # config, anim_config, io_helpers, path_resolve
+├── api/server.py           # FastAPI v1.1 (:8000)
+├── frontend/index.html     # Konva + вкладки Upscale/Video
+├── scripts/                # модели split + anim
+├── cmd/comicsplit/         # Go CLI
+├── ml_worker/main.py
+├── benchmark.py
+├── tests/
+└── spec_s/
 ```
 
-**Не хранить в репозитории** (см. `.gitignore`): `venv_*`, `output/`, `*.onnx`, `__pycache__`, `comicsplit.exe`, старые папки `output*`.
+**Не в git** (`.gitignore`): `venv_*`, `output/`, `models/**/*` (кроме README), `out_ui/` (устаревший артефакт), `story_out*/`.
 
 ---
 
@@ -95,17 +94,26 @@ pip install -r requirements.txt
 
 Рекомендуется один каталог окружения: `venv_311`. Старые `venv`, `venv_310` можно удалить.
 
-### 4.2. Модели
+### 4.2. Модели split
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\scripts\download_models.ps1
-python scripts\quantize_models.py
+.\scripts\split_models_craft_scripts\download_models.ps1
+python scripts\split_models_craft_scripts\quantize_models.py
 ```
 
-Проверка: в `models/` должны быть три файла `*_int8.onnx` (см. `models/README.md`).
+Проверка: в `models/` три файла `*_int8.onnx` (см. `models/README.md`).
 
-### 4.3. Прокси (если Gradio не открывается)
+### 4.3. Модели anim (опционально, для апскейла и видео)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\download_animate_models.ps1
+python scripts\quantize_animate_models.py --verify
+```
+
+См. `scripts/MODELS_SETUP_GUIDE.md`. DepthFlow: `pip install depthflow` (делает скрипт загрузки).
+
+### 4.4. Прокси (если Gradio не открывается)
 
 ```powershell
 $env:NO_PROXY = "127.0.0.1,localhost"
@@ -133,7 +141,7 @@ CLI и Gradio читают этот файл при запуске. В Gradio м
 
 ## 6. Способ 1 — Gradio (графический интерфейс)
 
-Подходит для пробных прогонов, одной страницы или небольшого CBZ без командной строки.
+Подходит для пробных прогонов без командной строки. **Три вкладки:** раскройка, апскейл панелей, сборка видео.
 
 ### 6.1. Запуск
 
@@ -145,20 +153,26 @@ python main.py
 
 В браузере: **http://127.0.0.1:7860**
 
-### 6.2. Интерфейс
+### 6.2. Вкладки
+
+| Вкладка | Назначение |
+|---------|------------|
+| **Split — раскройка** | CBZ/папка/страница → PNG панелей (как раньше) |
+| **Upscale — апскейл** | Папка PNG → Real-ESRGAN NCNN (x2/x4) |
+| **Video — оживление** | Папка PNG → harmonize 16:9 → MP4 + `storyboard.mp4` |
+
+### 6.3. Split — элементы
 
 | Элемент | Действие |
 |---------|----------|
-| **Источник** | Загрузить JPG/PNG/CBZ/ZIP |
-| **Или путь к папке** | Вставить путь, например `D:\comics\pages` |
+| **Источник** | JPG/PNG/CBZ/ZIP или путь к папке |
 | **Папка вывода** | По умолчанию `output` |
-| **MobileSAM** | Включить для режима Accurate |
-| **Порядок чтения** | Сортировка панелей |
-| **RTL** | Для манги (справа налево) |
-| **Запустить** | Старт обработки |
-| **Результат** | Текст: статус и список путей к PNG |
+| **MobileSAM** | Accurate (YOLO + SAM) |
+| **Порядок чтения / RTL** | Сортировка панелей |
+| **Запустить** | Сохранение PNG на диск |
+| **Результат** | Текст со списком путей |
 
-### 6.3. Сценарий: одна страница
+### 6.4. Сценарий: одна страница (Split)
 
 1. Запустить `python main.py`.
 2. Загрузить `test_page.jpg` или свою страницу.
@@ -166,14 +180,18 @@ python main.py
 4. Нажать **Запустить**.
 5. Открыть папку `output\<имя_файла>\` — там PNG и `_visualization.jpg`.
 
-### 6.4. Сценарий: весь CBZ
+### 6.5. Сценарий: весь CBZ (Split)
 
 1. Загрузить свой `.cbz` **или** указать путь к папке (в репозитории готового CBZ нет; для теста папки — `exam_imgs`).
 2. Включить нужные опции (SAM, порядок чтения).
 3. **Запустить**.
 4. Результат: `output\<имя_комикса>\` — все панели с глобальной нумерацией `001_...`, `002_...`, подпапки `page_001/` с превью.
 
-### 6.5. Ограничения Gradio
+### 6.6. Upscale / Video в Gradio
+
+Укажите **папку с PNG** после split (например `output\MyComic` или подпапку страницы). Режимы видео: `opencv_zoom`, `opencv_shake`, `static`, `depthflow` (parallax, долго на CPU). Настройки по умолчанию — `config_animate.yaml`.
+
+### 6.7. Ограничения Gradio
 
 - Галерея превью в UI отключена (стабильность на Windows); пути к файлам — в поле «Результат».
 - Для пакетной автоматизации удобнее CLI (способ 2).
@@ -251,37 +269,85 @@ PNG с альфа-каналом: фон прозрачный, панель вы
 
 ---
 
-## 9. Способ 3 — редактор масок (порт 8000)
+## 9. Способ 3 — веб-редактор (порт 8000)
 
-Для ручной правки рамок после автодетекции.
+Split с ручной правкой + апскейл и видео без Gradio. FastAPI **v1.1** + `frontend/index.html`.
 
 ### 9.1. Запуск
 
 ```powershell
 .\venv_311\Scripts\activate
+$env:NO_PROXY = "127.0.0.1,localhost"
 uvicorn api.server:app --reload --port 8000
 ```
 
-Браузер: **http://localhost:8000**
+Браузер: **http://127.0.0.1:8000**
 
-### 9.2. Путь к файлу
+### 9.2. Вкладка Split
+
+| Элемент | Поведение |
+|---------|-----------|
+| **Детекция** | `POST /api/process` — только координаты в память, **файлы на диск не пишет** (папка `out_ui` больше не создаётся) |
+| **Accurate (YOLO + SAM)** | Точный контур при детекции |
+| **Полигон (ломаная форма)** | Редактирование вершин; **экспорт по маске** только при включённом полигоне или после ручной правки |
+| **Экспорт PNG** | `POST /api/export` → ваша папка `output_dir\<имя_страницы>\` |
+
+После экспорта пути подставляются во вкладки Upscale и Video.
+
+### 9.3. Вкладки Upscale и Video
+
+| Вкладка | API | Результат |
+|---------|-----|-----------|
+| Upscale | `POST /api/upscale` | PNG в выбранной папке (NCNN) |
+| Video | `POST /api/animate` | MP4 на панель + опционально `storyboard.mp4`; превью через `GET /api/video?path=...` |
+
+### 9.4. Пути к файлам
 
 | Рекомендация | Пример |
 |--------------|--------|
-| Относительный путь из корня проекта | `exam_imgs\01_Asterix_the_Gaul_page-0004.jpg` |
-| Абсолютный путь | `D:\comics\page.jpg` |
+| Относительный путь | `exam_imgs\01_Asterix_the_Gaul_page-0004.jpg` |
+| Папка панелей после export | `output\test_page` |
 
-На Windows при кириллице в пути сервер использует `utils/path_resolve.py` (исправление mojibake). Если видите «Файл не найден» с искажённым путём — укажите относительный путь к `exam_imgs` или `test_page.jpg`.
+При кириллице в путях — `utils/path_resolve.py`; при ошибке mojibake используйте относительные пути.
 
-### 9.3. Возможности UI
+### 9.5. REST API (кратко)
 
-- Загрузка страницы → YOLO-детекция
-- Режимы rect / polygon, перетаскивание вершин
-- Экспорт панелей в выбранную папку
+| Метод | Путь | Назначение |
+|-------|------|------------|
+| POST | `/api/process` | Детекция |
+| POST | `/api/export` | PNG панелей |
+| POST | `/api/upscale` | Апскейл папки |
+| POST | `/api/animate` | Видео-пайплайн |
+| GET | `/api/image?path=` | Исходник для Konva |
+| GET | `/api/video?path=` | MP4 для `<video>` |
 
 ---
 
-## 10. Способ 4 — Go CLI (`comicsplit.exe`)
+## 10. Способ 4 — CLI anim (`anim_pipeline.py`)
+
+Пакетная обработка уже нарезанных панелей (без UI).
+
+```powershell
+python pipeline.py exam_imgs panels --order
+python anim_pipeline.py panels\exam_imgs story_out --mode opencv_zoom --scale 2
+python anim_pipeline.py panels\exam_imgs story_out --no-upscale --mode static
+python anim_pipeline.py panels\exam_imgs story_out --mode depthflow
+```
+
+| Флаг | Назначение |
+|------|------------|
+| `--mode` | `opencv_zoom`, `opencv_shake`, `static`, `depthflow` |
+| `--no-upscale` | Без Real-ESRGAN |
+| `--scale` | 2 или 4 |
+| `--duration`, `--fps` | Длина клипа |
+
+Выход: `story_out/upscaled/`, `harmonized/`, `animated/*.mp4`, при concat — `storyboard.mp4`.
+
+Конфиг: `config_animate.yaml`.
+
+---
+
+## 11. Способ 5 — Go CLI (`comicsplit.exe`)
 
 Пакетная обработка без Gradio: Go читает архив/папку, вызывает `ml_worker` (Python).
 
@@ -304,7 +370,7 @@ go build -o comicsplit.exe ./cmd/comicsplit
 
 ---
 
-## 11. Инструменты разработчика
+## 12. Инструменты разработчика
 
 ```powershell
 python benchmark.py --dataset exam_imgs
@@ -316,23 +382,27 @@ pyinstaller packaging/comicsplit.spec
 
 ---
 
-## 12. Устранение неполадок
+## 13. Устранение неполадок
 
 | Симптом | Решение |
 |---------|---------|
-| `Модель не найдена` | Выполнить `download_models.ps1` и `quantize_models.py` |
+| `Модель не найдена` (split) | `scripts\split_models_craft_scripts\download_models.ps1` + quantize |
+| Anim upscale не стартует | `download_animate_models.ps1`, `quantize_animate_models.py --verify` |
 | Gradio: `localhost is not accessible` | `$env:NO_PROXY="127.0.0.1,localhost"`, перезапуск `main.py` |
 | Gradio: ошибка `charmap` / emoji | Обновить `main.py` и `pipeline.py` (логи без emoji); в консоли: `chcp 65001` |
 | Пустой результат / 0 панелей | Снизить `confidence_threshold` в config; попробовать `--sam` |
 | Медленно на больших страницах | Режим `fast`; для пакета — `max_workers` в config |
 | Кириллица в путях | CLI/Gradio: `imdecode`/`tofile`; :8000 — `path_resolve`, лучше `exam_imgs\...` |
-| :8000 «Файл не найден», путь `Âèäåî...` | Mojibake; относительный путь или обновлённый `api/server.py` |
-| `comicsplit.exe`: comic.cbz not found | В репо нет `comic.cbz`; `--input exam_imgs` или свой CBZ |
-| Gradio: `Gallery` / schema `bool` | Используется Gradio 5.x без Gallery; `show_api=False` в `main.py` |
+| :8000 «Файл не найден», путь `Âèäåî...` | Mojibake; относительный путь |
+| Появляется лишняя `out_ui/` | Обновите `api/server.py` — детекция без записи на диск |
+| SAM включён, экспорт с прозрачностью без «Полигон» | Обновите `frontend/index.html` — маска только в режиме полигона |
+| DepthFlow: `No such command 'run'` | Обновите `anim/animate_depthflow.py` (CLI 0.9.x: `input … zoom … main`) |
+| `comicsplit.exe`: comic.cbz not found | В репо нет `comic.cbz`; `--input exam_imgs` |
+| Gradio: `Gallery` / schema `bool` | Gradio 5.x без Gallery |
 
 ---
 
-## 13. Зависимости (ключевые версии)
+## 14. Зависимости (ключевые версии)
 
 Зафиксированы в `requirements.txt`:
 
@@ -345,17 +415,18 @@ pyinstaller packaging/comicsplit.spec
 
 ---
 
-## 14. Краткая шпаргалка
+## 15. Краткая шпаргалка
 
 | Задача | Команда |
 |--------|---------|
-| Gradio UI | `python main.py` → http://127.0.0.1:7860 |
-| Одна страница | `python pipeline.py test_page.jpg output --order` |
-| Папка примеров | `python pipeline.py exam_imgs output --order` |
-| CBZ целиком | `python pipeline.py D:\path\book.cbz output --order` |
-| Редактор масок | `uvicorn api.server:app --port 8000` |
-| Go batch | `.\comicsplit.exe --input exam_imgs --output panels --python .\venv_311\Scripts\python.exe` |
-| Точные маски | `--sam` или `quality_mode: accurate` |
-| Манга | `--rtl` или `reading_direction: rtl` |
+| Gradio (split + anim) | `python main.py` → :7860 |
+| Split одна страница | `python pipeline.py test_page.jpg output --order` |
+| Split CBZ/папка | `python pipeline.py D:\comics\book.cbz output --order` |
+| Веб split + anim | `uvicorn api.server:app --port 8000` |
+| Anim из панелей | `python anim_pipeline.py panels_dir story_out --mode opencv_zoom` |
+| Go split batch | `.\comicsplit.exe --input exam_imgs --output panels --python .\venv_311\Scripts\python.exe` |
+| Точные контуры (детекция) | `--sam` / Accurate |
+| Экспорт по маске (:8000) | Включить «Полигон» или править форму |
+| Манга | `--rtl` |
 
-**Готовый результат** всегда лежит в **папке вывода** (`output/...`), в виде нумерованных PNG и превью по страницам.
+**Split:** PNG в `output/<источник>/`. **Anim:** MP4 в `story_out/animated/`, склейка `storyboard.mp4`.

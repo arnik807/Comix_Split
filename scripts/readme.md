@@ -1,4 +1,4 @@
-## Что за файлы в этой папке:
+﻿## Что за файлы в этой папке:
 
 **`MODELS_SETUP_GUIDE.md`** — полный справочник: откуда что берётся, куда кладётся, зачем, с таблицами и пояснениями.
 
@@ -15,6 +15,11 @@ python scripts\quantize_animate_models.py --verify # только проверк
 ```
 Квантует MiDaS и TPSMM в INT8 (~вдвое меньше размер, быстрее на CPU), затем проверяет весь стек и печатает итог с цветными статусами.
 
-## Один важный момент про DepthFlow
+## DepthFlow (parallax)
 
-DepthFlow использует GLSL шейдеры для рендеринга параллакса — это значит что AMD Radeon iGPU нужен не для ML, а именно для OpenGL рендера. На Ryzen 5 5600H с AMD Radeon это работает через стандартные AMD драйверы. Если при запуске возникнут проблемы — добавь флаг `--noturbo` в CLI команду.
+- Пакет: `pip install depthflow` (ставит `download_animate_models.ps1`)
+- В коде: `anim/animate_depthflow.py` — цепочка `input -i … zoom|dolly main --render -o …`
+- Нужен OpenGL (AMD iGPU через драйверы); headless: `WINDOW_BACKEND=headless`
+- Первый запуск качает depth-модель (HuggingFace)
+
+Split-модели — отдельно в `scripts/split_models_craft_scripts/`.

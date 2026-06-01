@@ -14,10 +14,12 @@
 | Go CLI batch | `cmd/comicsplit`, `comicsplit.exe` | 🟡 |
 | Параллелизм страниц | `max_workers` в config, ThreadPool в pipeline | ✅ |
 | Gradio UI | `main.py`, :7860 | ✅ |
-| Редактор масок Konva | `api/server.py`, `frontend/`, :8000 | 🟡 |
+| Редактор + anim API | `api/server.py` v1.1, `frontend/`, :8000 | ✅ Split/Upscale/Video |
+| Anim pipeline | `anim_pipeline.py`, `anim/`, `config_animate.yaml` | ✅ (без TPSMM/segment) |
 | Wails desktop | — | ❌ |
 | `config.yaml` | `utils/config.py` | ✅ |
-| Скрипты моделей | `download_models.ps1`, `quantize_models.py` | ✅ |
+| Скрипты моделей split | `scripts/split_models_craft_scripts/` | ✅ |
+| Скрипты моделей anim | `download_animate_models.ps1`, `quantize_animate_models.py` | ✅ |
 | pytest | `tests/test_*.py` | ✅ |
 | PyInstaller | `packaging/comicsplit.spec` | 🟡 spec only |
 | Benchmark &lt;600 ms, 85% quality | `benchmark.py`; цель не закрыта | 🟡 |
@@ -31,6 +33,7 @@ python pipeline.py test_page.jpg output --order
 python pipeline.py exam_imgs output --order
 $env:NO_PROXY="127.0.0.1,localhost"; python main.py
 uvicorn api.server:app --port 8000
+python anim_pipeline.py output\exam_imgs story_out --mode opencv_zoom --no-upscale
 pytest -q
 go build -o comicsplit.exe ./cmd/comicsplit
 .\comicsplit.exe --input exam_imgs --output panels --python .\venv_311\Scripts\python.exe --order
