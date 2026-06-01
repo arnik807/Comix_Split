@@ -2,6 +2,8 @@
 
 Файлы моделей в git не хранятся (см. `.gitignore`).
 
+**Полная спецификация** (описание, ссылки, железо, апгрейды): [spec_s/MODELS_SPECIFICATION.md](../spec_s/MODELS_SPECIFICATION.md).
+
 ## Split (раскройка панелей)
 
 Папка `models/`:

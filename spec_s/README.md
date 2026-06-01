@@ -9,6 +9,7 @@
 | **[ComicSplit_Documentation.md](ComicSplit_Documentation.md)** | Пользователь, админ | Split + Anim: Gradio, CLI, :8000, Go, модели |
 | **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** | Разработчик | Что реализовано / не реализовано |
 | **[comic_panel_animation_spec.md](comic_panel_animation_spec.md)** | Anim-пайплайн | Спека оживления + **блок статуса реализации** |
+| **[MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md)** | ML / инференс | Все модели, ссылки, пригодность под Ryzen 5600H + AMD iGPU, рекомендации по качеству |
 | [../README.md](../README.md) | Все | Быстрый старт в корне |
 | [../CHANGELOG.md](../CHANGELOG.md) | Все | История релизов и правок |
 

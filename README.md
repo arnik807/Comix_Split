@@ -62,7 +62,8 @@ python anim_pipeline.py output\exam_imgs story_out --mode opencv_zoom --scale 2
 | [CHANGELOG.md](CHANGELOG.md) | История изменений |
 | [config.yaml](config.yaml) | Split |
 | [config_animate.yaml](config_animate.yaml) | Anim |
-| [models/README.md](models/README.md) | Модели |
+| [models/README.md](models/README.md) | Краткий список файлов моделей |
+| [spec_s/MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md) | **Спека моделей** (ссылки, Ryzen 5600H, рекомендации) |
 
 ## Структура (основное)
 

@@ -102,7 +102,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 python scripts\split_models_craft_scripts\quantize_models.py
 ```
 
-Проверка: в `models/` три файла `*_int8.onnx` (см. `models/README.md`).
+Проверка: в `models/` три файла `*_int8.onnx` (см. `models/README.md`).  
+**Подробно о всех моделях, ссылках и железе:** [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md).
 
 ### 4.3. Модели anim (опционально, для апскейла и видео)
 
@@ -111,7 +112,7 @@ powershell -ExecutionPolicy Bypass -File scripts\download_animate_models.ps1
 python scripts\quantize_animate_models.py --verify
 ```
 
-См. `scripts/MODELS_SETUP_GUIDE.md`. DepthFlow: `pip install depthflow` (делает скрипт загрузки).
+См. `scripts/MODELS_SETUP_GUIDE.md` и [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md). DepthFlow: `pip install depthflow` (делает скрипт загрузки).
 
 ### 4.4. Прокси (если Gradio не открывается)
 
