@@ -51,6 +51,42 @@
         .logo { font-size: 17px; font-weight: 800; letter-spacing: -.5px; color: var(--accent); }
         .logo span { color: var(--text); }
         .badge { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+        .mode-pill {
+            font-family: var(--mono); font-size: 10px;
+            padding: 4px 8px; border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.03);
+            color: var(--muted);
+            letter-spacing: .6px;
+        }
+        .mode-pill.std { border-color: rgba(240,192,64,.35); color: var(--accent); }
+        .mode-pill.q   { border-color: rgba(167,139,250,.45); color: #a78bfa; }
+        .mode-banner {
+            margin: 0 0 10px 0;
+            padding: 10px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.02);
+            font-size: 11px;
+            line-height: 1.5;
+            color: var(--text);
+        }
+        .mode-banner .t { font-family: var(--mono); font-weight: 800; letter-spacing: .6px; font-size: 10px; color: var(--muted); text-transform: uppercase; }
+        .mode-banner.std { border-color: rgba(240,192,64,.25); }
+        .mode-banner.q { border-color: rgba(167,139,250,.25); }
+        .lock-box { position: relative; }
+        .lock-box.locked { opacity: .45; filter: grayscale(.15); }
+        .lock-box.locked * { pointer-events: none; }
+        .lock-badge {
+            position: absolute; top: 8px; right: 8px;
+            font-family: var(--mono); font-size: 10px;
+            padding: 3px 6px; border-radius: 999px;
+            border: 1px solid rgba(255,255,255,.12);
+            background: rgba(0,0,0,.35);
+            color: var(--muted);
+            pointer-events: auto;
+        }
+        .lock-box.locked .lock-badge { color: var(--accent); border-color: rgba(240,192,64,.25); }
         .preset-row { display: flex; gap: 6px; margin-bottom: 8px; }
         .preset-cell { position: relative; flex: 1; min-width: 0; }
         .preset-btn {
@@ -372,6 +408,7 @@
     <header>
         <div class="logo">Comic<span>Split</span></div>
         <div class="badge">Split · Upscale · Video</div>
+        <div id="mode-pill" class="mode-pill std">MODE: STANDARD</div>
         <div class="sep"></div>
         <div id="status">Готов к работе</div>
     </header>
@@ -405,6 +442,10 @@
 
         <div id="tab-split" class="tab-panel active">
         <div class="sec">
+            <div id="banner-split" class="mode-banner std">
+                <div class="t">Режим</div>
+                <div id="banner-split-txt"><b>Стандарт</b>: быстрый прогон, минимум настроек. Для черновой раскройки.</div>
+            </div>
             <div class="sec-title">Источник</div>
             <label class="lbl" data-tip="img_path">Путь к изображению</label>
             <input type="text" id="img-path" value="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
@@ -413,7 +454,8 @@
 
         <div class="sec">
             <div class="sec-title">Параметры детекции</div>
-            <div id="split-quality-block">
+            <div id="split-quality-block" class="lock-box">
+                <span class="lock-badge">только Quality</span>
                 <div class="trow">
                     <span class="tlbl" data-tip="use_sam">Точные контуры (SAM)</span>
                     <label class="tog"><input type="checkbox" id="use-sam" onchange="updateSamHint()"><span class="sl"></span></label>
@@ -428,8 +470,9 @@
                 <span class="tlbl" data-tip="rtl">RTL (манга)</span>
                 <label class="tog"><input type="checkbox" id="rtl"><span class="sl"></span></label>
             </div>
-            <details class="adv" id="split-thresholds">
+            <details class="adv lock-box" id="split-thresholds">
                 <summary>Пороги YOLO (расширенные)</summary>
+                <span class="lock-badge">только Quality</span>
                 <div class="range-row">
                     <div class="range-head"><span class="rlbl" data-tip="conf_thr">Confidence</span><span class="rval" id="conf-thr-val">0.35</span></div>
                     <input type="range" id="conf-thr" min="0.1" max="0.9" step="0.05" value="0.35"
@@ -490,6 +533,10 @@
 
         <div id="tab-upscale" class="tab-panel">
             <div class="sec">
+                <div id="banner-upscale" class="mode-banner std">
+                    <div class="t">Режим</div>
+                    <div id="banner-upscale-txt"><b>Стандарт</b>: простой апскейл — выберите ×2/×4 и запускайте.</div>
+                </div>
                 <div class="sec-title">Апскейл панелей</div>
                 <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
                     Папка с PNG после Split (например <code style="color:var(--accent)">output\mycomic\page_name</code>).
@@ -504,7 +551,8 @@
                     <button type="button" class="seg-btn" data-v="4">×4</button>
                 </div>
                 <input type="hidden" id="up-scale" value="2" />
-                <div id="upscale-quality-block">
+                <div id="upscale-quality-block" class="lock-box">
+                    <span class="lock-badge">только Quality</span>
                     <label class="lbl" data-tip="up_model">Модель Real-ESRGAN</label>
                     <select id="up-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
@@ -522,6 +570,10 @@
 
         <div id="tab-video" class="tab-panel">
             <div class="sec">
+                <div id="banner-video" class="mode-banner std">
+                    <div class="t">Режим</div>
+                    <div id="banner-video-txt"><b>Стандарт</b>: базовая анимация (OpenCV / static). DepthFlow и тонкие настройки — в Quality.</div>
+                </div>
                 <div class="sec-title">Video — оживление</div>
                 <p class="field-hint">Папка с панелями → 16:9, анимация, MP4 на панель + <code style="color:var(--accent)">storyboard.mp4</code>. На CPU долго.</p>
                 <label class="lbl" data-tip="vid_panels">Папка с панелями</label>
@@ -545,7 +597,8 @@
                     <button type="button" class="seg-btn" data-v="4">×4</button>
                 </div>
                 <input type="hidden" id="vid-scale" value="2" />
-                <div id="video-quality-block">
+                <div id="video-quality-block" class="lock-box">
+                    <span class="lock-badge">только Quality</span>
                     <label class="lbl" data-tip="vid_model">Модель апскейла</label>
                     <select id="vid-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
@@ -968,27 +1021,40 @@ function _setPresetActive(name) {
 
 function applyPresetModeUI() {
     const isQ = currentPreset === 'quality';
-    // Split
-    const sam = $('split-quality-block');
-    if (sam) sam.style.display = isQ ? '' : 'none';
-    const thr = $('split-thresholds');
-    if (thr) thr.style.display = isQ ? '' : 'none';
-    // Upscale advanced
-    const upq = $('upscale-quality-block');
-    if (upq) upq.style.display = isQ ? '' : 'none';
-    // Video advanced
-    const vq = $('video-quality-block');
-    if (vq) vq.style.display = isQ ? '' : 'none';
-    // Disable/enable DepthFlow mode in Standard
+    // Header pill
+    const pill = $('mode-pill');
+    if (pill) {
+        pill.className = 'mode-pill ' + (isQ ? 'q' : 'std');
+        pill.textContent = isQ ? 'MODE: QUALITY' : 'MODE: STANDARD';
+    }
+
+    // Banners
+    const bs = $('banner-split'); const bu = $('banner-upscale'); const bv = $('banner-video');
+    if (bs) bs.className = 'mode-banner ' + (isQ ? 'q' : 'std');
+    if (bu) bu.className = 'mode-banner ' + (isQ ? 'q' : 'std');
+    if (bv) bv.className = 'mode-banner ' + (isQ ? 'q' : 'std');
+    if ($('banner-split-txt')) $('banner-split-txt').innerHTML = isQ
+        ? '<b>Качество</b>: точнее контуры и результат. Доступны SAM и пороги YOLO. Медленнее.'
+        : '<b>Стандарт</b>: быстрый прогон, минимум настроек. Для черновой раскройки.';
+    if ($('banner-upscale-txt')) $('banner-upscale-txt').innerHTML = isQ
+        ? '<b>Качество</b>: можно выбрать модель (v3/6B) и GPU/CPU. 6B медленнее, но детальнее.'
+        : '<b>Стандарт</b>: простой апскейл — выберите ×2/×4 и запускайте.';
+    if ($('banner-video-txt')) $('banner-video-txt').innerHTML = isQ
+        ? '<b>Качество</b>: доступны harmonize (16:9), intensity и DepthFlow parallax. Рендер дольше.'
+        : '<b>Стандарт</b>: базовая анимация (OpenCV / static). DepthFlow и тонкие настройки — в Quality.';
+
+    // Lock boxes (visible but disabled)
+    const lock = (id) => { const el=$(id); if (el) el.classList.toggle('locked', !isQ); };
+    lock('split-quality-block');
+    lock('split-thresholds');
+    lock('upscale-quality-block');
+    lock('video-quality-block');
+
+    // Disable/enable DepthFlow option in Standard (keep visible as “teaser”)
     const optDf = $('opt-depthflow');
-    if (optDf) {
-        optDf.disabled = !isQ;
-        optDf.hidden = !isQ;
-    }
-    if (!isQ && $('vid-mode')?.value === 'depthflow') {
-        $('vid-mode').value = 'opencv_zoom';
-    }
-    // For Standard, DepthFlow preset hint should not show
+    if (optDf) optDf.disabled = !isQ;
+    if (!isQ && $('vid-mode')?.value === 'depthflow') $('vid-mode').value = 'opencv_zoom';
+
     syncVideoAdvancedVisibility();
 }
 
@@ -1847,6 +1913,7 @@ async function initApp() {
         fillFormFromPreset(OFFLINE_PRESET_STANDARD);
     }
     syncVideoAdvancedVisibility();
+    applyPresetModeUI();
 }
 
 initApp();

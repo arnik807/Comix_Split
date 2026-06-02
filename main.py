@@ -301,6 +301,26 @@ def _apply_preset_to_gradio(name: str, persist: bool):
     s, a = p["split"], p["anim"]
     is_quality = name == "quality"
     mode_choices = ANIM_MODES if is_quality else [x for x in ANIM_MODES if x[1] != "depthflow"]
+    mode_badge_md = (
+        "**MODE: QUALITY** — точный режим, доступны расширенные настройки."
+        if is_quality
+        else "**MODE: STANDARD** — быстрый режим, минимум настроек."
+    )
+    split_banner_md = (
+        "**Качество**: доступны SAM и пороги YOLO (точнее, но медленнее)."
+        if is_quality
+        else "**Стандарт**: быстрый прогон; SAM и пороги YOLO скрыты."
+    )
+    upscale_banner_md = (
+        "**Качество**: можно выбрать модель (v3/6B) и GPU/CPU."
+        if is_quality
+        else "**Стандарт**: только масштаб ×2/×4; модель/GPU в Quality."
+    )
+    video_banner_md = (
+        "**Качество**: доступны harmonize/intensity/DepthFlow."
+        if is_quality
+        else "**Стандарт**: базовая анимация; DepthFlow/harmonize в Quality."
+    )
     return (
         gr.update(value=s["use_sam"], visible=is_quality),
         gr.update(value=s["reading_order"]),
@@ -321,6 +341,10 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         gr.update(value=a["depthflow_animation"], visible=is_quality),
         gr.update(value=a["do_concat"]),
         gr.update(visible=is_quality),  # yolo thresholds accordion
+        gr.update(value=mode_badge_md),
+        gr.update(value=split_banner_md),
+        gr.update(value=upscale_banner_md),
+        gr.update(value=video_banner_md),
         f"Пресет «{p['label']}» применён" + (" и сохранён в YAML" if persist else ""),
     )
 
@@ -332,6 +356,7 @@ with gr.Blocks(title="ComicSplit") as demo:
     )
 
     with gr.Row():
+        mode_badge = gr.Markdown("**MODE: STANDARD** — быстрый режим, минимум настроек.")
         preset_std_btn = gr.Button("Стандарт", size="sm")
         preset_q_btn = gr.Button("Качество", size="sm", variant="primary")
         preset_persist = gr.Checkbox(
@@ -352,6 +377,7 @@ with gr.Blocks(title="ComicSplit") as demo:
             gr.Markdown(
                 "Страница (JPG/PNG), CBZ/ZIP или папка со страницами → PNG-панели."
             )
+            split_mode_banner = gr.Markdown("**Стандарт**: быстрый прогон, SAM и пороги YOLO скрыты.")
             with gr.Row():
                 with gr.Column(scale=1):
                     source = gr.File(
@@ -438,6 +464,7 @@ with gr.Blocks(title="ComicSplit") as demo:
             gr.Markdown(
                 "Папка с PNG-панелями (например `output\\имя_комикса`) → апскейл Real-ESRGAN NCNN."
             )
+            upscale_mode_banner = gr.Markdown("**Стандарт**: простой апскейл — масштаб ×2/×4. Модель/GPU доступны в Quality.")
             with gr.Row():
                 with gr.Column(scale=1):
                     up_input = gr.Textbox(
@@ -490,6 +517,7 @@ with gr.Blocks(title="ComicSplit") as demo:
             gr.Markdown(
                 "Папка с панелями → 16:9, анимация, MP4 на каждую панель + `storyboard.mp4`."
             )
+            video_mode_banner = gr.Markdown("**Стандарт**: базовая анимация (OpenCV/static). DepthFlow/harmonize/intensity доступны в Quality.")
             with gr.Row():
                 with gr.Column(scale=1):
                     vid_input = gr.Textbox(
@@ -651,6 +679,10 @@ with gr.Blocks(title="ComicSplit") as demo:
         vid_df_anim,
         vid_concat,
         yolo_adv,
+        mode_badge,
+        split_mode_banner,
+        upscale_mode_banner,
+        video_mode_banner,
         preset_status,
     ]
 
