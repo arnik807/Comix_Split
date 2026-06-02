@@ -152,3 +152,47 @@ def get_anim_config() -> AnimConfig:
     if _anim_config is None:
         return load_anim_config()
     return _anim_config
+
+
+def save_anim_config(
+    cfg: Optional[AnimConfig] = None, path: Optional[pathlib.Path] = None
+) -> None:
+    """Write anim settings to config_animate.yaml."""
+    cfg = cfg or get_anim_config()
+    cfg_path = path or DEFAULT_ANIM_CONFIG_PATH
+    data = {
+        "upscale": {
+            "enabled": cfg.upscale.enabled,
+            "scale": cfg.upscale.scale,
+            "model": cfg.upscale.model,
+            "backend": cfg.upscale.backend,
+            "gpu_id": cfg.upscale.gpu_id,
+        },
+        "harmonize": {
+            "enabled": cfg.harmonize.enabled,
+            "target_width": cfg.harmonize.target_width,
+            "target_height": cfg.harmonize.target_height,
+            "mode": cfg.harmonize.mode,
+            "blur_sigma": cfg.harmonize.blur_sigma,
+            "vignette_strength": cfg.harmonize.vignette_strength,
+        },
+        "animation": {
+            "mode": cfg.animation.mode,
+            "duration": cfg.animation.duration,
+            "fps": cfg.animation.fps,
+            "intensity": cfg.animation.intensity,
+            "depthflow_animation": cfg.animation.depthflow_animation,
+        },
+        "render": {
+            "concat_panels": cfg.render.concat_panels,
+            "storyboard_name": cfg.render.storyboard_name,
+            "codec": cfg.render.codec,
+            "pix_fmt": cfg.render.pix_fmt,
+        },
+        "paths": {
+            "esrgan_exe": None,
+            "ffmpeg_exe": None,
+        },
+    }
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)

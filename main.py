@@ -43,6 +43,8 @@ import gradio as gr
 from pipeline import process_page, process_source
 from utils.config import get_config, load_config
 from utils.anim_config import load_anim_config
+from utils.presets import apply_preset, preset_ui_payload
+from utils.ui_tooltips import FIELD_TIPS as TIP
 
 
 def _resolve_path(file_path, folder: str | None) -> str | None:
@@ -59,11 +61,22 @@ def run_comicsplit(
     use_sam: bool,
     reading_order: bool,
     rtl: bool,
+    confidence_threshold: float = 0.35,
+    iou_threshold: float = 0.45,
 ) -> str:
     if not source_path:
         return "Укажите файл или папку (файл, CBZ или путь к папке)."
 
+    from utils.config import apply_config_to_pipeline
+
     load_config()
+    cfg = get_config()
+    cfg.quality_mode = "accurate" if use_sam else "fast"
+    cfg.reading_order = reading_order
+    cfg.reading_direction = "rtl" if rtl else "ltr"
+    cfg.confidence_threshold = float(confidence_threshold)
+    cfg.iou_threshold = float(iou_threshold)
+    apply_config_to_pipeline()
     out_path = Path(output_dir) if output_dir else Path("output")
     out_path.mkdir(parents=True, exist_ok=True)
     src = Path(source_path)
@@ -110,6 +123,8 @@ def run_upscale_only(
     panels_dir: str,
     output_dir: str,
     scale: int,
+    upscale_model: str = "animevideov3",
+    gpu_id: int = 0,
 ) -> str:
     if not panels_dir or not Path(panels_dir).is_dir():
         return "Укажите существующую папку с PNG/JPG панелями."
@@ -120,6 +135,8 @@ def run_upscale_only(
     cfg = load_anim_config()
     cfg.upscale.enabled = True
     cfg.upscale.scale = int(scale)
+    cfg.upscale.model = str(upscale_model)
+    cfg.upscale.gpu_id = int(gpu_id)
 
     out = Path(output_dir or "output_upscaled")
     out.mkdir(parents=True, exist_ok=True)
@@ -148,6 +165,13 @@ def run_video_pipeline(
     duration: float,
     fps: int,
     do_concat: bool,
+    upscale_model: str = "animevideov3",
+    gpu_id: int = 0,
+    harmonize_mode: str = "auto",
+    harmonize_blur_sigma: int = 60,
+    harmonize_vignette: float = 0.7,
+    intensity: float = 0.3,
+    depthflow_animation: str = "zoom",
 ) -> str:
     if not panels_dir or not Path(panels_dir).is_dir():
         return "Укажите существующую папку с PNG/JPG панелями."
@@ -162,10 +186,17 @@ def run_video_pipeline(
     cfg = load_anim_config()
     cfg.upscale.enabled = bool(do_upscale)
     cfg.upscale.scale = int(scale)
+    cfg.upscale.model = str(upscale_model)
+    cfg.upscale.gpu_id = int(gpu_id)
     cfg.harmonize.enabled = True
+    cfg.harmonize.mode = str(harmonize_mode)
+    cfg.harmonize.blur_sigma = int(harmonize_blur_sigma)
+    cfg.harmonize.vignette_strength = float(harmonize_vignette)
     cfg.animation.mode = mode
     cfg.animation.duration = float(duration)
     cfg.animation.fps = int(fps)
+    cfg.animation.intensity = float(intensity)
+    cfg.animation.depthflow_animation = str(depthflow_animation)
     cfg.render.concat_panels = bool(do_concat)
 
     out = Path(output_dir or "story_out")
@@ -190,26 +221,61 @@ def run_video_pipeline(
     return msg
 
 
+load_config()
+
+
 def _split_defaults():
     cfg = get_config()
-    return cfg.use_sam, cfg.reading_order, cfg.rtl
+    return (
+        cfg.use_sam,
+        cfg.reading_order,
+        cfg.reading_direction == "rtl",
+        cfg.confidence_threshold,
+        cfg.iou_threshold,
+    )
 
 
 def _anim_defaults():
     ac = load_anim_config()
     return (
         ac.upscale.scale,
+        ac.upscale.model,
+        ac.upscale.gpu_id,
+        ac.harmonize.mode,
+        ac.harmonize.blur_sigma,
+        ac.harmonize.vignette_strength,
         ac.animation.mode,
+        ac.upscale.enabled,
         ac.animation.duration,
         ac.animation.fps,
-        ac.upscale.enabled,
+        ac.animation.intensity,
+        ac.animation.depthflow_animation,
         ac.render.concat_panels,
     )
 
 
-use_sam_def, order_def, rtl_def = _split_defaults()
-scale_def, mode_def, dur_def, fps_def, upscale_def, concat_def = _anim_defaults()
-load_config()
+(
+    use_sam_def,
+    order_def,
+    rtl_def,
+    conf_def,
+    iou_def,
+) = _split_defaults()
+(
+    scale_def,
+    up_model_def,
+    gpu_def,
+    harm_mode_def,
+    harm_blur_def,
+    harm_vig_def,
+    mode_def,
+    upscale_def,
+    dur_def,
+    fps_def,
+    intensity_def,
+    df_anim_def,
+    concat_def,
+) = _anim_defaults()
 
 ANIM_MODES = [
     ("Zoom (OpenCV)", "opencv_zoom"),
@@ -217,12 +283,68 @@ ANIM_MODES = [
     ("Статичный кадр", "static"),
     ("Parallax (DepthFlow)", "depthflow"),
 ]
+UPSCALE_MODELS = [
+    ("Быстрый (animevideov3)", "animevideov3"),
+    ("Качество (anime 6B)", "anime_6B"),
+]
+HARMONIZE_MODES = [
+    "auto",
+    "blurred_pillarbox",
+    "dominant_color",
+    "smart_crop",
+]
+DEPTHFLOW_PRESETS = [("Zoom", "zoom"), ("Dolly", "dolly")]
+
+
+def _apply_preset_to_gradio(name: str, persist: bool):
+    p = apply_preset(name, persist=persist)
+    s, a = p["split"], p["anim"]
+    is_quality = name == "quality"
+    mode_choices = ANIM_MODES if is_quality else [x for x in ANIM_MODES if x[1] != "depthflow"]
+    return (
+        gr.update(value=s["use_sam"], visible=is_quality),
+        gr.update(value=s["reading_order"]),
+        gr.update(value=s["rtl"]),
+        gr.update(value=s["confidence_threshold"]),
+        gr.update(value=s["iou_threshold"]),
+        gr.update(value=a["upscale_scale"]),
+        gr.update(value=a["upscale_model"], visible=is_quality),
+        gr.update(value=a["gpu_id"], visible=is_quality),
+        gr.update(value=a["harmonize_mode"], visible=is_quality),
+        gr.update(value=a["harmonize_blur_sigma"], visible=is_quality),
+        gr.update(value=a["harmonize_vignette"], visible=is_quality),
+        gr.update(value=a["mode"], choices=mode_choices),
+        gr.update(value=a["upscale_enabled"]),
+        gr.update(value=a["duration"]),
+        gr.update(value=a["fps"]),
+        gr.update(value=a["intensity"], visible=is_quality),
+        gr.update(value=a["depthflow_animation"], visible=is_quality),
+        gr.update(value=a["do_concat"]),
+        gr.update(visible=is_quality),  # yolo thresholds accordion
+        f"Пресет «{p['label']}» применён" + (" и сохранён в YAML" if persist else ""),
+    )
+
 
 with gr.Blocks(title="ComicSplit") as demo:
     gr.Markdown(
         "# ComicSplit\n"
         "Раскройка панелей, апскейл и сборка видео-раскадровки."
     )
+
+    with gr.Row():
+        preset_std_btn = gr.Button("Стандарт", size="sm")
+        preset_q_btn = gr.Button("Качество", size="sm", variant="primary")
+        preset_persist = gr.Checkbox(
+            label="Сохранить в config.yaml",
+            value=False,
+            info=TIP["preset_persist"],
+        )
+        preset_status = gr.Markdown("")
+    with gr.Accordion("Что делают пресеты «Стандарт» и «Качество»?", open=False):
+        gr.Markdown(
+            f"**Стандарт** — {TIP['preset_standard']}\n\n"
+            f"**Качество** — {TIP['preset_quality']}"
+        )
 
     with gr.Tabs():
         # ── Split ─────────────────────────────────────────────────────
@@ -236,23 +358,55 @@ with gr.Blocks(title="ComicSplit") as demo:
                         label="Источник (JPG/PNG, CBZ, ZIP)",
                         type="filepath",
                     )
+                    gr.Markdown(f"<sub>ⓘ {TIP['split_source']}</sub>")
                     folder_path = gr.Textbox(
                         label="Или путь к папке со страницами",
                         placeholder="D:\\comics\\pages",
+                        info=TIP["split_folder"],
                     )
-                    split_output = gr.Textbox(label="Папка вывода", value="output")
+                    split_output = gr.Textbox(
+                        label="Папка вывода",
+                        value="output",
+                        info=TIP["split_output"],
+                    )
                     use_sam = gr.Checkbox(
-                        label="MobileSAM (режим Accurate)",
+                        label="Точные контуры (SAM)",
                         value=use_sam_def,
+                        info=TIP["use_sam"],
+                        visible=False,
+                    )
+                    sam_note = gr.Markdown(
+                        "<sub>На `exam_imgs` без SAM ~10–15 с; с SAM часто 1–3 мин. "
+                        "Контуры на холсте — только в веб-редакторе (:8000), режим «Полигон».</sub>",
+                        visible=False,
                     )
                     reading_order = gr.Checkbox(
                         label="Сортировать по порядку чтения",
                         value=order_def,
+                        info=TIP["reading_order"],
                     )
                     rtl = gr.Checkbox(
                         label="Порядок справа-налево (манга)",
                         value=rtl_def,
+                        info=TIP["rtl"],
                     )
+                    with gr.Accordion("Пороги YOLO (расширенные)", open=False, visible=False) as yolo_adv:
+                        conf_thr = gr.Slider(
+                            label="Confidence",
+                            minimum=0.1,
+                            maximum=0.9,
+                            step=0.05,
+                            value=conf_def,
+                            info=TIP["conf_thr"],
+                        )
+                        iou_thr = gr.Slider(
+                            label="IoU NMS",
+                            minimum=0.1,
+                            maximum=0.9,
+                            step=0.05,
+                            value=iou_def,
+                            info=TIP["iou_thr"],
+                        )
                     split_btn = gr.Button("Запустить раскройку", variant="primary")
 
                 with gr.Column(scale=2):
@@ -263,8 +417,8 @@ with gr.Blocks(title="ComicSplit") as demo:
                     )
 
             split_btn.click(
-                fn=lambda f, folder, o, s, ro, rt: run_comicsplit(
-                    _resolve_path(f, folder), o, s, ro, rt
+                fn=lambda f, folder, o, s, ro, rt, c, i: run_comicsplit(
+                    _resolve_path(f, folder), o, s, ro, rt, c, i
                 ),
                 inputs=[
                     source,
@@ -273,6 +427,8 @@ with gr.Blocks(title="ComicSplit") as demo:
                     use_sam,
                     reading_order,
                     rtl,
+                    conf_thr,
+                    iou_thr,
                 ],
                 outputs=split_status,
             )
@@ -287,15 +443,32 @@ with gr.Blocks(title="ComicSplit") as demo:
                     up_input = gr.Textbox(
                         label="Папка с панелями",
                         placeholder="output\\mycomic",
+                        info=TIP["up_panels"],
                     )
                     up_output = gr.Textbox(
                         label="Папка вывода",
                         value="output_upscaled",
+                        info=TIP["up_output"],
                     )
                     up_scale = gr.Radio(
                         label="Масштаб",
                         choices=[2, 4],
                         value=scale_def,
+                        info=TIP["up_scale"],
+                    )
+                    up_model = gr.Dropdown(
+                        label="Модель Real-ESRGAN",
+                        choices=UPSCALE_MODELS,
+                        value=up_model_def,
+                        info=TIP["up_model"],
+                        visible=False,
+                    )
+                    up_gpu = gr.Radio(
+                        label="GPU (Vulkan)",
+                        choices=[("0 — видеокарта", 0), ("−1 — CPU", -1)],
+                        value=gpu_def,
+                        info=TIP["up_gpu"],
+                        visible=False,
                     )
                     up_btn = gr.Button("Запустить апскейл", variant="primary")
 
@@ -308,7 +481,7 @@ with gr.Blocks(title="ComicSplit") as demo:
 
             up_btn.click(
                 fn=run_upscale_only,
-                inputs=[up_input, up_output, up_scale],
+                inputs=[up_input, up_output, up_scale, up_model, up_gpu],
                 outputs=up_status,
             )
 
@@ -322,24 +495,89 @@ with gr.Blocks(title="ComicSplit") as demo:
                     vid_input = gr.Textbox(
                         label="Папка с панелями",
                         placeholder="output\\mycomic",
+                        info=TIP["vid_panels"],
                     )
                     vid_output = gr.Textbox(
                         label="Папка вывода",
                         value="story_out",
+                        info=TIP["vid_output"],
                     )
                     vid_mode = gr.Dropdown(
                         label="Режим анимации",
                         choices=ANIM_MODES,
                         value=mode_def,
+                        info=TIP["vid_mode"],
                     )
                     vid_upscale = gr.Checkbox(
                         label="Апскейл перед видео",
                         value=upscale_def,
+                        info=TIP["vid_upscale"],
                     )
                     vid_scale = gr.Radio(
                         label="Масштаб апскейла",
                         choices=[2, 4],
                         value=scale_def,
+                        info=TIP["vid_scale"],
+                    )
+                    vid_model = gr.Dropdown(
+                        label="Модель апскейла",
+                        choices=UPSCALE_MODELS,
+                        value=up_model_def,
+                        info=TIP["vid_model"],
+                        visible=False,
+                    )
+                    vid_gpu = gr.Radio(
+                        label="GPU (Vulkan)",
+                        choices=[("0 — видеокарта", 0), ("−1 — CPU", -1)],
+                        value=gpu_def,
+                        info=TIP["vid_gpu"],
+                        visible=False,
+                    )
+                    vid_harm_mode = gr.Dropdown(
+                        label="Фон 16:9 (harmonize)",
+                        choices=[
+                            ("auto", "auto"),
+                            ("Размытые поля", "blurred_pillarbox"),
+                            ("Доминантный цвет", "dominant_color"),
+                            ("Умный кроп", "smart_crop"),
+                        ],
+                        value=harm_mode_def,
+                        info=TIP["vid_harm_mode"],
+                        visible=False,
+                    )
+                    vid_harm_blur = gr.Slider(
+                        label="Blur sigma (pillarbox)",
+                        minimum=10,
+                        maximum=120,
+                        step=5,
+                        value=harm_blur_def,
+                        info=TIP["vid_harm_blur"],
+                        visible=False,
+                    )
+                    vid_harm_vig = gr.Slider(
+                        label="Vignette",
+                        minimum=0.0,
+                        maximum=1.0,
+                        step=0.05,
+                        value=harm_vig_def,
+                        info=TIP["vid_harm_vig"],
+                        visible=False,
+                    )
+                    vid_intensity = gr.Slider(
+                        label="Интенсивность анимации",
+                        minimum=0.1,
+                        maximum=1.0,
+                        step=0.05,
+                        value=intensity_def,
+                        info=TIP["vid_intensity"],
+                        visible=False,
+                    )
+                    vid_df_anim = gr.Dropdown(
+                        label="DepthFlow preset",
+                        choices=DEPTHFLOW_PRESETS,
+                        value=df_anim_def,
+                        info=TIP["vid_df_anim"],
+                        visible=False,
                     )
                     vid_duration = gr.Slider(
                         label="Длина клипа (сек)",
@@ -347,6 +585,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                         maximum=10,
                         step=0.5,
                         value=dur_def,
+                        info=TIP["vid_duration"],
                     )
                     vid_fps = gr.Slider(
                         label="FPS",
@@ -354,10 +593,12 @@ with gr.Blocks(title="ComicSplit") as demo:
                         maximum=30,
                         step=1,
                         value=fps_def,
+                        info=TIP["vid_fps"],
                     )
                     vid_concat = gr.Checkbox(
                         label="Собрать storyboard.mp4",
                         value=concat_def,
+                        info=TIP["vid_concat"],
                     )
                     vid_btn = gr.Button("Создать видео", variant="primary")
 
@@ -379,9 +620,50 @@ with gr.Blocks(title="ComicSplit") as demo:
                     vid_duration,
                     vid_fps,
                     vid_concat,
+                    vid_model,
+                    vid_gpu,
+                    vid_harm_mode,
+                    vid_harm_blur,
+                    vid_harm_vig,
+                    vid_intensity,
+                    vid_df_anim,
                 ],
                 outputs=vid_status,
             )
+
+    _preset_outputs = [
+        use_sam,
+        reading_order,
+        rtl,
+        conf_thr,
+        iou_thr,
+        up_scale,
+        up_model,
+        up_gpu,
+        vid_harm_mode,
+        vid_harm_blur,
+        vid_harm_vig,
+        vid_mode,
+        vid_upscale,
+        vid_duration,
+        vid_fps,
+        vid_intensity,
+        vid_df_anim,
+        vid_concat,
+        yolo_adv,
+        preset_status,
+    ]
+
+    preset_std_btn.click(
+        fn=lambda p: _apply_preset_to_gradio("standard", p),
+        inputs=preset_persist,
+        outputs=_preset_outputs,
+    )
+    preset_q_btn.click(
+        fn=lambda p: _apply_preset_to_gradio("quality", p),
+        inputs=preset_persist,
+        outputs=_preset_outputs,
+    )
 
 
 if __name__ == "__main__":

@@ -74,6 +74,25 @@ def get_config() -> AppConfig:
     return _config
 
 
+def save_config(cfg: Optional[AppConfig] = None, path: Optional[pathlib.Path] = None) -> None:
+    """Write split settings to config.yaml."""
+    cfg = cfg or get_config()
+    cfg_path = path or DEFAULT_CONFIG_PATH
+    data = {
+        "language": cfg.language,
+        "quality_mode": cfg.quality_mode,
+        "reading_order": cfg.reading_order,
+        "reading_direction": cfg.reading_direction,
+        "max_workers": cfg.max_workers,
+        "confidence_threshold": cfg.confidence_threshold,
+        "iou_threshold": cfg.iou_threshold,
+        "overlap_filter_threshold": cfg.overlap_filter_threshold,
+        "output_pattern": cfg.output_pattern,
+    }
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+
 def apply_config_to_pipeline() -> AppConfig:
     """Push config thresholds into pipeline module globals."""
     import pipeline as pl

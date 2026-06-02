@@ -5,8 +5,20 @@
 
 ## [Unreleased]
 
+### Добавлено (блок A — качество без новых моделей)
+
+- Пресеты **Стандарт** / **Качество**: `config/presets.yaml`, `utils/presets.py`
+- API v1.2: `GET /api/presets`, `GET /api/presets/{name}`, `POST /api/presets/apply`
+- Расширены `POST /api/process` (пороги YOLO), `/api/upscale`, `/api/animate` (модель, GPU, harmonize, DepthFlow)
+- Gradio (`main.py`): кнопки пресетов, пороги Split, модель/GPU апскейла, harmonize + intensity на Video
+- Веб-редактор (:8000): секция пресетов, те же поля на вкладках Split / Upscale / Video
+- `tests/test_presets.py` — round-trip standard ↔ quality
+- `tests/test_smoke_exam_imgs.py` — smoke на `exam_imgs` (9 панелей Asterix-0004) + API TestClient
+- Подсказки ко всем настройкам: `utils/ui_tooltips.py`, `GET /api/tooltips`, «!» в веб-UI, `info` в Gradio
+
 ### Планируется
 
+- [ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) — блок B (новые модели)
 - TPSMM в `anim_pipeline.py`
 - `segment.py` для motion transfer
 - OpenCV fast-path в split-каскаде

@@ -51,6 +51,97 @@
         .logo { font-size: 17px; font-weight: 800; letter-spacing: -.5px; color: var(--accent); }
         .logo span { color: var(--text); }
         .badge { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+        .preset-row { display: flex; gap: 6px; margin-bottom: 8px; }
+        .preset-cell { position: relative; flex: 1; min-width: 0; }
+        .preset-btn {
+            width: 100%; padding: 7px 30px 7px 10px; font-size: 12px; font-weight: 600;
+            border-radius: 6px; border: 1px solid var(--border); background: var(--surface2);
+            color: var(--text); cursor: pointer; font-family: var(--sans);
+        }
+        .preset-btn:hover { border-color: var(--accent); }
+        .preset-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+        .preset-cell .tip-host {
+            position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+            z-index: 3; line-height: 0; pointer-events: auto;
+        }
+        .preset-cell .tip-host .tip-wrap { margin-left: 0; }
+        .preset-hint { font-size: 10px; color: var(--muted); line-height: 1.45; font-family: var(--mono); }
+        select.inp, input.inp-num {
+            width: 100%; padding: 8px 10px; margin-bottom: 10px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 11px;
+        }
+        select.inp { cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%); background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+        select.inp:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 1px rgba(240,192,64,.25); }
+        select.inp option { background: #1a1a1f; color: var(--text); }
+        .field-hint { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+        .range-row { margin-bottom: 12px; }
+        .range-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+        .range-head .rlbl { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+        .range-head .rval { font-size: 11px; color: var(--accent); font-family: var(--mono); font-weight: 700; min-width: 2.5em; text-align: right; }
+        input[type=range] {
+            width: 100%; height: 6px; border-radius: 4px; cursor: pointer;
+            accent-color: var(--accent); background: var(--border);
+        }
+        .seg { display: flex; gap: 6px; margin-bottom: 10px; }
+        .seg-btn {
+            flex: 1; padding: 8px 6px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--muted); font-family: var(--mono); font-size: 11px;
+            cursor: pointer; transition: all .15s;
+        }
+        .seg-btn:hover { border-color: var(--text); color: var(--text); }
+        .seg-btn.active { background: var(--accent); color: #0e0e0f; border-color: var(--accent); font-weight: 700; }
+        /* Подсказки: кружок «!» у настройки */
+        /* Слой для подсказок (не обязателен для кликов) */
+        #tip-layer {
+            position: fixed; inset: 0; z-index: 200000;
+            pointer-events: none;
+        }
+        .tip-wrap {
+            position: relative; display: inline-flex; align-items: center; justify-content: center;
+            vertical-align: middle; margin-left: 5px; flex: 0 0 auto; width: 16px; height: 16px;
+        }
+        .tip-icon {
+            flex: 0 0 16px; width: 16px; height: 16px; min-width: 16px; min-height: 16px;
+            max-width: 16px; max-height: 16px; aspect-ratio: 1;
+            border-radius: 50%; padding: 0; margin: 0; border: 1px solid var(--muted);
+            background: var(--surface2); color: var(--muted);
+            font-size: 11px; font-weight: 800; font-family: var(--sans);
+            cursor: help; user-select: none;
+            display: inline-flex; align-items: center; justify-content: center;
+            line-height: 1; box-sizing: border-box;
+        }
+        .tip-icon:hover, .tip-wrap:focus-within .tip-icon {
+            border-color: var(--accent); color: var(--accent); background: rgba(240,192,64,.12);
+        }
+        .tip-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .tip-bubble {
+            display: none; position: fixed; left: 0; top: 0;
+            width: min(260px, 72vw); max-width: min(260px, 72vw);
+            padding: 10px 11px; border-radius: 8px; background: #1e1e24; color: var(--text);
+            border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,.65);
+            font-size: 11px; line-height: 1.5; font-family: var(--sans); font-weight: 400;
+            z-index: 200001;
+            pointer-events: auto;
+            text-transform: none; letter-spacing: 0;
+        }
+        .tip-bubble.tip-show { display: block; }
+        .tip-close {
+            position: absolute; top: 6px; right: 7px;
+            width: 18px; height: 18px; border-radius: 6px;
+            border: 1px solid rgba(255,255,255,.12);
+            background: rgba(255,255,255,.06);
+            color: var(--muted);
+            cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 12px; line-height: 1;
+        }
+        .tip-close:hover { border-color: var(--accent); color: var(--accent); background: rgba(240,192,64,.10); }
+        .tip-bubble .tip-text { display: block; padding-right: 22px; }
+        label.lbl[data-tip] { display: flex; align-items: center; }
+        .tlbl[data-tip], .rlbl[data-tip] { display: inline-flex; align-items: center; }
+        details.adv { margin-top: 6px; }
+        details.adv summary { font-size: 11px; color: var(--muted); cursor: pointer; font-family: var(--mono); margin-bottom: 8px; }
         .sep { flex: 1; }
         #status { font-family: var(--mono); font-size: 11px; color: var(--muted); }
         #status.ok   { color: var(--ok); }
@@ -286,6 +377,26 @@
     </header>
 
     <aside>
+        <div class="sec">
+            <div class="sec-title">Пресет качества</div>
+            <div class="preset-row">
+                <div class="preset-cell">
+                    <button type="button" class="preset-btn" id="preset-std" onclick="applyPreset('standard')">Стандарт</button>
+                    <span class="tip-host" data-tip="preset_standard"></span>
+                </div>
+                <div class="preset-cell">
+                    <button type="button" class="preset-btn" id="preset-q" onclick="applyPreset('quality')">Качество</button>
+                    <span class="tip-host" data-tip="preset_quality"></span>
+                </div>
+            </div>
+            <div class="trow" style="margin-bottom:6px">
+                <span class="tlbl" style="font-size:11px" data-tip="preset_persist">Сохранить в YAML</span>
+                <label class="tog"><input type="checkbox" id="preset-persist"><span class="sl"></span></label>
+            </div>
+            <p class="preset-hint" id="preset-desc">Быстро: YOLO без SAM, animevideov3, OpenCV zoom</p>
+            <p class="preset-hint" id="preset-timing" style="margin-top:4px;color:var(--accent);display:none"></p>
+        </div>
+
         <div class="tab-bar">
             <button type="button" class="tab-btn active" data-tab="split" onclick="switchTab('split')">Split</button>
             <button type="button" class="tab-btn" data-tab="upscale" onclick="switchTab('upscale')">Upscale</button>
@@ -295,32 +406,48 @@
         <div id="tab-split" class="tab-panel active">
         <div class="sec">
             <div class="sec-title">Источник</div>
-            <label class="lbl">Путь к изображению</label>
-            <input type="text" id="img-path" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
+            <label class="lbl" data-tip="img_path">Путь к изображению</label>
+            <input type="text" id="img-path" value="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
+            <p class="preset-hint" style="margin-top:6px">Относительный путь от корня проекта — надёжнее при кириллице в каталогах.</p>
         </div>
 
         <div class="sec">
             <div class="sec-title">Параметры детекции</div>
-            <div class="trow">
-                <span class="tlbl">Accurate (YOLO + SAM)</span>
-                <label class="tog"><input type="checkbox" id="use-sam"><span class="sl"></span></label>
+            <div id="split-quality-block">
+                <div class="trow">
+                    <span class="tlbl" data-tip="use_sam">Точные контуры (SAM)</span>
+                    <label class="tog"><input type="checkbox" id="use-sam" onchange="updateSamHint()"><span class="sl"></span></label>
+                </div>
+                <p class="det-hint" id="sam-hint">SAM замедляет детекцию (на exam_imgs часто 1–3 мин). Контуры на холсте — в режиме «Полигон»; экспорт по маске — при полигоне или после правки.</p>
             </div>
-            <p class="det-hint" id="sam-hint">Точные контуры SAM на холсте — только в режиме «Полигон»; экспорт по маске — при включённом полигоне или после правки формы.</p>
             <div class="trow">
-                <span class="tlbl">Порядок чтения</span>
+                <span class="tlbl" data-tip="reading_order">Порядок чтения</span>
                 <label class="tog"><input type="checkbox" id="reading-order" checked><span class="sl"></span></label>
             </div>
             <div class="trow">
-                <span class="tlbl">RTL (манга)</span>
+                <span class="tlbl" data-tip="rtl">RTL (манга)</span>
                 <label class="tog"><input type="checkbox" id="rtl"><span class="sl"></span></label>
             </div>
+            <details class="adv" id="split-thresholds">
+                <summary>Пороги YOLO (расширенные)</summary>
+                <div class="range-row">
+                    <div class="range-head"><span class="rlbl" data-tip="conf_thr">Confidence</span><span class="rval" id="conf-thr-val">0.35</span></div>
+                    <input type="range" id="conf-thr" min="0.1" max="0.9" step="0.05" value="0.35"
+                        data-display="conf-thr-val" data-format="dec2" />
+                </div>
+                <div class="range-row">
+                    <div class="range-head"><span class="rlbl" data-tip="iou_thr">IoU NMS</span><span class="rval" id="iou-thr-val">0.45</span></div>
+                    <input type="range" id="iou-thr" min="0.1" max="0.9" step="0.05" value="0.45"
+                        data-display="iou-thr-val" data-format="dec2" />
+                </div>
+            </details>
         </div>
 
         <!-- Режим редактирования -->
         <div class="sec">
             <div class="sec-title">Режим редактирования</div>
             <div class="trow">
-                <span class="tlbl">Полигон (ломаная форма)</span>
+                <span class="tlbl" data-tip="poly_mode">Полигон (ломаная форма)</span>
                 <label class="tog poly">
                     <input type="checkbox" id="poly-mode" onchange="togglePolyMode()">
                     <span class="sl"></span>
@@ -355,7 +482,7 @@
 
         <div class="sec" id="sec-export" style="display:none">
             <div class="sec-title">Экспорт</div>
-            <label class="lbl">Папка вывода</label>
+            <label class="lbl" data-tip="out_dir">Папка вывода</label>
             <input type="text" id="out-dir" placeholder="C:\output\panels" style="margin-bottom:10px" />
             <button class="btn btn-e" id="btn-exp" onclick="exportPanels()">↓ Экспортировать PNG</button>
         </div>
@@ -367,51 +494,109 @@
                 <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
                     Папка с PNG после Split (например <code style="color:var(--accent)">output\mycomic\page_name</code>).
                 </p>
-                <label class="lbl">Папка с панелями</label>
+                <label class="lbl" data-tip="up_panels">Папка с панелями</label>
                 <input type="text" id="up-panels" placeholder="output\mycomic" style="margin-bottom:10px" />
-                <label class="lbl">Папка вывода</label>
+                <label class="lbl" data-tip="up_output">Папка вывода</label>
                 <input type="text" id="up-output" value="output_upscaled" style="margin-bottom:10px" />
-                <label class="lbl">Масштаб</label>
-                <select id="up-scale" class="inp" style="margin-bottom:12px">
-                    <option value="2" selected>x2</option>
-                    <option value="4">x4</option>
-                </select>
+                <label class="lbl" data-tip="up_scale">Масштаб</label>
+                <div class="seg" id="up-scale-seg" data-target="up-scale">
+                    <button type="button" class="seg-btn active" data-v="2">×2</button>
+                    <button type="button" class="seg-btn" data-v="4">×4</button>
+                </div>
+                <input type="hidden" id="up-scale" value="2" />
+                <div id="upscale-quality-block">
+                    <label class="lbl" data-tip="up_model">Модель Real-ESRGAN</label>
+                    <select id="up-model" class="inp" style="margin-bottom:10px">
+                        <option value="animevideov3" selected>Быстрый (animevideov3)</option>
+                        <option value="anime_6B">Качество (anime 6B)</option>
+                    </select>
+                    <label class="lbl" data-tip="up_gpu">GPU (Vulkan)</label>
+                    <select id="up-gpu" class="inp" style="margin-bottom:12px">
+                        <option value="0" selected>0 — видеокарта (Vulkan)</option>
+                        <option value="-1">−1 — только CPU</option>
+                    </select>
+                </div>
                 <button class="btn btn-p" id="btn-upscale" onclick="runUpscale()">▶ Запустить апскейл</button>
             </div>
         </div>
 
         <div id="tab-video" class="tab-panel">
             <div class="sec">
-                <div class="sec-title">Видео из панелей</div>
-                <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
-                    16:9, анимация, MP4 на панель + storyboard. Долго на CPU.
-                </p>
-                <label class="lbl">Папка с панелями</label>
+                <div class="sec-title">Video — оживление</div>
+                <p class="field-hint">Папка с панелями → 16:9, анимация, MP4 на панель + <code style="color:var(--accent)">storyboard.mp4</code>. На CPU долго.</p>
+                <label class="lbl" data-tip="vid_panels">Папка с панелями</label>
                 <input type="text" id="vid-panels" placeholder="output\mycomic" style="margin-bottom:10px" />
-                <label class="lbl">Папка вывода</label>
+                <label class="lbl" data-tip="vid_output">Папка вывода</label>
                 <input type="text" id="vid-output" value="story_out" style="margin-bottom:10px" />
-                <label class="lbl">Режим анимации</label>
-                <select id="vid-mode" class="inp" style="margin-bottom:10px">
+                <label class="lbl" data-tip="vid_mode">Режим анимации</label>
+                <select id="vid-mode" class="inp" style="margin-bottom:10px" onchange="syncVideoAdvancedVisibility()">
                     <option value="opencv_zoom">Zoom (OpenCV)</option>
                     <option value="opencv_shake">Shake (OpenCV)</option>
                     <option value="static">Статичный кадр</option>
-                    <option value="depthflow">Parallax (DepthFlow)</option>
+                    <option value="depthflow" id="opt-depthflow">Parallax (DepthFlow)</option>
                 </select>
                 <div class="trow">
-                    <span class="tlbl">Апскейл перед видео</span>
+                    <span class="tlbl" data-tip="vid_upscale">Апскейл перед видео</span>
                     <label class="tog"><input type="checkbox" id="vid-upscale" checked><span class="sl"></span></label>
                 </div>
-                <label class="lbl">Масштаб апскейла</label>
-                <select id="vid-scale" class="inp" style="margin-bottom:10px">
-                    <option value="2" selected>x2</option>
-                    <option value="4">x4</option>
-                </select>
-                <label class="lbl">Длина клипа (сек)</label>
-                <input type="text" id="vid-duration" value="3" style="margin-bottom:10px" />
-                <label class="lbl">FPS</label>
-                <input type="text" id="vid-fps" value="24" style="margin-bottom:10px" />
+                <label class="lbl" data-tip="vid_scale">Масштаб апскейла</label>
+                <div class="seg" id="vid-scale-seg" data-target="vid-scale">
+                    <button type="button" class="seg-btn active" data-v="2">×2</button>
+                    <button type="button" class="seg-btn" data-v="4">×4</button>
+                </div>
+                <input type="hidden" id="vid-scale" value="2" />
+                <div id="video-quality-block">
+                    <label class="lbl" data-tip="vid_model">Модель апскейла</label>
+                    <select id="vid-model" class="inp" style="margin-bottom:10px">
+                        <option value="animevideov3" selected>Быстрый (animevideov3)</option>
+                        <option value="anime_6B">Качество (anime 6B)</option>
+                    </select>
+                    <label class="lbl" data-tip="vid_gpu">GPU (Vulkan)</label>
+                    <select id="vid-gpu" class="inp" style="margin-bottom:10px">
+                        <option value="0" selected>0 — видеокарта</option>
+                        <option value="-1">−1 — CPU</option>
+                    </select>
+                    <label class="lbl" data-tip="vid_harm_mode">Фон 16:9 (harmonize)</label>
+                    <select id="vid-harm-mode" class="inp" style="margin-bottom:10px">
+                        <option value="auto">auto</option>
+                        <option value="blurred_pillarbox">Размытые поля</option>
+                        <option value="dominant_color">Доминантный цвет</option>
+                        <option value="smart_crop">Умный кроп</option>
+                    </select>
+                    <div class="range-row">
+                        <div class="range-head"><span class="rlbl" data-tip="vid_harm_blur">Blur sigma (pillarbox)</span><span class="rval" id="vid-harm-blur-val">60</span></div>
+                        <input type="range" id="vid-harm-blur" min="10" max="120" step="5" value="60"
+                            data-display="vid-harm-blur-val" data-format="int" />
+                    </div>
+                    <div class="range-row">
+                        <div class="range-head"><span class="rlbl" data-tip="vid_harm_vig">Vignette</span><span class="rval" id="vid-harm-vig-val">0.70</span></div>
+                        <input type="range" id="vid-harm-vig" min="0" max="1" step="0.05" value="0.7"
+                            data-display="vid-harm-vig-val" data-format="dec2" />
+                    </div>
+                    <div class="range-row">
+                        <div class="range-head"><span class="rlbl" data-tip="vid_intensity">Интенсивность анимации</span><span class="rval" id="vid-intensity-val">0.30</span></div>
+                        <input type="range" id="vid-intensity" min="0.1" max="1" step="0.05" value="0.3"
+                            data-display="vid-intensity-val" data-format="dec2" />
+                    </div>
+                    <label class="lbl" data-tip="vid_df_anim">DepthFlow preset</label>
+                    <select id="vid-df-anim" class="inp" style="margin-bottom:10px">
+                        <option value="zoom">Zoom</option>
+                        <option value="dolly">Dolly</option>
+                    </select>
+                    <p class="field-hint" id="vid-df-hint" style="display:none">DepthFlow: выберите режим «Parallax» выше.</p>
+                </div>
+                <div class="range-row">
+                    <div class="range-head"><span class="rlbl" data-tip="vid_duration">Длина клипа (сек)</span><span class="rval" id="vid-duration-val">3.0</span></div>
+                    <input type="range" id="vid-duration" min="1" max="10" step="0.5" value="3"
+                        data-display="vid-duration-val" data-format="sec" />
+                </div>
+                <div class="range-row">
+                    <div class="range-head"><span class="rlbl" data-tip="vid_fps">FPS</span><span class="rval" id="vid-fps-val">24</span></div>
+                    <input type="range" id="vid-fps" min="12" max="30" step="1" value="24"
+                        data-display="vid-fps-val" data-format="int" />
+                </div>
                 <div class="trow" style="margin-bottom:12px">
-                    <span class="tlbl">Собрать storyboard.mp4</span>
+                    <span class="tlbl" data-tip="vid_concat">Собрать storyboard.mp4</span>
                     <label class="tog"><input type="checkbox" id="vid-concat" checked><span class="sl"></span></label>
                 </div>
                 <button class="btn btn-e" id="btn-video" onclick="runVideo()">▶ Создать видео</button>
@@ -445,6 +630,7 @@
     </main>
 </div>
 
+<div id="tip-layer" aria-hidden="true"></div>
 <div id="toast"></div>
 
 <script>
@@ -474,6 +660,249 @@ let spaceDown = false;
 
 // ── UI helpers ────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
+
+function formatRangeValue(v, fmt) {
+    const n = parseFloat(v);
+    if (fmt === 'int') return String(Math.round(n));
+    if (fmt === 'sec') return n.toFixed(1);
+    if (fmt === 'dec2') return n.toFixed(2);
+    return String(n);
+}
+
+function setRange(id, val) {
+    const el = $(id);
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function getRange(id) {
+    return parseFloat($(id).value);
+}
+
+function initRangeDisplays() {
+    document.querySelectorAll('input[type=range][data-display]').forEach(sl => {
+        const disp = $(sl.dataset.display);
+        if (!disp) return;
+        const fmt = sl.dataset.format || 'num';
+        const update = () => { disp.textContent = formatRangeValue(sl.value, fmt); };
+        sl.addEventListener('input', update);
+        update();
+    });
+}
+
+function setSegScale(segId, hiddenId, val) {
+    const v = String(val);
+    const hid = $(hiddenId);
+    if (hid) hid.value = v;
+    const seg = $(segId);
+    if (!seg) return;
+    seg.querySelectorAll('.seg-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.v === v);
+    });
+}
+
+function initSegScales() {
+    document.querySelectorAll('.seg[data-target]').forEach(seg => {
+        const target = $(seg.dataset.target);
+        if (!target) return;
+        seg.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setSegScale(seg.id, seg.dataset.target, btn.dataset.v);
+            });
+        });
+        setSegScale(seg.id, seg.dataset.target, target.value || '2');
+    });
+}
+
+function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function tipMarkup(text) {
+    return `<span class="tip-wrap">`
+        + `<span class="tip-icon" tabindex="0" role="button" aria-label="Подсказка">!</span>`
+        + `<span class="tip-bubble" role="tooltip">`
+        + `<button type="button" class="tip-close" aria-label="Закрыть подсказку">×</button>`
+        + `<span class="tip-text">${escapeHtml(text)}</span>`
+        + `</span>`
+        + `</span>`;
+}
+
+/** Текущая открытая подсказка (bubble уходит в body — querySelector внутри wrap не найдёт). */
+const _activeTip = { wrap: null, bubble: null, anchor: null };
+
+function _tipBubbleOf(wrap) {
+    return wrap?._tipBubbleEl || wrap?.querySelector('.tip-bubble');
+}
+
+function closeAllTips() {
+    if (_activeTip.wrap) hideTipBubble(_activeTip.wrap);
+}
+
+function placeTipBubble(bubble, anchor) {
+    if (!bubble || !anchor) return;
+    document.body.appendChild(bubble);
+
+    const r = anchor.getBoundingClientRect();
+    const gap = 10;
+    const pad = 8;
+    const maxW = Math.min(260, window.innerWidth * 0.72);
+
+    bubble.style.width = maxW + 'px';
+    bubble.style.maxWidth = maxW + 'px';
+    bubble.style.left = '0px';
+    bubble.style.top = '0px';
+    bubble.style.visibility = 'hidden';
+    bubble.classList.add('tip-show');
+
+    const bh = Math.ceil(bubble.getBoundingClientRect().height || 0);
+    const bw = Math.ceil(bubble.getBoundingClientRect().width || maxW);
+
+    let left = r.right + gap;
+    let top = r.top + (r.height / 2) - (bh / 2);
+
+    if (left + bw > window.innerWidth - pad) {
+        left = r.left - gap - bw;
+    }
+    if (left < pad) left = pad;
+
+    top = Math.max(pad, Math.min(top, window.innerHeight - bh - pad));
+
+    bubble.style.left = Math.round(left) + 'px';
+    bubble.style.top = Math.round(top) + 'px';
+    bubble.style.visibility = 'visible';
+}
+
+function showTipBubble(wrap) {
+    const bubble = _tipBubbleOf(wrap);
+    const anchor = wrap.querySelector('.tip-icon') || wrap;
+    if (!bubble) return;
+
+    if (_activeTip.wrap && _activeTip.wrap !== wrap) hideTipBubble(_activeTip.wrap);
+
+    wrap._tipBubbleEl = bubble;
+    wrap.dataset.tipOpen = '1';
+    wrap.setAttribute('data-tip-open', '1');
+
+    _activeTip.wrap = wrap;
+    _activeTip.bubble = bubble;
+    _activeTip.anchor = anchor;
+
+    placeTipBubble(bubble, anchor);
+}
+
+function hideTipBubble(wrap) {
+    const bubble = wrap ? _tipBubbleOf(wrap) : _activeTip.bubble;
+    if (!bubble) return;
+
+    bubble.classList.remove('tip-show');
+    bubble.style.visibility = 'hidden';
+
+    if (wrap) {
+        wrap.appendChild(bubble);
+        delete wrap.dataset.tipOpen;
+        wrap.removeAttribute('data-tip-open');
+    }
+
+    if (_activeTip.wrap === wrap) {
+        _activeTip.wrap = null;
+        _activeTip.bubble = null;
+        _activeTip.anchor = null;
+    }
+}
+
+let _tipGlobalBound = false;
+
+function initFloatingTips() {
+    document.querySelectorAll('.tip-wrap').forEach(wrap => {
+        if (wrap.dataset.tipBound) return;
+        wrap.dataset.tipBound = '1';
+
+        const icon = wrap.querySelector('.tip-icon');
+        const bubble = wrap.querySelector('.tip-bubble');
+        if (bubble) wrap._tipBubbleEl = bubble;
+
+        let hideTimer = null;
+        const cancelHide = () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } };
+        const scheduleHide = () => {
+            cancelHide();
+            hideTimer = setTimeout(() => {
+                if (_activeTip.wrap !== wrap) return;
+                const b = _activeTip.bubble;
+                const stillOnIcon = icon && icon.matches(':hover');
+                const stillOnBubble = b && b.matches(':hover');
+                if (!stillOnIcon && !stillOnBubble) hideTipBubble(wrap);
+            }, 150);
+        };
+
+        if (icon) {
+            icon.addEventListener('mouseenter', () => { cancelHide(); showTipBubble(wrap); });
+            icon.addEventListener('mouseleave', scheduleHide);
+            icon.addEventListener('click', e => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (_activeTip.wrap === wrap) hideTipBubble(wrap);
+                else showTipBubble(wrap);
+            });
+        }
+        if (bubble) {
+            bubble.addEventListener('mouseenter', cancelHide);
+            bubble.addEventListener('mouseleave', scheduleHide);
+        }
+    });
+
+    if (_tipGlobalBound) return;
+    _tipGlobalBound = true;
+
+    document.addEventListener('click', e => {
+        if (e.target.closest('.tip-close')) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeAllTips();
+            return;
+        }
+        if (!e.target.closest('.tip-icon') && !e.target.closest('.tip-bubble')) {
+            closeAllTips();
+        }
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeAllTips();
+    });
+
+    const repaintOpenTips = () => {
+        if (_activeTip.wrap && _activeTip.bubble && _activeTip.anchor) {
+            placeTipBubble(_activeTip.bubble, _activeTip.anchor);
+        }
+    };
+    document.querySelector('aside')?.addEventListener('scroll', repaintOpenTips, { passive: true });
+    window.addEventListener('resize', repaintOpenTips);
+}
+
+function attachFieldTips(tips) {
+    document.querySelectorAll('[data-tip]').forEach(el => {
+        const key = el.getAttribute('data-tip');
+        const text = tips && tips[key];
+        if (!text || el.querySelector('.tip-wrap')) return;
+        if (el.classList.contains('tip-host')) {
+            el.innerHTML = tipMarkup(text);
+        } else {
+            el.insertAdjacentHTML('beforeend', tipMarkup(text));
+        }
+    });
+    initFloatingTips();
+}
+
+async function loadFieldTips() {
+    try {
+        const r = await fetch('/api/tooltips');
+        if (r.ok) return await r.json();
+    } catch (_) { /* offline */ }
+    return {};
+}
 
 function setStatus(msg, cls='') { const el=$('status'); el.textContent=msg; el.className=cls; }
 
@@ -529,6 +958,138 @@ function polyToBbox(poly) {
 
 // ── Tabs (Split / Upscale / Video) ────────────────────────────────────────
 let activeTab = 'split';
+let currentPreset = 'standard';
+
+function _setPresetActive(name) {
+    currentPreset = name;
+    $('preset-std').classList.toggle('active', name === 'standard');
+    $('preset-q').classList.toggle('active', name === 'quality');
+}
+
+function applyPresetModeUI() {
+    const isQ = currentPreset === 'quality';
+    // Split
+    const sam = $('split-quality-block');
+    if (sam) sam.style.display = isQ ? '' : 'none';
+    const thr = $('split-thresholds');
+    if (thr) thr.style.display = isQ ? '' : 'none';
+    // Upscale advanced
+    const upq = $('upscale-quality-block');
+    if (upq) upq.style.display = isQ ? '' : 'none';
+    // Video advanced
+    const vq = $('video-quality-block');
+    if (vq) vq.style.display = isQ ? '' : 'none';
+    // Disable/enable DepthFlow mode in Standard
+    const optDf = $('opt-depthflow');
+    if (optDf) {
+        optDf.disabled = !isQ;
+        optDf.hidden = !isQ;
+    }
+    if (!isQ && $('vid-mode')?.value === 'depthflow') {
+        $('vid-mode').value = 'opencv_zoom';
+    }
+    // For Standard, DepthFlow preset hint should not show
+    syncVideoAdvancedVisibility();
+}
+
+function fillFormFromPreset(payload) {
+    const s = payload.split || {};
+    const a = payload.anim || {};
+    $('use-sam').checked = !!s.use_sam;
+    $('reading-order').checked = s.reading_order !== false;
+    $('rtl').checked = !!s.rtl;
+    setRange('conf-thr', s.confidence_threshold ?? 0.35);
+    setRange('iou-thr', s.iou_threshold ?? 0.45);
+    setSegScale('up-scale-seg', 'up-scale', a.upscale_scale ?? 2);
+    $('up-model').value = a.upscale_model || 'animevideov3';
+    const gpu = String(a.gpu_id ?? 0);
+    if ($('up-gpu').querySelector(`option[value="${gpu}"]`)) $('up-gpu').value = gpu;
+    else $('up-gpu').value = '0';
+    setSegScale('vid-scale-seg', 'vid-scale', a.upscale_scale ?? 2);
+    $('vid-model').value = a.upscale_model || 'animevideov3';
+    const vgpu = String(a.gpu_id ?? 0);
+    if ($('vid-gpu').querySelector(`option[value="${vgpu}"]`)) $('vid-gpu').value = vgpu;
+    else $('vid-gpu').value = '0';
+    $('vid-harm-mode').value = a.harmonize_mode || 'auto';
+    setRange('vid-harm-blur', a.harmonize_blur_sigma ?? 60);
+    setRange('vid-harm-vig', a.harmonize_vignette ?? 0.7);
+    $('vid-mode').value = a.mode || 'opencv_zoom';
+    $('vid-upscale').checked = a.upscale_enabled !== false;
+    setRange('vid-duration', a.duration ?? 3);
+    setRange('vid-fps', a.fps ?? 24);
+    setRange('vid-intensity', a.intensity ?? 0.3);
+    $('vid-df-anim').value = a.depthflow_animation || 'zoom';
+    $('vid-concat').checked = a.do_concat !== false;
+    if (payload.description) $('preset-desc').textContent = payload.description;
+    _setPresetActive(payload.preset || currentPreset);
+    updateSamHint();
+    syncVideoAdvancedVisibility();
+    applyPresetModeUI();
+}
+
+const PRESET_TIMING_HINT = {
+    standard: 'Ожидание на exam_imgs: ~10–15 с (YOLO)',
+    quality: 'Ожидание на exam_imgs: ~1–3 мин (YOLO + SAM)',
+};
+
+function updateSamHint() {
+    const on = $('use-sam').checked;
+    $('sam-hint').style.color = on ? 'var(--accent)' : '';
+}
+
+function syncVideoAdvancedVisibility() {
+    const df = $('vid-mode').value === 'depthflow';
+    const dfHint = $('vid-df-hint');
+    const dfSel = $('vid-df-anim');
+    // Hint only makes sense when quality fields are visible
+    const isQ = currentPreset === 'quality';
+    if (dfHint) dfHint.style.display = (isQ && !df) ? 'block' : 'none';
+    if (dfSel) dfSel.style.opacity = (df ? '1' : '0.55');
+    const timing = $('preset-timing');
+    if (timing) {
+        timing.textContent = PRESET_TIMING_HINT[currentPreset] || '';
+        timing.style.display = timing.textContent ? 'block' : 'none';
+    }
+}
+
+async function loadPresets() {
+    try {
+        const r = await fetch('/api/presets');
+        if (!r.ok) return;
+        const data = await r.json();
+        (data.presets || []).forEach(p => {
+            if (p.id === 'standard' && p.description) {
+                if (currentPreset === 'standard') $('preset-desc').textContent = p.description;
+            }
+        });
+    } catch (_) { /* API offline */ }
+}
+
+async function applyPreset(name) {
+    const persist = $('preset-persist').checked;
+    try {
+        const r = await fetch('/api/presets/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({ name, persist }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || r.statusText);
+        fillFormFromPreset(data);
+        toast(`Пресет «${data.label || name}»` + (persist ? ' (сохранён)' : ''));
+        syncVideoAdvancedVisibility();
+        applyPresetModeUI();
+    } catch (e) {
+        try {
+            const r2 = await fetch(`/api/presets/${name}`);
+            const p = await r2.json();
+            if (r2.ok) fillFormFromPreset(p);
+            else throw e;
+        } catch (_) {
+            toast(e.message || 'Пресет недоступен', 'err');
+        }
+    }
+}
 
 function switchTab(name) {
     activeTab = name;
@@ -597,7 +1158,13 @@ async function runUpscale() {
         const r = await fetch('/api/upscale', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({ panels_dir, output_dir, scale }),
+            body: JSON.stringify({
+                panels_dir,
+                output_dir,
+                scale,
+                upscale_model: $('up-model').value,
+                gpu_id: parseInt($('up-gpu').value, 10),
+            }),
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.detail || r.statusText);
@@ -643,9 +1210,16 @@ async function runVideo() {
                 mode: $('vid-mode').value,
                 do_upscale: $('vid-upscale').checked,
                 scale: parseInt($('vid-scale').value, 10) || 2,
-                duration: parseFloat($('vid-duration').value) || 3,
-                fps: parseInt($('vid-fps').value, 10) || 24,
+                duration: getRange('vid-duration'),
+                fps: Math.round(getRange('vid-fps')),
                 do_concat: $('vid-concat').checked,
+                upscale_model: $('vid-model').value,
+                gpu_id: parseInt($('vid-gpu').value, 10),
+                harmonize_mode: $('vid-harm-mode').value,
+                harmonize_blur_sigma: Math.round(getRange('vid-harm-blur')),
+                harmonize_vignette: getRange('vid-harm-vig'),
+                intensity: getRange('vid-intensity'),
+                depthflow_animation: $('vid-df-anim').value,
             }),
         });
         const data = await r.json();
@@ -687,6 +1261,8 @@ async function runDetection() {
                 use_sam:       $('use-sam').checked,
                 reading_order: $('reading-order').checked,
                 rtl:           $('rtl').checked,
+                confidence_threshold: getRange('conf-thr'),
+                iou_threshold: getRange('iou-thr'),
             }),
         });
         if (!r.ok) { const e=await r.json(); throw new Error(e.detail||r.statusText); }
@@ -1242,6 +1818,38 @@ $('kv').addEventListener('mousemove',e=>{
 $('kv').addEventListener('mouseup',()=>{
     if(isPanning){ isPanning=false; $('kv').style.cursor=spaceDown?'grab':''; }
 });
+
+const OFFLINE_PRESET_STANDARD = {
+    preset: 'standard',
+    description: 'Быстро: YOLO без SAM, animevideov3, OpenCV zoom',
+    split: { use_sam: false, reading_order: true, rtl: false, confidence_threshold: 0.35, iou_threshold: 0.45 },
+    anim: {
+        upscale_scale: 2, upscale_model: 'animevideov3', gpu_id: 0,
+        harmonize_mode: 'auto', harmonize_blur_sigma: 60, harmonize_vignette: 0.7,
+        mode: 'opencv_zoom', upscale_enabled: true, duration: 3, fps: 24,
+        intensity: 0.3, depthflow_animation: 'zoom', do_concat: true,
+    },
+};
+
+async function initApp() {
+    initRangeDisplays();
+    initSegScales();
+    attachFieldTips(await loadFieldTips());
+    if (!$('img-path').value.trim()) {
+        $('img-path').value = 'exam_imgs\\01_Asterix_the_Gaul_page-0004.jpg';
+    }
+    _setPresetActive('standard');
+    try {
+        const r = await fetch('/api/presets/standard');
+        if (r.ok) fillFormFromPreset(await r.json());
+        else fillFormFromPreset(OFFLINE_PRESET_STANDARD);
+    } catch (_) {
+        fillFormFromPreset(OFFLINE_PRESET_STANDARD);
+    }
+    syncVideoAdvancedVisibility();
+}
+
+initApp();
 </script>
 </body>
 </html>

@@ -38,6 +38,9 @@ power_shel_error.txt
 Thumbs.db
 Desktop.ini
 
+# Локальные переопределения пресетов (блок A)
+config/presets.user.yaml
+
 # Временные файлы
 *.tmp
 ~$*
