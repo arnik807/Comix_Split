@@ -45,14 +45,25 @@ from utils.config import get_config, load_config
 from utils.anim_config import load_anim_config
 from utils.presets import apply_preset, preset_ui_payload
 from utils.ui_tooltips import FIELD_TIPS as TIP
+from utils.path_dialog import pick_file, pick_folder
 
 
-def _resolve_path(file_path, folder: str | None) -> str | None:
+def _resolve_path(file_path, explicit_path: str | None, folder: str | None) -> str | None:
     if file_path:
         return str(file_path)
+    if explicit_path:
+        return str(explicit_path)
     if folder and Path(folder).exists():
         return folder
     return None
+
+
+def browse_file_or_archive(current: str | None = None) -> str:
+    return pick_file(current) or (current or "")
+
+
+def browse_folder(current: str | None = None) -> str:
+    return pick_folder(current) or (current or "")
 
 
 def run_comicsplit(
@@ -306,21 +317,6 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         if is_quality
         else "**MODE: STANDARD** — быстрый режим, минимум настроек."
     )
-    split_banner_md = (
-        "**Качество**: доступны SAM и пороги YOLO (точнее, но медленнее)."
-        if is_quality
-        else "**Стандарт**: быстрый прогон; SAM и пороги YOLO скрыты."
-    )
-    upscale_banner_md = (
-        "**Качество**: можно выбрать модель (v3/6B) и GPU/CPU."
-        if is_quality
-        else "**Стандарт**: только масштаб ×2/×4; модель/GPU в Quality."
-    )
-    video_banner_md = (
-        "**Качество**: доступны harmonize/intensity/DepthFlow."
-        if is_quality
-        else "**Стандарт**: базовая анимация; DepthFlow/harmonize в Quality."
-    )
     return (
         gr.update(value=s["use_sam"], visible=is_quality),
         gr.update(value=s["reading_order"]),
@@ -342,9 +338,6 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         gr.update(value=a["do_concat"]),
         gr.update(visible=is_quality),  # yolo thresholds accordion
         gr.update(value=mode_badge_md),
-        gr.update(value=split_banner_md),
-        gr.update(value=upscale_banner_md),
-        gr.update(value=video_banner_md),
         f"Пресет «{p['label']}» применён" + (" и сохранён в YAML" if persist else ""),
     )
 
@@ -377,7 +370,6 @@ with gr.Blocks(title="ComicSplit") as demo:
             gr.Markdown(
                 "Страница (JPG/PNG), CBZ/ZIP или папка со страницами → PNG-панели."
             )
-            split_mode_banner = gr.Markdown("**Стандарт**: быстрый прогон, SAM и пороги YOLO скрыты.")
             with gr.Row():
                 with gr.Column(scale=1):
                     source = gr.File(
@@ -385,16 +377,23 @@ with gr.Blocks(title="ComicSplit") as demo:
                         type="filepath",
                     )
                     gr.Markdown(f"<sub>ⓘ {TIP['split_source']}</sub>")
+                    source_path_box = gr.Textbox(
+                        label="Или путь к файлу/архиву",
+                        placeholder="exam_imgs\\01_Asterix_the_Gaul_page-0004.jpg",
+                    )
+                    source_browse_btn = gr.Button("Обзор файла/архива", size="sm")
                     folder_path = gr.Textbox(
                         label="Или путь к папке со страницами",
                         placeholder="D:\\comics\\pages",
                         info=TIP["split_folder"],
                     )
+                    folder_browse_btn = gr.Button("Обзор папки страниц", size="sm")
                     split_output = gr.Textbox(
                         label="Папка вывода",
                         value="output",
                         info=TIP["split_output"],
                     )
+                    split_out_browse_btn = gr.Button("Обзор папки вывода", size="sm")
                     use_sam = gr.Checkbox(
                         label="Точные контуры (SAM)",
                         value=use_sam_def,
@@ -443,11 +442,12 @@ with gr.Blocks(title="ComicSplit") as demo:
                     )
 
             split_btn.click(
-                fn=lambda f, folder, o, s, ro, rt, c, i: run_comicsplit(
-                    _resolve_path(f, folder), o, s, ro, rt, c, i
+                fn=lambda f, srcp, folder, o, s, ro, rt, c, i: run_comicsplit(
+                    _resolve_path(f, srcp, folder), o, s, ro, rt, c, i
                 ),
                 inputs=[
                     source,
+                    source_path_box,
                     folder_path,
                     split_output,
                     use_sam,
@@ -458,13 +458,15 @@ with gr.Blocks(title="ComicSplit") as demo:
                 ],
                 outputs=split_status,
             )
+            source_browse_btn.click(fn=browse_file_or_archive, inputs=source_path_box, outputs=source_path_box)
+            folder_browse_btn.click(fn=browse_folder, inputs=folder_path, outputs=folder_path)
+            split_out_browse_btn.click(fn=browse_folder, inputs=split_output, outputs=split_output)
 
         # ── Upscale ───────────────────────────────────────────────────
         with gr.Tab("Upscale — апскейл"):
             gr.Markdown(
                 "Папка с PNG-панелями (например `output\\имя_комикса`) → апскейл Real-ESRGAN NCNN."
             )
-            upscale_mode_banner = gr.Markdown("**Стандарт**: простой апскейл — масштаб ×2/×4. Модель/GPU доступны в Quality.")
             with gr.Row():
                 with gr.Column(scale=1):
                     up_input = gr.Textbox(
@@ -472,11 +474,13 @@ with gr.Blocks(title="ComicSplit") as demo:
                         placeholder="output\\mycomic",
                         info=TIP["up_panels"],
                     )
+                    up_input_browse = gr.Button("Обзор папки панелей", size="sm")
                     up_output = gr.Textbox(
                         label="Папка вывода",
                         value="output_upscaled",
                         info=TIP["up_output"],
                     )
+                    up_output_browse = gr.Button("Обзор папки вывода", size="sm")
                     up_scale = gr.Radio(
                         label="Масштаб",
                         choices=[2, 4],
@@ -511,13 +515,14 @@ with gr.Blocks(title="ComicSplit") as demo:
                 inputs=[up_input, up_output, up_scale, up_model, up_gpu],
                 outputs=up_status,
             )
+            up_input_browse.click(fn=browse_folder, inputs=up_input, outputs=up_input)
+            up_output_browse.click(fn=browse_folder, inputs=up_output, outputs=up_output)
 
         # ── Video ───────────────────────────────────────────────────
         with gr.Tab("Video — оживление"):
             gr.Markdown(
                 "Папка с панелями → 16:9, анимация, MP4 на каждую панель + `storyboard.mp4`."
             )
-            video_mode_banner = gr.Markdown("**Стандарт**: базовая анимация (OpenCV/static). DepthFlow/harmonize/intensity доступны в Quality.")
             with gr.Row():
                 with gr.Column(scale=1):
                     vid_input = gr.Textbox(
@@ -525,11 +530,13 @@ with gr.Blocks(title="ComicSplit") as demo:
                         placeholder="output\\mycomic",
                         info=TIP["vid_panels"],
                     )
+                    vid_input_browse = gr.Button("Обзор папки панелей", size="sm")
                     vid_output = gr.Textbox(
                         label="Папка вывода",
                         value="story_out",
                         info=TIP["vid_output"],
                     )
+                    vid_output_browse = gr.Button("Обзор папки вывода", size="sm")
                     vid_mode = gr.Dropdown(
                         label="Режим анимации",
                         choices=ANIM_MODES,
@@ -658,6 +665,8 @@ with gr.Blocks(title="ComicSplit") as demo:
                 ],
                 outputs=vid_status,
             )
+            vid_input_browse.click(fn=browse_folder, inputs=vid_input, outputs=vid_input)
+            vid_output_browse.click(fn=browse_folder, inputs=vid_output, outputs=vid_output)
 
     _preset_outputs = [
         use_sam,
@@ -680,9 +689,6 @@ with gr.Blocks(title="ComicSplit") as demo:
         vid_concat,
         yolo_adv,
         mode_badge,
-        split_mode_banner,
-        upscale_mode_banner,
-        video_mode_banner,
         preset_status,
     ]
 

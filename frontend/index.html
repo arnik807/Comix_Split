@@ -61,32 +61,6 @@
         }
         .mode-pill.std { border-color: rgba(240,192,64,.35); color: var(--accent); }
         .mode-pill.q   { border-color: rgba(167,139,250,.45); color: #a78bfa; }
-        .mode-banner {
-            margin: 0 0 10px 0;
-            padding: 10px 10px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: rgba(255,255,255,.02);
-            font-size: 11px;
-            line-height: 1.5;
-            color: var(--text);
-        }
-        .mode-banner .t { font-family: var(--mono); font-weight: 800; letter-spacing: .6px; font-size: 10px; color: var(--muted); text-transform: uppercase; }
-        .mode-banner.std { border-color: rgba(240,192,64,.25); }
-        .mode-banner.q { border-color: rgba(167,139,250,.25); }
-        .lock-box { position: relative; }
-        .lock-box.locked { opacity: .45; filter: grayscale(.15); }
-        .lock-box.locked * { pointer-events: none; }
-        .lock-badge {
-            position: absolute; top: 8px; right: 8px;
-            font-family: var(--mono); font-size: 10px;
-            padding: 3px 6px; border-radius: 999px;
-            border: 1px solid rgba(255,255,255,.12);
-            background: rgba(0,0,0,.35);
-            color: var(--muted);
-            pointer-events: auto;
-        }
-        .lock-box.locked .lock-badge { color: var(--accent); border-color: rgba(240,192,64,.25); }
         .preset-row { display: flex; gap: 6px; margin-bottom: 8px; }
         .preset-cell { position: relative; flex: 1; min-width: 0; }
         .preset-btn {
@@ -102,6 +76,15 @@
         }
         .preset-cell .tip-host .tip-wrap { margin-left: 0; }
         .preset-hint { font-size: 10px; color: var(--muted); line-height: 1.45; font-family: var(--mono); }
+        .path-row { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+        .path-row input[type=text] { margin-bottom: 0; flex: 1; min-width: 0; }
+        .path-browse {
+            padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--muted); font-family: var(--mono);
+            font-size: 11px; cursor: pointer; white-space: nowrap;
+        }
+        .path-browse:hover { border-color: var(--accent); color: var(--text); }
+        .path-browse:disabled { opacity: .45; cursor: not-allowed; }
         select.inp, input.inp-num {
             width: 100%; padding: 8px 10px; margin-bottom: 10px;
             background: var(--surface2); border: 1px solid var(--border);
@@ -442,20 +425,18 @@
 
         <div id="tab-split" class="tab-panel active">
         <div class="sec">
-            <div id="banner-split" class="mode-banner std">
-                <div class="t">Режим</div>
-                <div id="banner-split-txt"><b>Стандарт</b>: быстрый прогон, минимум настроек. Для черновой раскройки.</div>
-            </div>
             <div class="sec-title">Источник</div>
             <label class="lbl" data-tip="img_path">Путь к изображению</label>
-            <input type="text" id="img-path" value="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
+            <div class="path-row">
+                <input type="text" id="img-path" value="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
+                <button type="button" class="path-browse" onclick="pickPath('img-path','file','Выберите страницу')">Обзор…</button>
+            </div>
             <p class="preset-hint" style="margin-top:6px">Относительный путь от корня проекта — надёжнее при кириллице в каталогах.</p>
         </div>
 
         <div class="sec">
             <div class="sec-title">Параметры детекции</div>
-            <div id="split-quality-block" class="lock-box">
-                <span class="lock-badge">только Quality</span>
+            <div id="split-quality-block">
                 <div class="trow">
                     <span class="tlbl" data-tip="use_sam">Точные контуры (SAM)</span>
                     <label class="tog"><input type="checkbox" id="use-sam" onchange="updateSamHint()"><span class="sl"></span></label>
@@ -470,9 +451,8 @@
                 <span class="tlbl" data-tip="rtl">RTL (манга)</span>
                 <label class="tog"><input type="checkbox" id="rtl"><span class="sl"></span></label>
             </div>
-            <details class="adv lock-box" id="split-thresholds">
+            <details class="adv" id="split-thresholds">
                 <summary>Пороги YOLO (расширенные)</summary>
-                <span class="lock-badge">только Quality</span>
                 <div class="range-row">
                     <div class="range-head"><span class="rlbl" data-tip="conf_thr">Confidence</span><span class="rval" id="conf-thr-val">0.35</span></div>
                     <input type="range" id="conf-thr" min="0.1" max="0.9" step="0.05" value="0.35"
@@ -526,33 +506,37 @@
         <div class="sec" id="sec-export" style="display:none">
             <div class="sec-title">Экспорт</div>
             <label class="lbl" data-tip="out_dir">Папка вывода</label>
-            <input type="text" id="out-dir" placeholder="C:\output\panels" style="margin-bottom:10px" />
+            <div class="path-row">
+                <input type="text" id="out-dir" placeholder="C:\output\panels" />
+                <button type="button" class="path-browse" onclick="pickPath('out-dir','folder','Папка экспорта')">Обзор…</button>
+            </div>
             <button class="btn btn-e" id="btn-exp" onclick="exportPanels()">↓ Экспортировать PNG</button>
         </div>
         </div><!-- /tab-split -->
 
         <div id="tab-upscale" class="tab-panel">
             <div class="sec">
-                <div id="banner-upscale" class="mode-banner std">
-                    <div class="t">Режим</div>
-                    <div id="banner-upscale-txt"><b>Стандарт</b>: простой апскейл — выберите ×2/×4 и запускайте.</div>
-                </div>
                 <div class="sec-title">Апскейл панелей</div>
                 <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
                     Папка с PNG после Split (например <code style="color:var(--accent)">output\mycomic\page_name</code>).
                 </p>
                 <label class="lbl" data-tip="up_panels">Папка с панелями</label>
-                <input type="text" id="up-panels" placeholder="output\mycomic" style="margin-bottom:10px" />
+                <div class="path-row">
+                    <input type="text" id="up-panels" placeholder="output\mycomic" />
+                    <button type="button" class="path-browse" onclick="pickPath('up-panels','folder','Папка панелей')">Обзор…</button>
+                </div>
                 <label class="lbl" data-tip="up_output">Папка вывода</label>
-                <input type="text" id="up-output" value="output_upscaled" style="margin-bottom:10px" />
+                <div class="path-row">
+                    <input type="text" id="up-output" value="output_upscaled" />
+                    <button type="button" class="path-browse" onclick="pickPath('up-output','folder','Папка вывода апскейла')">Обзор…</button>
+                </div>
                 <label class="lbl" data-tip="up_scale">Масштаб</label>
                 <div class="seg" id="up-scale-seg" data-target="up-scale">
                     <button type="button" class="seg-btn active" data-v="2">×2</button>
                     <button type="button" class="seg-btn" data-v="4">×4</button>
                 </div>
                 <input type="hidden" id="up-scale" value="2" />
-                <div id="upscale-quality-block" class="lock-box">
-                    <span class="lock-badge">только Quality</span>
+                <div id="upscale-quality-block">
                     <label class="lbl" data-tip="up_model">Модель Real-ESRGAN</label>
                     <select id="up-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
@@ -570,16 +554,18 @@
 
         <div id="tab-video" class="tab-panel">
             <div class="sec">
-                <div id="banner-video" class="mode-banner std">
-                    <div class="t">Режим</div>
-                    <div id="banner-video-txt"><b>Стандарт</b>: базовая анимация (OpenCV / static). DepthFlow и тонкие настройки — в Quality.</div>
-                </div>
                 <div class="sec-title">Video — оживление</div>
                 <p class="field-hint">Папка с панелями → 16:9, анимация, MP4 на панель + <code style="color:var(--accent)">storyboard.mp4</code>. На CPU долго.</p>
                 <label class="lbl" data-tip="vid_panels">Папка с панелями</label>
-                <input type="text" id="vid-panels" placeholder="output\mycomic" style="margin-bottom:10px" />
+                <div class="path-row">
+                    <input type="text" id="vid-panels" placeholder="output\mycomic" />
+                    <button type="button" class="path-browse" onclick="pickPath('vid-panels','folder','Папка панелей для видео')">Обзор…</button>
+                </div>
                 <label class="lbl" data-tip="vid_output">Папка вывода</label>
-                <input type="text" id="vid-output" value="story_out" style="margin-bottom:10px" />
+                <div class="path-row">
+                    <input type="text" id="vid-output" value="story_out" />
+                    <button type="button" class="path-browse" onclick="pickPath('vid-output','folder','Папка вывода видео')">Обзор…</button>
+                </div>
                 <label class="lbl" data-tip="vid_mode">Режим анимации</label>
                 <select id="vid-mode" class="inp" style="margin-bottom:10px" onchange="syncVideoAdvancedVisibility()">
                     <option value="opencv_zoom">Zoom (OpenCV)</option>
@@ -597,8 +583,7 @@
                     <button type="button" class="seg-btn" data-v="4">×4</button>
                 </div>
                 <input type="hidden" id="vid-scale" value="2" />
-                <div id="video-quality-block" class="lock-box">
-                    <span class="lock-badge">только Quality</span>
+                <div id="video-quality-block">
                     <label class="lbl" data-tip="vid_model">Модель апскейла</label>
                     <select id="vid-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
@@ -1027,32 +1012,20 @@ function applyPresetModeUI() {
         pill.className = 'mode-pill ' + (isQ ? 'q' : 'std');
         pill.textContent = isQ ? 'MODE: QUALITY' : 'MODE: STANDARD';
     }
-
-    // Banners
-    const bs = $('banner-split'); const bu = $('banner-upscale'); const bv = $('banner-video');
-    if (bs) bs.className = 'mode-banner ' + (isQ ? 'q' : 'std');
-    if (bu) bu.className = 'mode-banner ' + (isQ ? 'q' : 'std');
-    if (bv) bv.className = 'mode-banner ' + (isQ ? 'q' : 'std');
-    if ($('banner-split-txt')) $('banner-split-txt').innerHTML = isQ
-        ? '<b>Качество</b>: точнее контуры и результат. Доступны SAM и пороги YOLO. Медленнее.'
-        : '<b>Стандарт</b>: быстрый прогон, минимум настроек. Для черновой раскройки.';
-    if ($('banner-upscale-txt')) $('banner-upscale-txt').innerHTML = isQ
-        ? '<b>Качество</b>: можно выбрать модель (v3/6B) и GPU/CPU. 6B медленнее, но детальнее.'
-        : '<b>Стандарт</b>: простой апскейл — выберите ×2/×4 и запускайте.';
-    if ($('banner-video-txt')) $('banner-video-txt').innerHTML = isQ
-        ? '<b>Качество</b>: доступны harmonize (16:9), intensity и DepthFlow parallax. Рендер дольше.'
-        : '<b>Стандарт</b>: базовая анимация (OpenCV / static). DepthFlow и тонкие настройки — в Quality.';
-
-    // Lock boxes (visible but disabled)
-    const lock = (id) => { const el=$(id); if (el) el.classList.toggle('locked', !isQ); };
-    lock('split-quality-block');
-    lock('split-thresholds');
-    lock('upscale-quality-block');
-    lock('video-quality-block');
-
-    // Disable/enable DepthFlow option in Standard (keep visible as “teaser”)
+    // Show/hide advanced blocks by mode
+    const sam = $('split-quality-block');
+    if (sam) sam.style.display = isQ ? '' : 'none';
+    const thr = $('split-thresholds');
+    if (thr) thr.style.display = isQ ? '' : 'none';
+    const upq = $('upscale-quality-block');
+    if (upq) upq.style.display = isQ ? '' : 'none';
+    const vq = $('video-quality-block');
+    if (vq) vq.style.display = isQ ? '' : 'none';
     const optDf = $('opt-depthflow');
-    if (optDf) optDf.disabled = !isQ;
+    if (optDf) {
+        optDf.disabled = !isQ;
+        optDf.hidden = !isQ;
+    }
     if (!isQ && $('vid-mode')?.value === 'depthflow') $('vid-mode').value = 'opencv_zoom';
 
     syncVideoAdvancedVisibility();
@@ -1182,6 +1155,24 @@ function switchTab(name) {
 
 function setBatchLog(text) {
     $('batch-log').textContent = text;
+}
+
+async function pickPath(targetId, kind, title='Выберите путь') {
+    const input = $(targetId);
+    if (!input) return;
+    const current = (input.value || '').trim();
+    try {
+        const r = await fetch('/api/path/pick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({ kind, initial: current, title }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || r.statusText);
+        if (!data.cancelled && data.path) input.value = data.path;
+    } catch (e) {
+        toast(`Диалог выбора пути недоступен: ${e.message}`, 'err');
+    }
 }
 
 function setVideoLinks(files, storyboard) {

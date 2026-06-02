@@ -46,6 +46,7 @@ from utils.presets import (  # noqa: E402
     snapshot_from_configs,
 )
 from utils.ui_tooltips import FIELD_TIPS  # noqa: E402
+from utils.path_dialog import pick_file, pick_folder  # noqa: E402
 
 load_config()
 
@@ -105,6 +106,12 @@ class AnimateRequest(BaseModel):
 class PresetApplyRequest(BaseModel):
     name: str
     persist: bool = False
+
+
+class PathPickRequest(BaseModel):
+    kind: str  # "file" | "folder"
+    initial: Optional[str] = None
+    title: Optional[str] = None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -207,6 +214,25 @@ def _crop_polygon(img: np.ndarray, polygon: List[List[int]]) -> np.ndarray:
 def api_tooltips():
     """Тексты подсказок для веб-UI (ключ → описание)."""
     return JSONResponse(FIELD_TIPS)
+
+
+@app.post("/api/path/pick")
+def api_path_pick(req: PathPickRequest):
+    """Open native OS picker on server machine and return selected path."""
+    try:
+        kind = (req.kind or "").strip().lower()
+        if kind == "file":
+            picked = pick_file(req.initial)
+        elif kind == "folder":
+            picked = pick_folder(req.initial, title=req.title or "Выберите папку")
+        else:
+            raise HTTPException(400, detail="kind must be 'file' or 'folder'")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(500, detail=f"Не удалось открыть диалог выбора пути: {exc}") from exc
+
+    return JSONResponse({"ok": True, "path": picked or "", "cancelled": not bool(picked)})
 
 
 @app.get("/api/presets")
