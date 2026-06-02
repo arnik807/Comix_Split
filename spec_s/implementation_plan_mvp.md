@@ -1,6 +1,6 @@
 ﻿# MVP Implementation Plan for ComicSplit (Desktop + Web Tails)
 
-> **Статус (май 2026):** план исходный (англ.); фактическая реализация описана в [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) и [ComicSplit_Documentation.md](ComicSplit_Documentation.md).
+> **Статус (июнь 2026):** план исходный (англ.); фактическая реализация описана в [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) и [ComicSplit_Documentation.md](ComicSplit_Documentation.md).
 
 ## План vs факт (кратко)
 
@@ -11,9 +11,12 @@
 | CBZ/CBR/ZIP/папка (`io_helpers`) | ✅ |
 | OpenCV fast-path каскад | ❌ |
 | `process_source` + параллельный analyze | ✅ |
-| Gradio UI | ✅ (5.x, без Gallery) |
-| FastAPI + Konva + anim API | ✅ (`api/` v1.1, :8000, 3 вкладки UI) |
+| Gradio UI | ✅ (5.x, без Gallery; пресеты, tooltips) |
+| FastAPI + Konva + anim API | ✅ (`api/` v1.2, :8000, 3 вкладки UI) |
 | Anim pipeline (upscale/video) | ✅ (`anim/`, `anim_pipeline.py`, Gradio) |
+| Пресеты Стандарт / Качество (блок A) | ✅ |
+| Tooltips, path pickers, API v1.2 | ✅ |
+| Апскейл: x4plus-anime только ×4, benchmark | ✅ |
 | TPSMM / segment в anim | ❌ |
 | `config.yaml` + Pydantic/YAML | ✅ |
 | pytest | ✅ (`tests/`) |

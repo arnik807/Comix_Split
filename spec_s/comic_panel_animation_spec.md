@@ -15,22 +15,23 @@
 
 ---
 
-## ✅ СТАТУС РЕАЛИЗАЦИИ (май 2026)
+## ✅ СТАТУС РЕАЛИЗАЦИИ (июнь 2026)
 
-См. также [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), [ComicSplit_Documentation.md](ComicSplit_Documentation.md).
+См. также [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), [ComicSplit_Documentation.md](ComicSplit_Documentation.md), [ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md).
 
 | Модуль / функция | Файл | Статус |
 |------------------|------|--------|
-| Апскейл NCNN (Real-ESRGAN Vulkan) | `anim/upscale.py` | ✅ |
+| Апскейл NCNN (Real-ESRGAN Vulkan) | `anim/upscale.py` | ✅ videov3 ×2/×4; x4plus-anime ×4; `tile_size`, benchmark |
 | Гармонизация 16:9 | `anim/harmonize.py` | ✅ blurred_pillarbox, dominant_color, smart_crop, auto |
 | OpenCV zoom / shake / static | `anim/animate_opencv.py` | ✅ |
 | DepthFlow parallax | `anim/animate_depthflow.py` | ✅ CLI 0.9.x (`input … preset … main --render`) |
 | ffmpeg → MP4, concat | `anim/render.py` | ✅ |
 | Оркестратор CLI | `anim_pipeline.py` | ✅ |
 | Конфиг | `config_animate.yaml`, `utils/anim_config.py` | ✅ |
-| Gradio вкладки Upscale / Video | `main.py` | ✅ |
-| REST API | `api/server.py` → `/api/upscale`, `/api/animate` | ✅ |
-| Веб UI Upscale / Video | `frontend/index.html` | ✅ |
+| Пресеты Стандарт / Качество | `config/presets.yaml`, `utils/presets.py` | ✅ API + Gradio + :8000 |
+| Gradio вкладки Upscale / Video | `main.py` | ✅ модель, GPU, harmonize, intensity, tooltips |
+| REST API v1.2 | `api/server.py` → upscale, animate, presets, tooltips | ✅ |
+| Веб UI Upscale / Video | `frontend/index.html` | ✅ паритет с Gradio |
 | Сегментация (`segment.py`) | — | ❌ не реализовано |
 | TPSMM motion transfer | модели в `models/anim/tpsmm/` | 🟡 ONNX есть, **не в пайплайне** |
 | LivePortrait | — | ❌ |
@@ -579,5 +580,5 @@ render:
 
 ---
 
-*Документ: исследование v1.0 + статус реализации v1.1 (май 2026)*  
+*Документ: исследование v1.0 + статус реализации v1.2 (июнь 2026)*  
 *MVP проверен на AMD Ryzen 5 5600H + Radeon iGPU + 16GB RAM, Windows, Python 3.11*

@@ -43,6 +43,7 @@ import gradio as gr
 from pipeline import process_page, process_source
 from utils.config import get_config, load_config
 from utils.anim_config import load_anim_config
+from utils.anim_config import X4_ONLY_UPSCALE_MODEL
 from utils.presets import apply_preset, preset_ui_payload
 from utils.ui_tooltips import FIELD_TIPS as TIP
 from utils.path_dialog import pick_file, pick_folder
@@ -296,8 +297,15 @@ ANIM_MODES = [
 ]
 UPSCALE_MODELS = [
     ("Быстрый (animevideov3)", "animevideov3"),
-    ("Качество (anime 6B)", "anime_6B"),
+    ("Точный (x4plus-anime, только ×4)", "anime_6B"),
 ]
+def _upscale_scale_radio_update(model: str, scale: int = 2):
+    """x4plus-anime (anime_6B) supports only scale 4 in NCNN; ×2 corrupts output."""
+    scale = int(scale) if scale in (2, 4) else 2
+    if model == X4_ONLY_UPSCALE_MODEL:
+        extra = " Для realesrgan-x4plus-anime доступен только ×4."
+        return gr.update(choices=[4], value=4, info=TIP["up_scale"] + extra)
+    return gr.update(choices=[2, 4], value=scale, info=TIP["up_scale"])
 HARMONIZE_MODES = [
     "auto",
     "blurred_pillarbox",
@@ -323,7 +331,9 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         gr.update(value=s["rtl"]),
         gr.update(value=s["confidence_threshold"]),
         gr.update(value=s["iou_threshold"]),
-        gr.update(value=a["upscale_scale"]),
+        _upscale_scale_radio_update(a["upscale_model"], a["upscale_scale"]),
+        _upscale_scale_radio_update(a["upscale_model"], a["upscale_scale"]),
+        gr.update(value=a["upscale_model"], visible=is_quality),
         gr.update(value=a["upscale_model"], visible=is_quality),
         gr.update(value=a["gpu_id"], visible=is_quality),
         gr.update(value=a["harmonize_mode"], visible=is_quality),
@@ -517,6 +527,11 @@ with gr.Blocks(title="ComicSplit") as demo:
             )
             up_input_browse.click(fn=browse_folder, inputs=up_input, outputs=up_input)
             up_output_browse.click(fn=browse_folder, inputs=up_output, outputs=up_output)
+            up_model.change(
+                fn=_upscale_scale_radio_update,
+                inputs=[up_model, up_scale],
+                outputs=up_scale,
+            )
 
         # ── Video ───────────────────────────────────────────────────
         with gr.Tab("Video — оживление"):
@@ -667,6 +682,11 @@ with gr.Blocks(title="ComicSplit") as demo:
             )
             vid_input_browse.click(fn=browse_folder, inputs=vid_input, outputs=vid_input)
             vid_output_browse.click(fn=browse_folder, inputs=vid_output, outputs=vid_output)
+            vid_model.change(
+                fn=_upscale_scale_radio_update,
+                inputs=[vid_model, vid_scale],
+                outputs=vid_scale,
+            )
 
     _preset_outputs = [
         use_sam,
@@ -675,7 +695,9 @@ with gr.Blocks(title="ComicSplit") as demo:
         conf_thr,
         iou_thr,
         up_scale,
+        vid_scale,
         up_model,
+        vid_model,
         up_gpu,
         vid_harm_mode,
         vid_harm_blur,

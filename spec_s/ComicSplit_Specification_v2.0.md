@@ -7,9 +7,9 @@
 ---
 
 **Проект:** ComicSplit — десктопная утилита автоматического сплитирования панелей комиксов  
-**Версия спецификации:** 2.0 (документ не менялся по сути; **статус фаз** обновлён май 2026)  
+**Версия спецификации:** 2.0 (документ не менялся по сути; **статус фаз** обновлён июнь 2026)  
 **Дата:** 2026  
-**Статус реализации (31.05.2026):** Split MVP + Anim MVP (CLI/Gradio/:8000); фазы 1–2 **частично**; Wails/gRPC **не начаты**. Детали: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+**Статус реализации (02.06.2026):** Split MVP + Anim MVP + **блок A** (пресеты, UI v1.2); фазы 1–2 **частично**; Wails/gRPC **не начаты**. Детали: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), [ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md).
 
 ---
 
@@ -674,14 +674,15 @@ comicsplit/
 
 ### Обзор фаз
 
-| # | Фаза | Название | Статус (май 2026) | Ключевой результат |
+| # | Фаза | Название | Статус (июнь 2026) | Ключевой результат |
 |---|---|---|---|---|
 | 0 | — | Исследование и спецификация | ✅ Выполнено | Этот документ |
-| 1 | PoC | Python ML-пайплайн | 🟡 ~80% | `pipeline.py`, `benchmark.py`, Gradio; критерий &lt;600 ms/стр. не закрыт |
+| 1 | PoC | Python ML-пайплайн | 🟡 ~85% | `pipeline.py`, `benchmark.py`, Gradio; критерий &lt;600 ms/стр. не закрыт |
 | 2 | Core | Go-оркестратор + CLI | 🟡 Частично | `comicsplit.exe`, `ml_worker`, CBZ/папка; без CBR в Go |
 | 3 | Integration | Полный пайплайн Go+Python | ⬜ Не начато | gRPC, единый worker pool |
-| 4 | UI | Wails + редактор масок | 🟡 Частично | Gradio 3 вкладки; Konva `:8000` (Split/Upscale/Video); не Wails |
+| 4 | UI | Wails + редактор масок | 🟡 Частично | Gradio + Konva `:8000`; пресеты, tooltips, path pickers; не Wails |
 | — | Anim (отд. спека) | Оживление панелей | 🟡 MVP | `anim_pipeline`, NCNN, DepthFlow; TPSMM не в UI |
+| — | Качество (блок A) | Пресеты + паритет UI | ✅ Закрыт | `config/presets.yaml`, API v1.2 — см. ROADMAP_QUALITY_BOOST |
 
 ---
 
@@ -695,7 +696,7 @@ comicsplit/
 
 **Цель:** убедиться что модели работают на реальном железе (Ryzen 5 5600H). Только Python, никакого Go, никакого UI.
 
-**Факт (май 2026):** реализованы `yolo_test.py`, `sam_test.py`, `benchmark.py`, `process_source`, Gradio (`main.py`), pytest; OpenCV fast-path и полный edge-case QA — нет; на больших страницах `exam_imgs` время &gt; 600 ms.
+**Факт (июнь 2026):** реализованы `yolo_test.py`, `sam_test.py`, `benchmark.py`, `process_source`, Gradio (`main.py`), пресеты качества, pytest (21 тест); OpenCV fast-path и полный edge-case QA — нет; на больших страницах `exam_imgs` время &gt; 600 ms.
 
 **Установка окружения:**
 ```bash

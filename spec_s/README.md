@@ -1,6 +1,6 @@
 ﻿# Документация ComicSplit (`spec_s/`)
 
-**Обновлено:** 31 мая 2026
+**Обновлено:** 2 июня 2026 (блок A закрыт)
 
 ## С чего начать
 
@@ -10,7 +10,7 @@
 | **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** | Разработчик | Что реализовано / не реализовано |
 | **[comic_panel_animation_spec.md](comic_panel_animation_spec.md)** | Anim-пайплайн | Спека оживления + **блок статуса реализации** |
 | **[MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md)** | ML / инференс | Все модели, ссылки, пригодность под Ryzen 5600H + AMD iGPU, рекомендации по качеству |
-| **[ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md)** | План работ | Пресеты Стандарт/Качество, UI Gradio+:8000, новые модели (manga YOLO, TPSMM) |
+| **[ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md)** | План работ | **Блок A ✓** (пресеты, UI, tooltips, path pickers); блок B — новые модели |
 | [../README.md](../README.md) | Все | Быстрый старт в корне |
 | [../CHANGELOG.md](../CHANGELOG.md) | Все | История релизов и правок |
 
@@ -63,4 +63,5 @@ flowchart TB
 |------|-------|-----------|
 | 2026-05 (начало) | `ComicSplit_Documentation.md`, `README.md` | Первая пользовательская документация |
 | 2026-05-31 | Все рабочие доки + `CHANGELOG.md` | Anim-пайплайн, Gradio/веб 3 вкладки, API v1.1, убран `out_ui`, логика экспорта полигона, DepthFlow CLI |
+| 2026-06-02 | Все рабочие доки + `CHANGELOG.md` | **Финал блока A:** пресеты, API v1.2, UI, tooltips, paths, апскейл ×4/x4plus-anime, tile_size, benchmark, 25 pytest |
 | — | `Export_antigraviy_chat.md` | Архив без правок |

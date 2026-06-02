@@ -17,6 +17,18 @@ NCNN_MODELS = {
     "animevideov3": "realesr-animevideov3",
     "anime_6B": "realesrgan-x4plus-anime",
 }
+# Config id anime_6B → NCNN realesrgan-x4plus-anime (not RealESRGAN_x4plus_anime_6B weights).
+X4_ONLY_UPSCALE_MODEL = "anime_6B"
+
+
+def resolve_upscale_scale(model: str, scale: int) -> int:
+    """NCNN x4plus-anime: only scale 4 is safe on our stack; 2/3 → artifacts."""
+    s = int(scale)
+    if s not in (2, 3, 4):
+        s = 2
+    if model == X4_ONLY_UPSCALE_MODEL and s != 4:
+        return 4
+    return s
 
 
 @dataclass
@@ -26,10 +38,15 @@ class UpscaleConfig:
     model: str = "animevideov3"
     backend: str = "ncnn_vulkan"
     gpu_id: int = 0
+    tile_size: int = 0  # 0 = auto (-t 0); try 64/128/256 on AMD iGPU if tile seams
 
     @property
     def ncnn_model_name(self) -> str:
         return NCNN_MODELS.get(self.model, "realesr-animevideov3")
+
+    @property
+    def effective_scale(self) -> int:
+        return resolve_upscale_scale(self.model, self.scale)
 
 
 @dataclass
@@ -118,6 +135,7 @@ def load_anim_config(path: Optional[pathlib.Path] = None) -> AnimConfig:
             model=str(up.get("model", "animevideov3")),
             backend=str(up.get("backend", "ncnn_vulkan")),
             gpu_id=int(up.get("gpu_id", 0)),
+            tile_size=int(up.get("tile_size", 0)),
         ),
         harmonize=HarmonizeConfig(
             enabled=bool(hm.get("enabled", True)),
@@ -167,6 +185,7 @@ def save_anim_config(
             "model": cfg.upscale.model,
             "backend": cfg.upscale.backend,
             "gpu_id": cfg.upscale.gpu_id,
+            "tile_size": cfg.upscale.tile_size,
         },
         "harmonize": {
             "enabled": cfg.harmonize.enabled,

@@ -24,10 +24,9 @@ SPLIT_PANELS_DEV/
     │   ├── upscale/
     │   │   ├── realesrgan-ncnn-vulkan.exe
     │   │   └── models/                  ← .bin + .param файлы
-    │   │       ├── realesr-animevideov3-x4.bin
-    │   │       ├── realesr-animevideov3-x4.param
-    │   │       ├── RealESRGAN_x4plus_anime_6B.bin
-    │   │       └── RealESRGAN_x4plus_anime_6B.param
+    │   │       ├── realesr-animevideov3-x2/x3/x4.bin + .param
+    │   │       ├── realesrgan-x4plus-anime.bin + .param
+    │   │       └── realesrgan-x4plus.bin + .param
     │   ├── depth/
     │   │   ├── midas_v21_small_256.onnx      ← исходная
     │   │   └── midas_v21_small_256_int8.onnx ← после квантования
@@ -59,12 +58,11 @@ https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncn
 realesrgan-ncnn-vulkan-20220424-windows.zip
 ├── realesrgan-ncnn-vulkan.exe      ← исполняемый файл (Vulkan/NCNN)
 └── models/
-    ├── realesr-animevideov3-x4.bin     ← быстрая модель для аниме/видео
-    ├── realesr-animevideov3-x4.param
-    ├── RealESRGAN_x4plus_anime_6B.bin  ← качественная модель для иллюстраций
-    ├── RealESRGAN_x4plus_anime_6B.param
-    ├── RealESRGAN_x4plus.bin
-    └── RealESRGAN_x4plus.param
+    ├── realesr-animevideov3-x2.bin / -x3 / -x4 (+ .param)
+    ├── realesrgan-x4plus-anime.bin     ← в UI: «x4plus-anime», конфиг id anime_6B
+    ├── realesrgan-x4plus-anime.param
+    ├── realesrgan-x4plus.bin
+    └── realesrgan-x4plus.param
 ```
 
 ### Распаковка
@@ -80,12 +78,12 @@ realesrgan-ncnn-vulkan-20220424-windows.zip
 
 ### Режимы и выбор модели
 
-| Модель | Назначение | Скорость |
-|--------|-----------|---------|
-| `realesr-animevideov3-x4` | Аниме/комиксы, пакетная обработка | Быстрее |
-| `RealESRGAN_x4plus_anime_6B` | Иллюстрации, высокое качество | Медленнее |
+| NCNN `-n` | Конфиг id | Масштаб в приложении |
+|-----------|-----------|----------------------|
+| `realesr-animevideov3` | `animevideov3` | ×2 или ×4 |
+| `realesrgan-x4plus-anime` | `anime_6B` | **только ×4** |
 
-**Рекомендация:** использовать `realesr-animevideov3-x4` с `-s 2` (x2 апскейл вместо x4 — в 2 раза быстрее).
+**Рекомендация:** пресет «Стандарт» — videov3 ×2; «Качество» — x4plus-anime ×4. Бенчмарк: `scripts\benchmark_upscale.ps1 -Quick`.
 
 ### Важно: флаг GPU для AMD iGPU
 

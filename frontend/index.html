@@ -110,6 +110,12 @@
         }
         .seg-btn:hover { border-color: var(--text); color: var(--text); }
         .seg-btn.active { background: var(--accent); color: #0e0e0f; border-color: var(--accent); font-weight: 700; }
+        .seg-btn.disabled,
+        .seg-btn:disabled {
+            opacity: 0.35;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
         /* Подсказки: кружок «!» у настройки */
         /* Слой для подсказок (не обязателен для кликов) */
         #tip-layer {
@@ -540,7 +546,7 @@
                     <label class="lbl" data-tip="up_model">Модель Real-ESRGAN</label>
                     <select id="up-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
-                        <option value="anime_6B">Качество (anime 6B)</option>
+                        <option value="anime_6B">Точный (x4plus-anime, только ×4)</option>
                     </select>
                     <label class="lbl" data-tip="up_gpu">GPU (Vulkan)</label>
                     <select id="up-gpu" class="inp" style="margin-bottom:12px">
@@ -587,7 +593,7 @@
                     <label class="lbl" data-tip="vid_model">Модель апскейла</label>
                     <select id="vid-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
-                        <option value="anime_6B">Качество (anime 6B)</option>
+                        <option value="anime_6B">Точный (x4plus-anime, только ×4)</option>
                     </select>
                     <label class="lbl" data-tip="vid_gpu">GPU (Vulkan)</label>
                     <select id="vid-gpu" class="inp" style="margin-bottom:10px">
@@ -729,6 +735,12 @@ function initRangeDisplays() {
     });
 }
 
+const X4_ONLY_UPSCALE_MODEL = 'anime_6B';
+
+function isX4OnlyUpscaleModel(model) {
+    return model === X4_ONLY_UPSCALE_MODEL;
+}
+
 function setSegScale(segId, hiddenId, val) {
     const v = String(val);
     const hid = $(hiddenId);
@@ -740,17 +752,49 @@ function setSegScale(segId, hiddenId, val) {
     });
 }
 
+/** Disable ×2 when x4plus-anime selected; force ×4 if needed. */
+function syncUpscaleScaleForModel(modelSelectId, segId, hiddenId) {
+    const model = $(modelSelectId)?.value;
+    const seg = $(segId);
+    if (!seg) return;
+    const btn2 = seg.querySelector('.seg-btn[data-v="2"]');
+    const x4only = isX4OnlyUpscaleModel(model);
+    if (btn2) {
+        btn2.disabled = x4only;
+        btn2.classList.toggle('disabled', x4only);
+    }
+    const hid = $(hiddenId);
+    if (x4only && hid && hid.value === '2') {
+        setSegScale(segId, hiddenId, '4');
+    }
+}
+
 function initSegScales() {
     document.querySelectorAll('.seg[data-target]').forEach(seg => {
         const target = $(seg.dataset.target);
         if (!target) return;
         seg.querySelectorAll('.seg-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                if (btn.disabled || btn.classList.contains('disabled')) return;
                 setSegScale(seg.id, seg.dataset.target, btn.dataset.v);
             });
         });
         setSegScale(seg.id, seg.dataset.target, target.value || '2');
     });
+    const upModel = $('up-model');
+    const vidModel = $('vid-model');
+    if (upModel) {
+        upModel.addEventListener('change', () => {
+            syncUpscaleScaleForModel('up-model', 'up-scale-seg', 'up-scale');
+        });
+        syncUpscaleScaleForModel('up-model', 'up-scale-seg', 'up-scale');
+    }
+    if (vidModel) {
+        vidModel.addEventListener('change', () => {
+            syncUpscaleScaleForModel('vid-model', 'vid-scale-seg', 'vid-scale');
+        });
+        syncUpscaleScaleForModel('vid-model', 'vid-scale-seg', 'vid-scale');
+    }
 }
 
 function escapeHtml(s) {
@@ -1039,13 +1083,19 @@ function fillFormFromPreset(payload) {
     $('rtl').checked = !!s.rtl;
     setRange('conf-thr', s.confidence_threshold ?? 0.35);
     setRange('iou-thr', s.iou_threshold ?? 0.45);
-    setSegScale('up-scale-seg', 'up-scale', a.upscale_scale ?? 2);
     $('up-model').value = a.upscale_model || 'animevideov3';
+    let upScale = a.upscale_scale ?? 2;
+    if (isX4OnlyUpscaleModel($('up-model').value) && upScale === 2) upScale = 4;
+    syncUpscaleScaleForModel('up-model', 'up-scale-seg', 'up-scale');
+    setSegScale('up-scale-seg', 'up-scale', upScale);
     const gpu = String(a.gpu_id ?? 0);
     if ($('up-gpu').querySelector(`option[value="${gpu}"]`)) $('up-gpu').value = gpu;
     else $('up-gpu').value = '0';
-    setSegScale('vid-scale-seg', 'vid-scale', a.upscale_scale ?? 2);
     $('vid-model').value = a.upscale_model || 'animevideov3';
+    let vidScale = a.upscale_scale ?? 2;
+    if (isX4OnlyUpscaleModel($('vid-model').value) && vidScale === 2) vidScale = 4;
+    syncUpscaleScaleForModel('vid-model', 'vid-scale-seg', 'vid-scale');
+    setSegScale('vid-scale-seg', 'vid-scale', vidScale);
     const vgpu = String(a.gpu_id ?? 0);
     if ($('vid-gpu').querySelector(`option[value="${vgpu}"]`)) $('vid-gpu').value = vgpu;
     else $('vid-gpu').value = '0';

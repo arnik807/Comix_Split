@@ -1,7 +1,7 @@
 ﻿# ComicSplit — документация (актуальная)
 
-**Версия документа:** 1.2 (31 мая 2026)  
-**Статус приложения:** рабочий MVP — split (YOLO+SAM) + anim (апскейл, 16:9, видео); Gradio и веб-редактор на :8000; опционально Go CLI.
+**Версия документа:** 1.4 (2 июня 2026) — финал блока A  
+**Статус приложения:** рабочий MVP — split (YOLO+SAM) + anim (апскейл, 16:9, видео); пресеты **Стандарт / Качество**; Gradio и веб-редактор на :8000; опционально Go CLI.
 
 Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video), **Go CLI**.
 
@@ -29,10 +29,12 @@
 
 **Режимы качества:**
 
-| Режим | В config | В Gradio | Скорость | Качество масок |
-|-------|----------|----------|----------|----------------|
-| **Fast** | `quality_mode: fast` | SAM выключен | Быстрее | Прямоугольник по bbox YOLO |
-| **Accurate** | `quality_mode: accurate` | «MobileSAM» включён | Медленнее | Контур панели точнее |
+| Режим | В config | В UI (пресет) | Скорость | Качество масок |
+|-------|----------|---------------|----------|----------------|
+| **Fast / Стандарт** | `quality_mode: fast` | Пресет «Стандарт», SAM выключен | Быстрее | Прямоугольник по bbox YOLO |
+| **Accurate / Качество** | `quality_mode: accurate` | Пресет «Качество», SAM включён | Медленнее | Контур панели точнее |
+
+Переключение пресетов — одной кнопкой в Gradio и веб-UI; эталон значений в `config/presets.yaml` (см. §5.1).
 
 ---
 
@@ -57,15 +59,16 @@ SPLIT_PANELS_DEV/
 ├── anim_pipeline.py        # Anim: upscale → 16:9 → MP4
 ├── config.yaml             # Split
 ├── config_animate.yaml     # Anim
+├── config/presets.yaml     # Пресеты Стандарт / Качество
 ├── requirements.txt
 ├── test_page.jpg
 ├── exam_imgs/
 ├── models/                 # split ONNX (не в git)
 ├── models/anim/            # NCNN, MiDaS, TPSMM, ffmpeg (не в git)
 ├── anim/                   # upscale, harmonize, render, animate_*
-├── utils/                  # config, anim_config, io_helpers, path_resolve
-├── api/server.py           # FastAPI v1.1 (:8000)
-├── frontend/index.html     # Konva + вкладки Upscale/Video
+├── utils/                  # config, anim_config, presets, io_helpers, path_resolve, ui_tooltips, path_dialog
+├── api/server.py           # FastAPI v1.2 (:8000)
+├── frontend/index.html     # Konva + вкладки Split/Upscale/Video
 ├── scripts/                # модели split + anim
 ├── cmd/comicsplit/         # Go CLI
 ├── ml_worker/main.py
@@ -136,7 +139,32 @@ $env:no_proxy = "127.0.0.1,localhost"
 
 Пример имени: `{order:03d}_page_{page:03d}_panel_{panel:02d}.png` → `007_page_003_panel_02.png`.
 
-CLI и Gradio читают этот файл при запуске. В Gradio можно переопределить SAM и RTL чекбоксами.
+CLI и Gradio читают этот файл при запуске. В Gradio и веб-UI можно переопределить SAM, RTL, пороги YOLO и anim-параметры; пресеты подставляют согласованный набор значений (§5.1).
+
+### 5.1. Пресеты качества (`config/presets.yaml`)
+
+Два встроенных пресета для быстрого переключения без ручного редактирования YAML:
+
+| Пресет | ID | Split | Anim (основное) |
+|--------|-----|-------|-----------------|
+| **Стандарт** | `standard` | YOLO без SAM, `confidence_threshold: 0.35` | `animevideov3`, OpenCV zoom, harmonize `auto` |
+| **Качество** | `quality` | YOLO + SAM, порог `0.30` | x4plus-anime ×4, DepthFlow `dolly`, harmonize `blurred_pillarbox` |
+
+- **Gradio:** кнопки «Стандарт» / «Качество» в шапке; бейдж **MODE: STANDARD** или **MODE: QUALITY**; чекбокс «Сохранить в YAML» записывает пресет в конфиги на диск.
+- **Веб :8000:** те же кнопки в шапке; бейдж режима; расширенные блоки (SAM, пороги YOLO, модель/GPU апскейла, harmonize, DepthFlow) показываются только в режиме «Качество».
+- **API:** `GET /api/presets`, `GET /api/presets/{name}`, `POST /api/presets/apply?name=standard|quality`.
+- Локальные переопределения (опционально): `config/presets.user.yaml` — не в git.
+
+Подробнее: [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md) §2.1 и §8.
+
+### 5.2. Апскейл NCNN (модели и масштаб)
+
+| Выбор в UI | NCNN `-n` | Масштаб |
+|------------|-----------|---------|
+| Быстрый (animevideov3) | `realesr-animevideov3` | ×2 или ×4 |
+| Точный (x4plus-anime) | `realesrgan-x4plus-anime` | **только ×4** |
+
+Параметр `upscale.tile_size` в `config_animate.yaml` (0 = auto; 64/128/256) передаётся в `-t`. Диагностика: `powershell -File scripts\benchmark_upscale.ps1 -Quick`.
 
 ---
 
@@ -154,11 +182,17 @@ python main.py
 
 В браузере: **http://127.0.0.1:7860**
 
-### 6.2. Вкладки
+### 6.2. Вкладки и общие элементы
+
+| Элемент | Назначение |
+|---------|------------|
+| **Стандарт / Качество** | Пресеты качества; бейдж MODE в шапке |
+| **Подсказки** | Иконка ⓘ / «!» у полей — краткое объяснение настройки |
+| **Обзор…** | Нативный диалог Windows для выбора файла или папки (дополняет ручной ввод и drag-and-drop) |
 
 | Вкладка | Назначение |
 |---------|------------|
-| **Split — раскройка** | CBZ/папка/страница → PNG панелей (как раньше) |
+| **Split — раскройка** | CBZ/папка/страница → PNG панелей |
 | **Upscale — апскейл** | Папка PNG → Real-ESRGAN NCNN (x2/x4) |
 | **Video — оживление** | Папка PNG → harmonize 16:9 → MP4 + `storyboard.mp4` |
 
@@ -166,9 +200,10 @@ python main.py
 
 | Элемент | Действие |
 |---------|----------|
-| **Источник** | JPG/PNG/CBZ/ZIP или путь к папке |
-| **Папка вывода** | По умолчанию `output` |
-| **MobileSAM** | Accurate (YOLO + SAM) |
+| **Источник** | JPG/PNG/CBZ/ZIP (drag-and-drop или «Обзор…») или путь к папке |
+| **Папка вывода** | По умолчанию `output`; «Обзор…» |
+| **MobileSAM** | Accurate (YOLO + SAM); виден в режиме «Качество» |
+| **Пороги YOLO** | `confidence_threshold`, `iou_threshold` — блок «Дополнительно», режим «Качество» |
 | **Порядок чтения / RTL** | Сортировка панелей |
 | **Запустить** | Сохранение PNG на диск |
 | **Результат** | Текст со списком путей |
@@ -190,7 +225,7 @@ python main.py
 
 ### 6.6. Upscale / Video в Gradio
 
-Укажите **папку с PNG** после split (например `output\MyComic` или подпапку страницы). Режимы видео: `opencv_zoom`, `opencv_shake`, `static`, `depthflow` (parallax, долго на CPU). Настройки по умолчанию — `config_animate.yaml`.
+Укажите **папку с PNG** после split (кнопка «Обзор…» или путь вручную). Режимы видео: `opencv_zoom`, `opencv_shake`, `static`, `depthflow` (только в пресете «Качество»). В режиме «Качество»: x4plus-anime (только ×4), GPU, harmonize, intensity, DepthFlow. Для ×2 используйте videov3 (пресет «Стандарт»). Настройки по умолчанию — `config_animate.yaml` и `config/presets.yaml`.
 
 ### 6.7. Ограничения Gradio
 
@@ -272,7 +307,7 @@ PNG с альфа-каналом: фон прозрачный, панель вы
 
 ## 9. Способ 3 — веб-редактор (порт 8000)
 
-Split с ручной правкой + апскейл и видео без Gradio. FastAPI **v1.1** + `frontend/index.html`.
+Split с ручной правкой + апскейл и видео без Gradio. FastAPI **v1.2** + `frontend/index.html`. Функционал настроек **согласован с Gradio** (пресеты, tooltips, расширенные поля anim).
 
 ### 9.1. Запуск
 
@@ -284,41 +319,57 @@ uvicorn api.server:app --reload --port 8000
 
 Браузер: **http://127.0.0.1:8000**
 
-### 9.2. Вкладка Split
+### 9.2. Общие элементы UI
 
 | Элемент | Поведение |
 |---------|-----------|
-| **Детекция** | `POST /api/process` — только координаты в память, **файлы на диск не пишет** (папка `out_ui` больше не создаётся) |
-| **Accurate (YOLO + SAM)** | Точный контур при детекции |
+| **Стандарт / Качество** | Пресеты; бейдж **MODE: STANDARD** / **MODE: QUALITY** в шапке |
+| **Подсказки «!»** | Наведение или клик — всплывающее объяснение; закрытие по ESC, клику снаружи или крестику |
+| **Обзор…** | `POST /api/path/pick` — нативный диалог на машине, где запущен uvicorn |
+| **Пути** | Ручной ввод в текстовое поле (относительные пути предпочтительны при кириллице) |
+
+### 9.3. Вкладка Split
+
+| Элемент | Поведение |
+|---------|-----------|
+| **Детекция** | `POST /api/process` — только координаты в память, **файлы на диск не пишет** |
+| **Accurate (YOLO + SAM)** | Точный контур при детекции; блок виден в режиме «Качество» |
+| **Пороги YOLO** | Слайдеры confidence / IoU — режим «Качество» |
 | **Полигон (ломаная форма)** | Редактирование вершин; **экспорт по маске** только при включённом полигоне или после ручной правки |
 | **Экспорт PNG** | `POST /api/export` → ваша папка `output_dir\<имя_страницы>\` |
 
 После экспорта пути подставляются во вкладки Upscale и Video.
 
-### 9.3. Вкладки Upscale и Video
+### 9.4. Вкладки Upscale и Video
 
 | Вкладка | API | Результат |
 |---------|-----|-----------|
-| Upscale | `POST /api/upscale` | PNG в выбранной папке (NCNN) |
-| Video | `POST /api/animate` | MP4 на панель + опционально `storyboard.mp4`; превью через `GET /api/video?path=...` |
+| Upscale | `POST /api/upscale` | PNG в выбранной папке (NCNN); модель и GPU — в режиме «Качество» |
+| Video | `POST /api/animate` | MP4 на панель + опционально `storyboard.mp4`; harmonize / DepthFlow — в «Качество» |
 
-### 9.4. Пути к файлам
+### 9.5. Пути к файлам
 
 | Рекомендация | Пример |
 |--------------|--------|
 | Относительный путь | `exam_imgs\01_Asterix_the_Gaul_page-0004.jpg` |
 | Папка панелей после export | `output\test_page` |
+| Кнопка «Обзор…» | Открывает диалог на **сервере** (где запущен `uvicorn`), не в браузере |
 
 При кириллице в путях — `utils/path_resolve.py`; при ошибке mojibake используйте относительные пути.
 
-### 9.5. REST API (кратко)
+### 9.6. REST API (кратко)
 
 | Метод | Путь | Назначение |
 |-------|------|------------|
-| POST | `/api/process` | Детекция |
+| POST | `/api/process` | Детекция (пороги YOLO в теле запроса) |
 | POST | `/api/export` | PNG панелей |
-| POST | `/api/upscale` | Апскейл папки |
-| POST | `/api/animate` | Видео-пайплайн |
+| POST | `/api/upscale` | Апскейл папки (model, scale, gpu_id) |
+| POST | `/api/animate` | Видео-пайплайн (mode, harmonize, intensity, depthflow…) |
+| GET | `/api/presets` | Список пресетов |
+| GET | `/api/presets/{name}` | Значения пресета для UI |
+| POST | `/api/presets/apply` | Применить пресет к конфигам |
+| GET | `/api/tooltips` | Тексты подсказок для полей |
+| POST | `/api/path/pick` | Нативный выбор файла/папки (`kind`: `file` \| `folder`) |
 | GET | `/api/image?path=` | Исходник для Konva |
 | GET | `/api/video?path=` | MP4 для `<video>` |
 
@@ -400,6 +451,8 @@ pyinstaller packaging/comicsplit.spec
 | DepthFlow: `No such command 'run'` | Обновите `anim/animate_depthflow.py` (CLI 0.9.x: `input … zoom … main`) |
 | `comicsplit.exe`: comic.cbz not found | В репо нет `comic.cbz`; `--input exam_imgs` |
 | Gradio: `Gallery` / schema `bool` | Gradio 5.x без Gallery |
+| Диалог «Обзор…» не открывается (:8000) | Запускайте uvicorn на Windows с GUI; tkinter нужен на машине сервера |
+| Пресет «Качество» — нет DepthFlow / SAM | Расширенные блоки скрыты в «Стандарт»; переключите пресет и проверьте бейдж MODE |
 
 ---
 
@@ -421,6 +474,7 @@ pyinstaller packaging/comicsplit.spec
 | Задача | Команда |
 |--------|---------|
 | Gradio (split + anim) | `python main.py` → :7860 |
+| Пресет «Качество» | Кнопка «Качество» в Gradio / :8000 |
 | Split одна страница | `python pipeline.py test_page.jpg output --order` |
 | Split CBZ/папка | `python pipeline.py D:\comics\book.cbz output --order` |
 | Веб split + anim | `uvicorn api.server:app --port 8000` |

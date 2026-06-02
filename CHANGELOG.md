@@ -5,24 +5,39 @@
 
 ## [Unreleased]
 
-### Добавлено (блок A — качество без новых моделей)
-
-- Пресеты **Стандарт** / **Качество**: `config/presets.yaml`, `utils/presets.py`
-- API v1.2: `GET /api/presets`, `GET /api/presets/{name}`, `POST /api/presets/apply`
-- Расширены `POST /api/process` (пороги YOLO), `/api/upscale`, `/api/animate` (модель, GPU, harmonize, DepthFlow)
-- Gradio (`main.py`): кнопки пресетов, пороги Split, модель/GPU апскейла, harmonize + intensity на Video
-- Веб-редактор (:8000): секция пресетов, те же поля на вкладках Split / Upscale / Video
-- `tests/test_presets.py` — round-trip standard ↔ quality
-- `tests/test_smoke_exam_imgs.py` — smoke на `exam_imgs` (9 панелей Asterix-0004) + API TestClient
-- Подсказки ко всем настройкам: `utils/ui_tooltips.py`, `GET /api/tooltips`, «!» в веб-UI, `info` в Gradio
-
 ### Планируется
 
-- [ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) — блок B (новые модели)
-- TPSMM в `anim_pipeline.py`
-- `segment.py` для motion transfer
+- [ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) — **блок B** (реестр моделей, manga YOLO, TPSMM в пайплайне)
 - OpenCV fast-path в split-каскаде
 - Wails / gRPC (спека v2.0)
+- Опционально из блока A: `localStorage` для ручных настроек на :8000
+
+---
+
+## [2026-06-02] — Блок A: пресеты, UI, апскейл (финал)
+
+### Добавлено
+
+- Пресеты **Стандарт** / **Качество**: `config/presets.yaml`, `utils/presets.py`, `config/presets.user.yaml` (локально, в `.gitignore`)
+- API **v1.2**: `GET /api/presets`, `GET /api/presets/{name}`, `POST /api/presets/apply`, `GET /api/tooltips`, `POST /api/path/pick`
+- Расширены `POST /api/process` (пороги YOLO), `/api/upscale`, `/api/animate` (модель, GPU, harmonize, DepthFlow)
+- Gradio и веб (:8000): паритет настроек Split / Upscale / Video; бейдж **MODE: STANDARD / QUALITY**
+- Подсказки: `utils/ui_tooltips.py` — «!» в веб-UI, `info` в Gradio
+- Выбор путей: `utils/path_dialog.py`, кнопки «Обзор…», drag-and-drop в Gradio
+- Апскейл: `tile_size` в `config_animate.yaml`, передача `-t` в NCNN; бенчмарк `scripts/benchmark_upscale.ps1`
+- Тесты: `tests/test_presets.py`, `tests/test_smoke_exam_imgs.py`, `tests/test_upscale.py`
+
+### Изменено
+
+- Модель `anime_6B` в UI: подпись **x4plus-anime (только ×4)**; пресет «Качество» — `scale: 4`; ×2 для этой модели отключён в UI
+- `anim/upscale.py`: при `anime_6B` и scale 2/3 принудительно **×4** + предупреждение в лог (артефакты NCNN)
+- Документация блока A: `ComicSplit_Documentation.md` v1.3, `MODELS_SPECIFICATION.md`, `ROADMAP_QUALITY_BOOST.md`, `IMPLEMENTATION_STATUS.md`
+
+### Исправлено
+
+- Gradio: `gr.File` без недопустимого `info`; подсказки через Markdown
+- Веб: z-index и закрытие всплывающих подсказок
+- Убраны лишние баннеры/серые «заблокированные» блоки — остался только бейдж режима
 
 ---
 
@@ -42,15 +57,8 @@
 
 - DepthFlow: вместо несуществующей команды `run` — цепочка `input → preset → main --render`
 - Веб Split: экспорт по маске SAM только при включённом «Полигон» или после ручной правки (`polyEdited`)
-- API детекция: `analyze_page` без записи в `out_ui/` (дублирующий экспорт при «Запустить детекцию» убран)
+- API детекция: `analyze_page` без записи в `out_ui/`
 - Windows: `NO_COLOR`, `WINDOW_BACKEND=headless` для DepthFlow
-
-### Документация
-
-- `ComicSplit_Documentation.md` v1.2, `IMPLEMENTATION_STATUS.md`, `comic_panel_animation_spec.md` (блок статуса)
-- `spec_s/MODELS_SPECIFICATION.md` — спека всех моделей, железо, рекомендации по качеству
-- `README.md`, `spec_s/README.md`, `models/README.md`, `scripts/readme.md`
-- Этот файл `CHANGELOG.md`
 
 ---
 
@@ -60,17 +68,9 @@
 
 - YOLO + MobileSAM ONNX (CPU), `pipeline.py`, `process_source`
 - Gradio split (`main.py`, :7860)
-- FastAPI + Konva редактор (:8000): детекция, rect/polygon, экспорт PNG
+- FastAPI + Konva редактор (:8000)
 - Go CLI `comicsplit.exe`, `ml_worker`
-- `utils/path_resolve.py` для кириллицы в путях
-- `config.yaml`, pytest, `benchmark.py`
-- `.gitignore` для крупных `models/**` (push >100 MB)
-
-### Известные ограничения (на момент серии)
-
-- Benchmark &lt;600 ms/стр. не достигнут на `exam_imgs`
-- Gradio без галереи превью
-- CBR только в Python CLI
+- `utils/path_resolve.py`, `config.yaml`, pytest, `benchmark.py`
 
 ---
 
@@ -80,4 +80,5 @@
 |----------|------------|
 | [spec_s/ComicSplit_Documentation.md](spec_s/ComicSplit_Documentation.md) | Руководство пользователя |
 | [spec_s/IMPLEMENTATION_STATUS.md](spec_s/IMPLEMENTATION_STATUS.md) | Статус модулей |
+| [spec_s/ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) | Roadmap качества |
 | [spec_s/README.md](spec_s/README.md) | Индекс документации |

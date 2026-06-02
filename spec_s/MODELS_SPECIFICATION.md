@@ -1,6 +1,6 @@
 ﻿# Спецификация моделей ComicSplit
 
-**Версия:** 1.0 (31 мая 2026)  
+**Версия:** 1.1 (2 июня 2026)  
 **Проект:** `SPLIT_PANELS_DEV`  
 **Связанные документы:** [models/README.md](../models/README.md), [scripts/MODELS_SETUP_GUIDE.md](../scripts/MODELS_SETUP_GUIDE.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
 
@@ -119,16 +119,18 @@ Encoder один раз на страницу + decoder на каждую пан
 |--|--|
 | **В проекте** | `models/anim/upscale/realesrgan-ncnn-vulkan.exe` + `models/anim/upscale/models/*.bin` |
 | **Сборка** | [Real-ESRGAN ncnn-vulkan release](https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-windows.zip) |
-| **Модели в конфиге** | `animevideov3` → `realesr-animevideov3-x4`; `anime_6B` → `RealESRGAN_x4plus_anime_6B` |
-| **Конфиг** | `config_animate.yaml` → `upscale.model`, `scale`, `gpu_id` (0 = AMD iGPU, -1 = CPU) |
+| **Модели в конфиге** | `animevideov3` → `realesr-animevideov3` (веса `*-x2/x3/x4.bin`); `anime_6B` → `realesrgan-x4plus-anime` |
+| **Конфиг** | `config_animate.yaml` → `upscale.model`, `scale`, `gpu_id`, `tile_size` |
 
-| NCNN-модель | ~Размер | Назначение | Скорость | Качество (комикс) |
-|-------------|---------|------------|----------|-------------------|
-| `realesr-animevideov3-x4` | ~600K params | Аниме/видео, пакеты | Быстрее | Хорошо для серии панелей |
-| `RealESRGAN_x4plus_anime_6B` | ~6M params | Иллюстрации, обложки | Медленнее | **Лучше детали линий** |
+| NCNN-модель (файлы в zip) | Назначение | Масштаб в приложении |
+|---------------------------|------------|----------------------|
+| `realesr-animevideov3-x2/x3/x4` | Быстрый апскейл, пакеты | ×2 или ×4 (`animevideov3`) |
+| `realesrgan-x4plus-anime` | Точнее линии на статике | **только ×4** (`anime_6B` в UI) |
+
+**Важно:** id `anime_6B` в конфиге — **не** отдельные веса `RealESRGAN_x4plus_anime_6B.pth`; в стандартном NCNN-zip их нет. Пары `RealESRGAN_x4plus_anime_6B.bin` в старых гайдах — устаревшее имя.
 
 **Под ваше железо: ⭐⭐⭐ (с Vulkan)**  
-Это **лучший** вариант апскейла для AMD iGPU: NCNN использует Vulkan, не CUDA. Рекомендация: `-g 0`, масштаб **x2** (в 2 раза быстрее x4, меньше артефактов на мелких панелях).
+Рекомендация: **Стандарт** — `animevideov3`, **×2**, `-g 0`. **Качество** — `anime_6B` (x4plus-anime), **×4**. При швах плиток — `tile_size: 128` в YAML; бенчмарк `scripts/benchmark_upscale.ps1`.
 
 **Под ваше железо: ⭐ (fallback `-g -1`)**  
 Чистый CPU через NCNN — в разы медленнее; только если Vulkan не видит GPU.
@@ -239,7 +241,7 @@ Encoder один раз на страницу + decoder на каждую пан
 | YOLO INT8 | CPU | < 500 MB | Быстро | Хорошо (western/comic) |
 | MobileSAM INT8 | CPU | +1–2 GB на страницу | Медленно | Отличные края |
 | Real-ESRGAN animevideov3 | Vulkan | низкая | Быстро | Хорошо |
-| Real-ESRGAN anime 6B | Vulkan | средняя | Средне | **Лучше линии/тени** |
+| realesrgan-x4plus-anime (`anime_6B`) | Vulkan | средняя | Только ×4 | **Линии на статике** |
 | DepthFlow + DA-V2 Small | OpenGL + CPU ML | 4–8 GB пик | Медленно | **Лучший parallax** |
 | OpenCV anim | CPU | минимум | Очень быстро | Базовое движение |
 | TPSMM (будущее) | CPU | средняя | Медленно | Зависит от driving |
@@ -268,7 +270,7 @@ Encoder один раз на страницу + decoder на каждую пан
 
 | Рекомендация | Зачем | Как включить |
 |--------------|-------|--------------|
-| **`anime_6B` вместо `animevideov3`** | Чётче линии и заливки на **статичных** панелях | `config_animate.yaml` → `upscale.model: anime_6B` |
+| **x4plus-anime (`anime_6B`) вместо videov3** | Чётче линии на статике | пресет «Качество», **scale 4** |
 | **Масштаб x2 вместо x4** | Меньше артефактов, ~4× меньше пикселей на выходе | `scale: 2` |
 | Проверить **Vulkan `-g 0`** | iGPU должен ускорять NCNN | `gpu_id: 0` в config |
 | Альтернатива: **waifu2x-ncnn-vulkan** | Сравнимый стек (NCNN), иногда мягче на манге | https://github.com/nihui/waifu2x-ncnn-vulkan — отдельная интеграция |
@@ -312,7 +314,16 @@ Encoder один раз на страницу + decoder на каждую пан
 
 ## 8. Практические пресеты под вашу машину
 
-### Быстрый конвейер (черновик)
+### В UI (рекомендуется)
+
+Не правьте YAML вручную — используйте пресеты **Стандарт** / **Качество** в Gradio или веб-редакторе. Эталон значений: `config/presets.yaml` (см. [ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md)).
+
+| Пресет | Split | Anim |
+|--------|-------|------|
+| **Стандарт** | fast, без SAM | animevideov3, OpenCV zoom |
+| **Качество** | accurate + SAM | x4plus-anime ×4, blurred_pillarbox, DepthFlow dolly |
+
+### Быстрый конвейер (ручной YAML, черновик)
 
 ```yaml
 # config.yaml
@@ -339,8 +350,9 @@ quality_mode: accurate
 # config_animate.yaml
 upscale:
   scale: 2
-  model: anime_6B
+  model: anime_6B   # NCNN: realesrgan-x4plus-anime, только scale 4
   gpu_id: 0
+  tile_size: 128    # опционально после benchmark
 animation:
   mode: depthflow
   depthflow_animation: dolly
@@ -370,6 +382,7 @@ animation:
 | Дата | Изменение |
 |------|-----------|
 | 2026-05-31 | Первая версия: все модели проекта, оценка под Ryzen 5600H + AMD iGPU, блок апгрейдов |
+| 2026-06-02 | §2.1: честное соответствие anime_6B ↔ x4plus-anime; только ×4; tile_size, benchmark |
 
 ---
 

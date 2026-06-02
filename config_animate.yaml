@@ -6,6 +6,7 @@ upscale:
   model: animevideov3         # animevideov3 | anime_6B
   backend: ncnn_vulkan        # ncnn_vulkan (единственный в MVP)
   gpu_id: 0                   # 0 = AMD iGPU, -1 = CPU fallback в NCNN
+  tile_size: 0                # 0 = auto; 64/128/256 — меньше швов на AMD Vega (scripts/benchmark_upscale.ps1)
 
 harmonize:
   enabled: true

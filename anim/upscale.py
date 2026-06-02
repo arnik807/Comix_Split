@@ -6,7 +6,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from utils.anim_config import AnimConfig, get_anim_config
+from utils.anim_config import (
+    AnimConfig,
+    X4_ONLY_UPSCALE_MODEL,
+    get_anim_config,
+    resolve_upscale_scale,
+)
 
 
 def upscale_image(
@@ -26,6 +31,14 @@ def upscale_image(
     if not inp.is_file():
         raise FileNotFoundError(f"Input image not found: {inp}")
 
+    scale = resolve_upscale_scale(up.model, up.scale)
+    if up.model == X4_ONLY_UPSCALE_MODEL and int(up.scale) != scale:
+        print(
+            f"[upscale] WARNING: модель {up.model} (realesrgan-x4plus-anime): "
+            f"запрошен scale={up.scale}, используем scale={scale} (×2/×3 дают артефакты NCNN).",
+            file=sys.stderr,
+        )
+
     cmd = [
         str(exe),
         "-i",
@@ -35,9 +48,11 @@ def upscale_image(
         "-n",
         up.ncnn_model_name,
         "-s",
-        str(up.scale),
+        str(scale),
         "-g",
         str(up.gpu_id),
+        "-t",
+        str(max(0, int(up.tile_size))),
     ]
     result = subprocess.run(
         cmd,

@@ -23,3 +23,13 @@ python scripts\quantize_animate_models.py --verify # только проверк
 - Первый запуск качает depth-модель (HuggingFace)
 
 Split-модели — отдельно в `scripts/split_models_craft_scripts/`.
+
+## Бенчмарк апскейла (NCNN)
+
+`benchmark_upscale.ps1` / `benchmark_upscale.py` — прогон комбинаций модель × scale × GPU × tile на одной панели; таблица + PNG в `exam_img/_upscale_benchmark/`.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\benchmark_upscale.ps1 -Quick
+```
+
+Полная матрица (GPU+CPU, tile 0 и 128) — без `-Quick`, дольше. Параметр `tile_size` в `config_animate.yaml` (0 = auto).

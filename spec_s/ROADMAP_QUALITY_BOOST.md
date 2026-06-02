@@ -1,8 +1,10 @@
 ﻿# Roadmap: раскрытие потенциала качества ComicSplit
 
-**Версия:** 1.0 (31 мая 2026)  
+**Версия:** 1.2 (2 июня 2026)  
 **Целевое железо:** Ryzen 5 5600H, AMD Radeon iGPU, 16 GB RAM, Windows, без CUDA  
 **Опора:** [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
+
+> **Блок A закрыт (02.06.2026).** Следующий этап — **блок B** (реестр моделей, manga YOLO, TPSMM).
 
 ---
 
@@ -59,8 +61,8 @@ stateDiagram-v2
 
 | Параметр | Стандарт | Качество |
 |----------|----------|----------|
-| `upscale.model` | `animevideov3` | `anime_6B` |
-| `upscale.scale` | `2` | `2` |
+| `upscale.model` | `animevideov3` | `anime_6B` (NCNN `realesrgan-x4plus-anime`) |
+| `upscale.scale` | `2` | `4` (×2 для x4plus-anime не использовать) |
 | `upscale.gpu_id` | `0` | `0` |
 | `harmonize.mode` | `auto` | `blurred_pillarbox` (или `auto`) |
 | `animation.mode` | `opencv_zoom` | `depthflow` |
@@ -89,15 +91,15 @@ stateDiagram-v2
 | A0.1 | Файл `config/presets.yaml` (`standard`, `quality`) для split + anim | `config/presets.yaml` |
 | A0.2 | `utils/presets.py`: load, apply, diff, snapshot текущего UI → dict | `utils/presets.py` |
 | A0.3 | API `GET/POST /api/presets`, `POST /api/presets/apply?name=quality\|standard` | `api/server.py` |
-| A0.4 | Сохранение «последних ручных» настроек в `localStorage` (:8000) / session (Gradio) | frontend, main.py |
+| A0.4 | Сохранение «последних ручных» в `localStorage` / Gradio session | — отложено |
 
 **Критерий готовности:** из CLI/API можно применить пресет и получить те же значения, что в таблице выше.
 
 ---
 
-### Этап A1 — Split: настройки в UI (2–3 дня)
+### Этап A1 — Split: настройки в UI (2–3 дня) ✅
 
-**Сейчас в UI:** SAM, reading order, RTL. **Нет в UI:** `quality_mode`, пороги YOLO, пресет.
+**Сделано:** SAM, reading order, RTL, пороги YOLO, пресеты, tooltips, path pickers.
 
 | # | Задача | Gradio | Web :8000 |
 |---|--------|--------|-----------|
@@ -111,9 +113,9 @@ stateDiagram-v2
 
 ---
 
-### Этап A2 — Anim: настройки в UI (2–3 дня)
+### Этап A2 — Anim: настройки в UI (2–3 дня) ✅
 
-**Сейчас в Gradio:** scale, mode, upscale on/off, duration, fps, concat. **Нет:** `upscale.model` (6B vs videov3), `gpu_id`, harmonize, depthflow preset, intensity.
+**Сделано:** модель/GPU апскейла, harmonize, DepthFlow, intensity; ограничение ×4 для x4plus-anime; `tile_size` в конфиге.
 
 | # | Задача | Gradio | Web :8000 |
 |---|--------|--------|-----------|
@@ -124,7 +126,7 @@ stateDiagram-v2
 | A2.5 | DepthFlow: `zoom` / `dolly`, intensity | ✓ | ✓ |
 | A2.6 | API: передать новые поля в `/api/upscale`, `/api/animate` | ✓ | ✓ |
 
-**Критерий:** пресет «Качество» включает `anime_6B` + depthflow без правки YAML.
+**Критерий:** пресет «Качество» — `anime_6B` (×4) + depthflow без правки YAML.
 
 ---
 
@@ -145,10 +147,12 @@ stateDiagram-v2
 [x] A0 Пресеты в коде + API
 [x] A1 Split UI (оба фронта)
 [x] A2 Anim UI (оба фронта)
-[x] A3 Синхронизация и доки (тесты + CHANGELOG; localStorage — опционально позже)
+[x] A3 Синхронизация и доки
+[x] A4 Апскейл: UI ×4 для x4plus-anime, guard в upscale.py, benchmark_upscale
+[ ] A0.4 localStorage — опционально позже
 ```
 
-**Оценка:** ~6–9 рабочих дней.
+**Оценка:** ~6–9 рабочих дней — **выполнено**.
 
 ---
 
@@ -233,15 +237,17 @@ stateDiagram-v2
 |-----------|--------|--------|-----|--------|
 | Пресет Стандарт/Качество | presets.yaml | ✓ | ✓ | — |
 | Split SAM / quality_mode | config.yaml | ✓ | ✓ | ✓ |
-| YOLO пороги | config.yaml | A1 | A1 | опц. |
+| YOLO пороги | config.yaml | ✓ | ✓ | ✓ |
 | Детектор comic/manga | models_registry | B1 | B1 | — |
-| Upscale model 6B/v3 | anim yaml | A2 | A2 | ✓ |
-| Upscale scale, gpu_id | anim yaml | частично | A2 | ✓ |
-| Harmonize mode | anim yaml | A2 | A2 | ✓ |
+| Upscale model 6B/v3 | anim yaml | ✓ | ✓ | ✓ |
+| Upscale scale, gpu_id | anim yaml | ✓ | ✓ | ✓ |
+| Harmonize mode | anim yaml | ✓ | ✓ | ✓ |
 | Anim mode + depthflow | anim yaml | ✓ | ✓ | ✓ |
+| Подсказки ко всем полям | ui_tooltips | ✓ | ✓ | — |
+| Выбор путей (Обзор…) | path_dialog | ✓ | ✓ | — |
 | TPSMM + driving | — | B2 | B2 | — |
 
-Легенда: ✓ есть; A1/A2/B1 — по этапам roadmap.
+Легенда: ✓ реализовано; B1/B2 — блок B roadmap.
 
 ---
 
@@ -294,3 +300,4 @@ gantt
 | Дата | Изменение |
 |------|-----------|
 | 2026-05-31 | Первая версия roadmap (блоки A и B, пресеты, паритет UI) |
+| 2026-06-02 | Блок A закрыт: финал доков, апскейл ×4/x4plus-anime, tile_size, benchmark; A0.4 отложен |

@@ -2,6 +2,8 @@
 
 Автоматическая нарезка панелей комиксов (YOLO + MobileSAM) и опциональное **оживление** панелей (апскейл, 16:9, MP4). Windows, Python 3.11.
 
+**Пресеты качества (блок A ✓):** «Стандарт» (YOLO + videov3 ×2) и «Качество» (SAM + x4plus-anime ×4 + DepthFlow) — Gradio :7860 и веб :8000; эталон `config/presets.yaml`.
+
 **Полная документация:** [spec_s/ComicSplit_Documentation.md](spec_s/ComicSplit_Documentation.md)
 
 ## Быстрый старт
@@ -62,6 +64,8 @@ python anim_pipeline.py output\exam_imgs story_out --mode opencv_zoom --scale 2
 | [CHANGELOG.md](CHANGELOG.md) | История изменений |
 | [config.yaml](config.yaml) | Split |
 | [config_animate.yaml](config_animate.yaml) | Anim |
+| [config/presets.yaml](config/presets.yaml) | Пресеты Стандарт / Качество |
+| [spec_s/ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) | Roadmap качества (блок A ✓, блок B — в планах) |
 | [models/README.md](models/README.md) | Краткий список файлов моделей |
 | [spec_s/MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md) | **Спека моделей** (ссылки, Ryzen 5600H, рекомендации) |
 
@@ -74,4 +78,6 @@ python anim_pipeline.py output\exam_imgs story_out --mode opencv_zoom --scale 2
 | `anim_pipeline.py` | Anim CLI |
 | `anim/` | upscale, harmonize, render, animate_* |
 | `api/` + `frontend/` | Веб :8000 |
-| `utils/` | config, io, paths |
+| `utils/` | config, presets, io, paths, tooltips, path_dialog |
+| `config/presets.yaml` | Пресеты Стандарт / Качество |
+| `scripts/benchmark_upscale.ps1` | Бенчмарк NCNN-апскейла на вашем железе |

@@ -26,7 +26,7 @@ python scripts\split_models_craft_scripts\quantize_models.py
 | Путь | Назначение |
 |------|------------|
 | `upscale/realesrgan-ncnn-vulkan.exe` | Апскейл NCNN/Vulkan (AMD iGPU) |
-| `upscale/models/*.bin`, `*.param` | NCNN-веса (animevideov3, x4plus-anime) |
+| `upscale/models/*.bin`, `*.param` | NCNN: `realesr-animevideov3-x2/x3/x4`, `realesrgan-x4plus-anime` (конфиг id `anime_6B`, только ×4) |
 | `depth/midas_v21_small_256.onnx` | MiDaS исходная |
 | `depth/midas_v21_small_256_int8.onnx` | MiDaS INT8 (для CPU inference) |
 | `tpsmm/kp_detector.onnx` | TPSMM keypoints |

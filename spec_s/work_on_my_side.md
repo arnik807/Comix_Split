@@ -1,5 +1,5 @@
 ﻿> **Архив gap-анализа.** Актуально: [ComicSplit_Documentation.md](ComicSplit_Documentation.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).  
-> Ниже — обновлённая таблица «спека v2.0 vs код» на **май 2026**.
+> Ниже — обновлённая таблица «спека v2.0 vs код» на **июнь 2026**.
 
 # Сопоставление спецификации v2.0 с реализацией
 
@@ -13,8 +13,9 @@
 | gRPC Go↔Python | — | ❌ |
 | Go CLI batch | `cmd/comicsplit`, `comicsplit.exe` | 🟡 |
 | Параллелизм страниц | `max_workers` в config, ThreadPool в pipeline | ✅ |
-| Gradio UI | `main.py`, :7860 | ✅ |
-| Редактор + anim API | `api/server.py` v1.1, `frontend/`, :8000 | ✅ Split/Upscale/Video |
+| Gradio UI | `main.py`, :7860 | ✅ пресеты, tooltips, browse |
+| Редактор + anim API | `api/server.py` v1.2, `frontend/`, :8000 | ✅ Split/Upscale/Video, presets, tooltips, path/pick |
+| Пресеты качества | `config/presets.yaml`, `utils/presets.py` | ✅ |
 | Anim pipeline | `anim_pipeline.py`, `anim/`, `config_animate.yaml` | ✅ (без TPSMM/segment) |
 | Wails desktop | — | ❌ |
 | `config.yaml` | `utils/config.py` | ✅ |

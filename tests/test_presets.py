@@ -32,6 +32,7 @@ def test_preset_ui_payload_quality_sam_and_depthflow():
     assert p["split"]["use_sam"] is True
     assert p["split"]["confidence_threshold"] == pytest.approx(0.30)
     assert p["anim"]["upscale_model"] == "anime_6B"
+    assert p["anim"]["upscale_scale"] == 4
     assert p["anim"]["mode"] == "depthflow"
     assert p["anim"]["depthflow_animation"] == "dolly"
     assert p["anim"]["harmonize_mode"] == "blurred_pillarbox"
