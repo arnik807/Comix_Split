@@ -1,0 +1,95 @@
+# Registry of ML / inference artifacts for ComicSplit.
+# Used by utils/models_registry.py for install checks before batch runs.
+# Version: 1.0 (2026-06-02)
+
+backends:
+  realesrgan:
+    label: "Real-ESRGAN NCNN"
+    type: ncnn_vulkan
+    doc: "https://github.com/xinntao/Real-ESRGAN"
+    exe: models/anim/upscale/realesrgan-ncnn-vulkan.exe
+    models_dir: models/anim/upscale/models
+    download_script: scripts/download_animate_models.ps1
+    variants:
+      - id: animevideov3
+        ncnn_name: realesr-animevideov3
+        scales: [2, 3, 4]
+        label: "AnimeVideo v3 (быстрый)"
+      - id: anime_6B
+        ncnn_name: realesrgan-x4plus-anime
+        scales: [4]
+        label: "x4plus-anime (линии, только ×4)"
+
+  realcugan:
+    label: "Real-CUGAN NCNN"
+    type: ncnn_vulkan
+    doc: "https://github.com/nihui/realcugan-ncnn-vulkan"
+    exe: models/anim/upscale/realcugan/realcugan-ncnn-vulkan.exe
+    models_dir: models/anim/upscale/realcugan/models-se
+    download_script: scripts/download_upscale_backends.ps1
+    release_tag: "20220728"
+    default_args:
+      model_path: models-se
+      noise: -1
+      syncgap: 3
+      scale: 2
+    variants:
+      - id: cugan_se_2x
+        scale: 2
+        model_path: models-se
+        label: "CUGAN SE ×2"
+      - id: cugan_se_4x
+        scale: 4
+        model_path: models-se
+        label: "CUGAN SE ×4"
+
+  span:
+    label: "SPAN NCNN"
+    type: ncnn_vulkan
+    doc: "https://github.com/TNTwise/SPAN-ncnn-vulkan"
+    exe: models/anim/upscale/span/span-ncnn-vulkan.exe
+    models_dir: models/anim/upscale/span/models
+    download_script: scripts/download_upscale_backends.ps1
+    release_tag: "20240831-055257"
+    default_args:
+      model_name: spanx4_ch48
+      scale: 4
+    variants:
+      - id: span_x2_ch48
+        model_name: spanx2_ch48
+        scale: 2
+        label: "SPAN ×2 ch48"
+      - id: span_x4_ch48
+        model_name: spanx4_ch48
+        scale: 4
+        label: "SPAN ×4 ch48 (default)"
+
+split:
+  comic_yolo:
+    label: "YOLO comic"
+    path: models/yolo_comic_int8.onnx
+    download_script: scripts/split_models_craft_scripts/download_models.ps1
+  manga_yolo:
+    label: "YOLO manga (Manga109)"
+    path: models/yolo_manga_int8.onnx
+    download_script: scripts/export_manga_yolo.ps1
+
+onnx:
+  midas:
+    label: "MiDaS small (задел TPSMM)"
+    path: models/anim/depth/midas_v21_small_256.onnx
+    download_script: scripts/download_animate_models.ps1
+    optional_int8: models/anim/depth/midas_v21_small_256_int8.onnx
+
+  tpsmm:
+    label: "TPSMM motion transfer"
+    paths:
+      - models/anim/tpsmm/kp_detector.onnx
+      - models/anim/tpsmm/tpsmm_rel.onnx
+    download_script: scripts/download_animate_models.ps1
+
+pip:
+  depthflow:
+    label: "DepthFlow (DA-V2 inside package)"
+    check: "import depthflow"
+    install: "pip install depthflow"

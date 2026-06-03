@@ -1,0 +1,67 @@
+# Пресеты качества (блок A). Стандарт = быстрые дефолты; Качество = рекомендации MODELS_SPECIFICATION.
+
+standard:
+  label: "Стандарт"
+  description: "Быстро: YOLO без SAM, animevideov3, OpenCV zoom"
+
+  split:
+    quality_mode: fast
+    reading_order: true
+    reading_direction: ltr
+    confidence_threshold: 0.35
+    iou_threshold: 0.45
+    overlap_filter_threshold: 0.7
+    use_sam: false
+
+  anim:
+    upscale:
+      enabled: true
+      scale: 2
+      model: animevideov3
+      gpu_id: 0
+    harmonize:
+      enabled: true
+      mode: auto
+      blur_sigma: 60
+      vignette_strength: 0.7
+    animation:
+      mode: opencv_zoom
+      duration: 3.0
+      fps: 24
+      intensity: 0.3
+      depthflow_animation: zoom
+    render:
+      concat_panels: true
+
+quality:
+  label: "Качество"
+  description: "Медленнее: SAM, апскейл x4plus-anime (только ×4), DepthFlow dolly, blurred pillarbox"
+
+  split:
+    quality_mode: accurate
+    reading_order: true
+    reading_direction: ltr
+    confidence_threshold: 0.30
+    iou_threshold: 0.45
+    overlap_filter_threshold: 0.7
+    use_sam: true
+
+  anim:
+    upscale:
+      enabled: true
+      scale: 4
+      model: anime_6B
+      gpu_id: 0
+    harmonize:
+      enabled: true
+      mode: blurred_pillarbox
+      blur_sigma: 60
+      vignette_strength: 0.7
+    animation:
+      mode: depthflow
+      duration: 3.0
+      fps: 24
+      intensity: 0.4
+      depthflow_animation: dolly
+    render:
+      concat_panels: true
