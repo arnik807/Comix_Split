@@ -1,12 +1,15 @@
-﻿# config_animate.yaml — настройки пайплайна anim (апскейл + видео)
+# config_animate.yaml — настройки пайплайна anim (апскейл + видео)
 
 upscale:
   enabled: true
-  scale: 2                    # 2 | 4
-  model: animevideov3         # animevideov3 | anime_6B
-  backend: ncnn_vulkan        # ncnn_vulkan (единственный в MVP)
+  backend: realesrgan         # realesrgan | realcugan | span
+  scale: 2                    # 2 | 4 (зависит от backend/model)
+  model: animevideov3         # см. config/models_registry.yaml
+  cugan_noise: -1
+  cugan_syncgap: 3
+  cugan_weights: models-se
   gpu_id: 0                   # 0 = AMD iGPU, -1 = CPU fallback в NCNN
-  tile_size: 0                # 0 = auto; 64/128/256 — меньше швов на AMD Vega (scripts/benchmark_upscale.ps1)
+  tile_size: 0                # 0 = auto; 64/128/256 — меньше швов на AMD Vega
 
 harmonize:
   enabled: true
@@ -17,11 +20,13 @@ harmonize:
   vignette_strength: 0.7
 
 animation:
-  mode: opencv_zoom           # opencv_zoom | opencv_shake | depthflow | static
+  mode: opencv_zoom           # по умолчанию; в UI/API режим задаётся при каждом запуске
   duration: 3.0               # секунды
   fps: 24
   intensity: 0.3              # 0.0–1.0
   depthflow_animation: dolly   # zoom | dolly (для mode=depthflow)
+  tpsmm_driving_video: ""     # путь к driving MP4 — только когда в UI выбран mode=tpsmm
+  tpsmm_mode: relative        # relative | standard
 
 render:
   concat_panels: true

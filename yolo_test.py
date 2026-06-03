@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Isolated YOLO detection test on a single page."""
 
 from __future__ import annotations
@@ -12,15 +12,18 @@ import cv2
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from pipeline import YOLO_MODEL, _load_session, _run_yolo  # noqa: E402
+import numpy as np
+
+from pipeline import _load_session, _run_yolo, _sync_config  # noqa: E402
 from utils.config import load_config  # noqa: E402
-from pipeline import _sync_config  # noqa: E402
+from utils.panel_detector import get_detector, normalize_detector  # noqa: E402
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("image", type=pathlib.Path, nargs="?", default=ROOT / "test_page.jpg")
     parser.add_argument("--out", type=pathlib.Path, default=None, help="Save annotated preview")
+    parser.add_argument("--detector", default="comic", choices=("comic", "manga"))
     args = parser.parse_args()
 
     load_config()
@@ -30,8 +33,15 @@ def main() -> None:
     if img is None:
         sys.exit(f"Cannot read {args.image}")
 
-    sess = _load_session(YOLO_MODEL)
-    bboxes, scores, ms = _run_yolo(sess, img, quiet=False)
+    spec = get_detector(normalize_detector(args.detector))
+    sess = _load_session(spec.onnx_path)
+    bboxes, scores, ms = _run_yolo(
+        sess,
+        img,
+        quiet=False,
+        num_classes=spec.num_classes,
+        panel_class_id=spec.panel_class_id,
+    )
     print(f"Detections: {len(bboxes)}, time: {ms:.1f}ms")
 
     if args.out and len(bboxes):

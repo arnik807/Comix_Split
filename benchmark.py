@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Benchmark ComicSplit pipeline on exam_imgs/ or custom paths.
 Writes CSV with per-page timings and Phase 1 criteria check (<600ms fast mode).
@@ -24,7 +24,8 @@ import numpy as np
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from pipeline import analyze_page, YOLO_MODEL, _load_session  # noqa: E402
+from pipeline import analyze_page, _load_session  # noqa: E402
+from utils.panel_detector import get_detector  # noqa: E402
 from utils.config import get_config, load_config  # noqa: E402
 
 DEFAULT_DATASET = ROOT / "exam_imgs"
@@ -52,7 +53,7 @@ def collect_images(paths: List[str], dataset: pathlib.Path) -> List[pathlib.Path
 
 def warmup() -> None:
     """Load YOLO session once."""
-    _load_session(YOLO_MODEL)
+    _load_session(get_detector("comic").onnx_path)
 
 
 def bench_image(path: pathlib.Path, use_sam: bool, repeats: int) -> dict:

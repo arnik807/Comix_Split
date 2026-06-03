@@ -1,4 +1,4 @@
-﻿# Инструкция: загрузка и подготовка моделей для модуля `anim/`
+# Инструкция: загрузка и подготовка моделей для модуля `anim/`
 
 ## Карта моделей
 
@@ -93,6 +93,49 @@ realesrgan-ncnn-vulkan-20220424-windows.zip
 # -g -1 = CPU fallback если Vulkan не работает
 # -g 0  = первый GPU (AMD iGPU)
 ```
+
+---
+
+## Шаг 1b — Real-CUGAN и SPAN (дополнительные апскейлеры, без квантования)
+
+Готовые NCNN Vulkan сборки — **отдельные exe** и папки моделей. Квантование ONNX не применяется.
+
+### Загрузка
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\download_upscale_backends.ps1
+```
+
+| Backend | Папка | Exe | Релиз |
+|---------|-------|-----|--------|
+| Real-CUGAN | `models/anim/upscale/realcugan/` | `realcugan-ncnn-vulkan.exe` | [20220728](https://github.com/nihui/realcugan-ncnn-vulkan/releases/tag/20220728) |
+| SPAN | `models/anim/upscale/span/` | `span-ncnn-vulkan.exe` | [20240831-055257](https://github.com/TNTwise/SPAN-ncnn-vulkan/releases/tag/20240831-055257) |
+
+Реестр путей и вариантов: `config/models_registry.yaml`, проверка: `utils/models_registry.py`.
+
+### Проверка (все три backend)
+
+```powershell
+python scripts\verify_upscale_backends.py
+```
+
+### Ручной smoke (из корня репозитория)
+
+```powershell
+# Real-CUGAN — line art / аниме-зоны, noise -1 = без денойза
+cd models\anim\upscale\realcugan
+.\realcugan-ncnn-vulkan.exe -i ..\..\..\exam_img\standart_split\test_page\001_p001_panel.png -o out_cugan.png -s 2 -n -1 -m models-se -g 0
+
+# SPAN — general efficient SR
+cd ..\span
+.\span-ncnn-vulkan.exe -m models -n spanx4_ch48 -s 4 -i ..\..\..\exam_img\standart_split\test_page\001_p001_panel.png -o out_span.png -g 0
+```
+
+**Параметры CUGAN, важные для качества (этап 2 UI):** `-n` (denoise -1..3), `-s` (1–4), `-m` (models-se / models-pro), `-c` (syncgap 0–3), `-t` (tile).
+
+**Параметры SPAN:** `-n` (имя модели), `-s` (2/3/4, должен совпадать с моделью), `-m` (папка models).
+
+Интеграция в ComicSplit UI/API — **следующий этап** (блок B4 roadmap); сейчас модели только скачаны и верифицированы CLI.
 
 ---
 

@@ -1,4 +1,4 @@
-﻿"""Quality presets: standard / quality — load, apply, UI payload."""
+"""Quality presets: standard / quality — load, apply, UI payload."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from utils.anim_config import (
     DEFAULT_ANIM_CONFIG_PATH,
     get_anim_config,
     load_anim_config,
+    normalize_upscale_backend,
     save_anim_config,
 )
 from utils.config import (
@@ -111,8 +112,13 @@ def preset_ui_payload(name: str) -> dict[str, Any]:
         "anim": {
             "upscale_enabled": bool(up.get("enabled", True)),
             "upscale_scale": int(up.get("scale", 2)),
+            "upscale_backend": normalize_upscale_backend(
+                str(up.get("backend", "realesrgan"))
+            ),
             "upscale_model": str(up.get("model", "animevideov3")),
             "gpu_id": int(up.get("gpu_id", 0)),
+            "cugan_noise": int(up.get("cugan_noise", -1)),
+            "cugan_syncgap": int(up.get("cugan_syncgap", 3)),
             "harmonize_mode": str(hm.get("mode", "auto")),
             "harmonize_blur_sigma": int(hm.get("blur_sigma", 60)),
             "harmonize_vignette": float(hm.get("vignette_strength", 0.7)),
@@ -160,7 +166,16 @@ def apply_anim_preset(anim_root: dict[str, Any], persist: bool = False) -> AnimC
         cfg.upscale.enabled = bool(up.get("enabled", cfg.upscale.enabled))
         cfg.upscale.scale = int(up.get("scale", cfg.upscale.scale))
         cfg.upscale.model = str(up.get("model", cfg.upscale.model))
+        cfg.upscale.backend = normalize_upscale_backend(
+            str(up.get("backend", cfg.upscale.backend))
+        )
         cfg.upscale.gpu_id = int(up.get("gpu_id", cfg.upscale.gpu_id))
+        cfg.upscale.cugan_noise = int(up.get("cugan_noise", cfg.upscale.cugan_noise))
+        cfg.upscale.cugan_syncgap = int(
+            up.get("cugan_syncgap", cfg.upscale.cugan_syncgap)
+        )
+        if "cugan_weights" in up:
+            cfg.upscale.cugan_weights = str(up.get("cugan_weights"))
     if hm:
         cfg.harmonize.enabled = bool(hm.get("enabled", cfg.harmonize.enabled))
         cfg.harmonize.mode = str(hm.get("mode", cfg.harmonize.mode))
@@ -205,12 +220,16 @@ def snapshot_from_configs() -> dict[str, Any]:
             "confidence_threshold": cfg.confidence_threshold,
             "iou_threshold": cfg.iou_threshold,
             "overlap_filter_threshold": cfg.overlap_filter_threshold,
+            "panel_detector": cfg.panel_detector,
         },
         "anim": {
             "upscale_enabled": ac.upscale.enabled,
             "upscale_scale": ac.upscale.scale,
+            "upscale_backend": ac.upscale.normalized_backend,
             "upscale_model": ac.upscale.model,
             "gpu_id": ac.upscale.gpu_id,
+            "cugan_noise": ac.upscale.cugan_noise,
+            "cugan_syncgap": ac.upscale.cugan_syncgap,
             "harmonize_mode": ac.harmonize.mode,
             "harmonize_blur_sigma": ac.harmonize.blur_sigma,
             "harmonize_vignette": ac.harmonize.vignette_strength,

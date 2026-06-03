@@ -12,23 +12,37 @@ venv/
 venv_310/
 venv_311/
 
-# Результаты обработки
+# Результаты обработки (локальные прогоны)
 output/
 output*/
+story_out/
+story_out*/
 story_test/
 out_*/
 out_ui/
+
+# Тестовые прогоны с большими PNG/MP4 (не путать с exam_imgs/ — 2 эталонные страницы в git)
+exam_img/
 
 # Сборка и артефакты
 *.exe
 comicsplit.exe
 benchmark_results.csv
+benchmark_split_detectors.csv
+benchmark_upscale*.csv
 
-# Модели и бинарники ML (локально через scripts/*; лимит Git ~100 MB)
-models/**/*
-!models/**/
+# Модели и бинарники ML (локально: scripts/*; лимит Git ~100 MB)
+# В репозитории только README и гайды в models/
+models/**
 !models/README.md
+!models/**/README.md
 !models/**/README*.md
+
+# Веса/архивы вне дерева models/ (на всякий случай)
+*.onnx
+*.pt
+*.bin
+*.param
 
 # IDE и ОС
 .vscode/
@@ -44,3 +58,6 @@ config/presets.user.yaml
 # Временные файлы
 *.tmp
 ~$*
+
+# Экспорт manga YOLO (ASCII workdir, не в репозитории)
+/tmp_comicsplit_manga/

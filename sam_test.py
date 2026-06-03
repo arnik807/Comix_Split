@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """YOLO bbox → MobileSAM mask test on a single page."""
 
 from __future__ import annotations
@@ -16,20 +16,21 @@ sys.path.insert(0, str(ROOT))
 from pipeline import (  # noqa: E402
     SAM_DECODER_MODEL,
     SAM_ENCODER_MODEL,
-    YOLO_MODEL,
     _load_session,
     _run_sam_decoder,
     _run_sam_encoder,
     _run_yolo,
+    _sync_config,
 )
 from utils.config import load_config  # noqa: E402
-from pipeline import _sync_config  # noqa: E402
+from utils.panel_detector import get_detector, normalize_detector  # noqa: E402
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("image", type=pathlib.Path, nargs="?", default=ROOT / "test_page.jpg")
     parser.add_argument("--out", type=pathlib.Path, default=ROOT / "output" / "sam_test_vis.jpg")
+    parser.add_argument("--detector", default="comic", choices=("comic", "manga"))
     args = parser.parse_args()
 
     load_config()
@@ -39,8 +40,15 @@ def main() -> None:
     if img is None:
         sys.exit(f"Cannot read {args.image}")
 
-    yolo_sess = _load_session(YOLO_MODEL)
-    bboxes, scores, yolo_ms = _run_yolo(yolo_sess, img, quiet=False)
+    spec = get_detector(normalize_detector(args.detector))
+    yolo_sess = _load_session(spec.onnx_path)
+    bboxes, scores, yolo_ms = _run_yolo(
+        yolo_sess,
+        img,
+        quiet=False,
+        num_classes=spec.num_classes,
+        panel_class_id=spec.panel_class_id,
+    )
     if len(bboxes) == 0:
         sys.exit("No panels from YOLO")
 

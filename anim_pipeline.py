@@ -1,4 +1,4 @@
-﻿"""
+"""
 anim_pipeline.py — CLI: панели PNG → MP4 + storyboard.
 
 Пример:
@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT))
 
 from anim.animate_depthflow import render_depthflow  # noqa: E402
 from anim.animate_opencv import animate_opencv  # noqa: E402
+from anim.animate_tpsmm import render_tpsmm  # noqa: E402
 from anim.harmonize import harmonize  # noqa: E402
 from anim.io_utils import imread, imwrite, list_images  # noqa: E402
 from anim.render import concat_videos, frames_to_video  # noqa: E402
@@ -89,6 +90,8 @@ def process_panel(
 
     if mode == "depthflow":
         render_depthflow(harm_path, video_path, cfg)
+    elif mode == "tpsmm":
+        render_tpsmm(harm_path, video_path, cfg)
     else:
         frames = animate_opencv(
             img,
@@ -155,7 +158,7 @@ def main() -> int:
     parser.add_argument("output", help="Output folder")
     parser.add_argument(
         "--mode",
-        choices=["opencv_zoom", "opencv_shake", "depthflow", "static"],
+        choices=["opencv_zoom", "opencv_shake", "depthflow", "static", "tpsmm"],
         help="Animation mode (overrides config)",
     )
     parser.add_argument("--scale", type=int, choices=[2, 4], help="Upscale factor")

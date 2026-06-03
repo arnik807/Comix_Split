@@ -1,6 +1,9 @@
 # config.yaml
 language: ru
 
+# Детектор панелей: comic (западные комиксы) | manga (Manga109 YOLO26n)
+panel_detector: comic
+
 # Режим качества: fast = только YOLO, accurate = YOLO + MobileSAM
 quality_mode: fast        # fast | accurate
 

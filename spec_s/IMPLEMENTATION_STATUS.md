@@ -1,4 +1,4 @@
-﻿# ComicSplit — статус реализации (июнь 2026)
+# ComicSplit — статус реализации (июнь 2026)
 
 Актуальный снимок кодовой базы `SPLIT_PANELS_DEV`. Установка и запуск: [ComicSplit_Documentation.md](ComicSplit_Documentation.md).
 
@@ -108,7 +108,9 @@
 
 **Anim** — `models/anim/` (см. `models/README.md`, `scripts/MODELS_SETUP_GUIDE.md`):
 
-- NCNN Real-ESRGAN, MiDaS ONNX, TPSMM ONNX (INT8 опционально)
+- NCNN Real-ESRGAN / Real-CUGAN / SPAN — в `anim/upscale.py` (backend в UI, пресеты = Real-ESRGAN)
+- MiDaS ONNX, TPSMM ONNX (INT8 опционально)
+- `config/models_registry.yaml`, `utils/models_registry.py`
 - `ffmpeg` в `models/anim/ffmpeg/bin/`
 - DepthFlow — pip-пакет `depthflow` (не файл в `models/`)
 
@@ -135,7 +137,7 @@
 | 4 UI | 📋 | Gradio + Konva :8000 (не Wails) |
 | Anim (отдельная спека) | 📋 | MVP: NCNN upscale, harmonize, OpenCV/DepthFlow, ffmpeg |
 | Блок A (пресеты + UI) | 📋 | ✅ закрыт — см. [ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md) |
-| Блок B (новые модели) | 📋 | В планах (manga YOLO, TPSMM в пайплайне) |
+| Блок B (новые модели) | 📋 | B4 ✅; B1 manga YOLO (код ✅); B2 TPSMM (код + UI ✅, модели на диске — download) |
 
 ---
 

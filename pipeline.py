@@ -1,4 +1,4 @@
-﻿# pipeline.py
+# pipeline.py
 """
 ComicSplit MVP pipeline.
 
@@ -34,7 +34,6 @@ _SESSION_CACHE: dict[str, ort.InferenceSession] = {}
 
 ROOT_DIR = pathlib.Path(__file__).resolve().parent
 MODEL_DIR = ROOT_DIR / "models"
-YOLO_MODEL = MODEL_DIR / "yolo_comic_int8.onnx"
 SAM_ENCODER_MODEL = MODEL_DIR / "mobilesam_encoder_int8.onnx"
 SAM_DECODER_MODEL = MODEL_DIR / "mobilesam_decoder_int8.onnx"
 
@@ -98,6 +97,48 @@ def _log(msg: str, quiet: bool) -> None:
         print(msg)
 
 
+def _parse_yolo_output(
+    raw: np.ndarray,
+    num_classes: int = 1,
+    panel_class_id: int = 0,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return cx, cy, w, h, scores in 640-space from ONNX output."""
+    if raw.ndim == 3:
+        pred = raw[0]
+    else:
+        pred = raw
+
+    # YOLO26 end2end export: (N, 6) = x1, y1, x2, y2, conf, class_id
+    if pred.ndim == 2 and pred.shape[1] == 6:
+        cls = pred[:, 5].astype(int)
+        keep = cls == int(panel_class_id)
+        pred = pred[keep]
+        if pred.size == 0:
+            empty = np.array([], dtype=np.float32)
+            return empty, empty, empty, empty, empty
+        x1, y1, x2, y2 = pred[:, 0], pred[:, 1], pred[:, 2], pred[:, 3]
+        scores = pred[:, 4].astype(np.float32)
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
+        w = x2 - x1
+        h = y2 - y1
+        return cx, cy, w, h, scores
+
+    if pred.shape[0] == 5 and num_classes <= 1:
+        cx, cy, w, h, scores = pred[0], pred[1], pred[2], pred[3], pred[4]
+        return cx, cy, w, h, scores
+
+    if pred.shape[0] >= 4 + num_classes:
+        cx, cy, w, h = pred[0], pred[1], pred[2], pred[3]
+        class_scores = pred[4 : 4 + num_classes]
+        scores = class_scores[int(panel_class_id)]
+        return cx, cy, w, h, scores
+
+    raise ValueError(
+        f"Unexpected YOLO ONNX shape {tuple(raw.shape)} for num_classes={num_classes}"
+    )
+
+
 def _preprocess_yolo(img: np.ndarray) -> np.ndarray:
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     resized = cv2.resize(rgb, (640, 640), interpolation=cv2.INTER_LINEAR)
@@ -109,12 +150,14 @@ def _run_yolo(
     session: ort.InferenceSession,
     img: np.ndarray,
     quiet: bool = False,
+    num_classes: int = 1,
+    panel_class_id: int = 0,
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     t0 = time.perf_counter()
     raw = session.run(None, {"images": _preprocess_yolo(img)})[0]
-    raw = raw[0]
-
-    cx, cy, w, h, scores = raw[0], raw[1], raw[2], raw[3], raw[4]
+    cx, cy, w, h, scores = _parse_yolo_output(
+        raw, num_classes=num_classes, panel_class_id=panel_class_id
+    )
     keep = scores > CONF_THRESHOLD
     if not np.any(keep):
         ms = (time.perf_counter() - t0) * 1000
@@ -276,14 +319,25 @@ def analyze_page(
     reading_order: bool = False,
     rtl: bool = False,
     quiet: bool = False,
+    panel_detector: Optional[str] = None,
 ) -> PageResult:
     """Run detection on an in-memory BGR image; return panels without saving files."""
-    _sync_config()
+    from utils.panel_detector import ensure_detector_installed, get_detector
+
+    cfg = _sync_config()
+    spec = ensure_detector_installed(get_detector(panel_detector))
     t_total = time.perf_counter()
     timings: Dict[str, float] = {}
+    timings["detector"] = spec.id
 
-    yolo_sess = _load_session(YOLO_MODEL)
-    bboxes, scores, timings["yolo_ms"] = _run_yolo(yolo_sess, img, quiet=quiet)
+    yolo_sess = _load_session(spec.onnx_path)
+    bboxes, scores, timings["yolo_ms"] = _run_yolo(
+        yolo_sess,
+        img,
+        quiet=quiet,
+        num_classes=spec.num_classes,
+        panel_class_id=spec.panel_class_id,
+    )
 
     if len(bboxes) == 0:
         timings["total_ms"] = (time.perf_counter() - t_total) * 1000
@@ -420,6 +474,7 @@ def process_page(
     global_order_start: int = 0,
     quiet: bool = False,
     cfg: Optional[AppConfig] = None,
+    panel_detector: Optional[str] = None,
 ) -> List[Panel]:
     cfg = cfg or get_config()
     t_total = time.perf_counter()
@@ -431,7 +486,12 @@ def process_page(
     _log(f"\n[page] {source_path}  ({img.shape[1]}x{img.shape[0]} px)", quiet)
 
     result = analyze_page(
-        img, use_sam=use_sam, reading_order=reading_order, rtl=rtl, quiet=quiet
+        img,
+        use_sam=use_sam,
+        reading_order=reading_order,
+        rtl=rtl,
+        quiet=quiet,
+        panel_detector=panel_detector,
     )
     if not result.panels:
         _log("  [!] Панели не найдены.", quiet)
@@ -463,13 +523,19 @@ def process_page_array(
     rtl: bool = False,
     quiet: bool = False,
     cfg: Optional[AppConfig] = None,
+    panel_detector: Optional[str] = None,
 ) -> PageResult:
     cfg = cfg or get_config()
     out_root.mkdir(parents=True, exist_ok=True)
 
     _log(f"\n[page] {page_name}  ({img.shape[1]}x{img.shape[0]} px)", quiet)
     result = analyze_page(
-        img, use_sam=use_sam, reading_order=reading_order, rtl=rtl, quiet=quiet
+        img,
+        use_sam=use_sam,
+        reading_order=reading_order,
+        rtl=rtl,
+        quiet=quiet,
+        panel_detector=panel_detector,
     )
     result.page_name = page_name
 
@@ -496,11 +562,14 @@ def process_source(
     max_workers: Optional[int] = None,
     quiet: bool = False,
     cfg: Optional[AppConfig] = None,
+    panel_detector: Optional[str] = None,
 ) -> SourceResult:
     """Process CBZ/CBR/ZIP/folder or single image; export all panels."""
     from utils.io_helpers import load_source
 
     cfg = cfg or get_config()
+    if panel_detector is None:
+        panel_detector = cfg.panel_detector
     use_sam = cfg.use_sam if use_sam is None else use_sam
     reading_order = cfg.reading_order if reading_order is None else reading_order
     rtl = cfg.rtl if rtl is None else rtl
@@ -528,6 +597,7 @@ def process_source(
             reading_order=reading_order,
             rtl=rtl,
             quiet=True,
+            panel_detector=panel_detector,
         )
         pr.page_name = name
         return page_num, name, pr

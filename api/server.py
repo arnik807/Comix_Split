@@ -1,4 +1,4 @@
-﻿"""
+"""
 ComicSplit API Server
 FastAPI backend + static frontend на одном порту.
 
@@ -61,6 +61,7 @@ class ProcessRequest(BaseModel):
     use_sam: bool = False
     reading_order: bool = True
     rtl: bool = False
+    panel_detector: Optional[str] = None  # comic | manga
     confidence_threshold: Optional[float] = None
     iou_threshold: Optional[float] = None
 
@@ -81,8 +82,13 @@ class UpscaleRequest(BaseModel):
     panels_dir: str
     output_dir: str = "output_upscaled"
     scale: int = 2
-    upscale_model: Optional[str] = None  # animevideov3 | anime_6B
+    upscale_backend: Optional[str] = None  # realesrgan | realcugan | span
+    upscale_model: Optional[str] = None
     gpu_id: Optional[int] = None
+    tile_size: Optional[int] = None
+    cugan_noise: Optional[int] = None
+    cugan_syncgap: Optional[int] = None
+    cugan_weights: Optional[str] = None
 
 
 class AnimateRequest(BaseModel):
@@ -94,13 +100,20 @@ class AnimateRequest(BaseModel):
     duration: float = 3.0
     fps: int = 24
     do_concat: bool = True
+    upscale_backend: Optional[str] = None
     upscale_model: Optional[str] = None
     gpu_id: Optional[int] = None
+    tile_size: Optional[int] = None
+    cugan_noise: Optional[int] = None
+    cugan_syncgap: Optional[int] = None
+    cugan_weights: Optional[str] = None
     harmonize_mode: Optional[str] = None
     harmonize_blur_sigma: Optional[int] = None
     harmonize_vignette: Optional[float] = None
     intensity: Optional[float] = None
     depthflow_animation: Optional[str] = None
+    tpsmm_driving_video: Optional[str] = None
+    tpsmm_mode: Optional[str] = None
 
 
 class PresetApplyRequest(BaseModel):
@@ -118,7 +131,23 @@ class PathPickRequest(BaseModel):
 # App
 # ══════════════════════════════════════════════════════════════════════════════
 
-app = FastAPI(title="ComicSplit API", version="1.2.0")
+app = FastAPI(title="ComicSplit API", version="1.3.0")
+
+
+def _apply_upscale_request(cfg, req) -> None:
+    from utils.upscale_options import apply_upscale_fields
+
+    apply_upscale_fields(
+        cfg.upscale,
+        backend=getattr(req, "upscale_backend", None),
+        model=req.upscale_model,
+        scale=int(req.scale) if hasattr(req, "scale") else None,
+        gpu_id=req.gpu_id,
+        tile_size=getattr(req, "tile_size", None),
+        cugan_noise=getattr(req, "cugan_noise", None),
+        cugan_syncgap=getattr(req, "cugan_syncgap", None),
+        cugan_weights=getattr(req, "cugan_weights", None),
+    )
 
 
 def _cfg_from_animate_request(req: AnimateRequest):
@@ -126,16 +155,12 @@ def _cfg_from_animate_request(req: AnimateRequest):
 
     cfg = load_anim_config()
     cfg.upscale.enabled = bool(req.do_upscale)
-    cfg.upscale.scale = int(req.scale)
     cfg.harmonize.enabled = True
     cfg.animation.mode = str(req.mode)
     cfg.animation.duration = float(req.duration)
     cfg.animation.fps = int(req.fps)
     cfg.render.concat_panels = bool(req.do_concat)
-    if req.upscale_model is not None:
-        cfg.upscale.model = str(req.upscale_model)
-    if req.gpu_id is not None:
-        cfg.upscale.gpu_id = int(req.gpu_id)
+    _apply_upscale_request(cfg, req)
     if req.harmonize_mode is not None:
         cfg.harmonize.mode = str(req.harmonize_mode)
     if req.harmonize_blur_sigma is not None:
@@ -146,6 +171,10 @@ def _cfg_from_animate_request(req: AnimateRequest):
         cfg.animation.intensity = float(req.intensity)
     if req.depthflow_animation is not None:
         cfg.animation.depthflow_animation = str(req.depthflow_animation)
+    if req.tpsmm_driving_video is not None:
+        cfg.animation.tpsmm_driving_video = str(req.tpsmm_driving_video)
+    if req.tpsmm_mode is not None:
+        cfg.animation.tpsmm_mode = str(req.tpsmm_mode)
     return cfg
 
 
@@ -208,6 +237,30 @@ def _crop_polygon(img: np.ndarray, polygon: List[List[int]]) -> np.ndarray:
 # ══════════════════════════════════════════════════════════════════════════════
 # API Routes
 # ══════════════════════════════════════════════════════════════════════════════
+
+
+@app.get("/api/upscale/options")
+def api_upscale_options():
+    """Backends, models, install status for upscale UI."""
+    from utils.upscale_options import upscale_options_payload
+
+    return JSONResponse(upscale_options_payload())
+
+
+@app.get("/api/split/options")
+def api_split_options():
+    """Panel detectors (comic / manga) and install status."""
+    from utils.panel_detector import split_options_payload
+
+    return JSONResponse(split_options_payload())
+
+
+@app.get("/api/models/setup")
+def api_models_setup():
+    """Install status per backend + PowerShell/Python setup commands (B0.3)."""
+    from utils.models_registry import models_setup_payload
+
+    return JSONResponse(models_setup_payload())
 
 
 @app.get("/api/tooltips")
@@ -295,6 +348,10 @@ def api_process(req: ProcessRequest):
         cfg.confidence_threshold = float(req.confidence_threshold)
     if req.iou_threshold is not None:
         cfg.iou_threshold = float(req.iou_threshold)
+    if req.panel_detector is not None:
+        from utils.panel_detector import normalize_detector
+
+        cfg.panel_detector = normalize_detector(req.panel_detector)
     apply_config_to_pipeline()
 
     try:
@@ -303,6 +360,7 @@ def api_process(req: ProcessRequest):
             use_sam=req.use_sam,
             reading_order=req.reading_order,
             rtl=req.rtl,
+            panel_detector=cfg.panel_detector,
         )
     except Exception as exc:
         raise HTTPException(500, detail=str(exc))
@@ -388,7 +446,7 @@ def api_export(req: ExportRequest):
 
 @app.post("/api/upscale")
 def api_upscale(req: UpscaleRequest):
-    """Апскейл всех PNG/JPG в папке через Real-ESRGAN NCNN."""
+    """Апскейл всех PNG/JPG в папке (Real-ESRGAN / Real-CUGAN / SPAN)."""
     try:
         panels_dir = resolve_dir_path(req.panels_dir, ROOT)
     except OSError as exc:
@@ -409,11 +467,7 @@ def api_upscale(req: UpscaleRequest):
 
     cfg = load_anim_config()
     cfg.upscale.enabled = True
-    cfg.upscale.scale = int(req.scale)
-    if req.upscale_model is not None:
-        cfg.upscale.model = str(req.upscale_model)
-    if req.gpu_id is not None:
-        cfg.upscale.gpu_id = int(req.gpu_id)
+    _apply_upscale_request(cfg, req)
 
     try:
         results = upscale_folder(panels_dir, out_base, cfg)

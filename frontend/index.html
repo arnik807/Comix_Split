@@ -1,10 +1,20 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ComicSplit</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#18181b" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap"
@@ -442,6 +452,12 @@
 
         <div class="sec">
             <div class="sec-title">Параметры детекции</div>
+            <label class="lbl" data-tip="panel_detector">Детектор панелей</label>
+            <select id="panel-detector" class="inp" style="margin-bottom:6px">
+                <option value="comic" selected>Западный комикс</option>
+                <option value="manga">Манга (Manga109)</option>
+            </select>
+            <p id="panel-detector-hint" class="field-hint" style="margin-bottom:10px"></p>
             <div id="split-quality-block">
                 <div class="trow">
                     <span class="tlbl" data-tip="use_sam">Точные контуры (SAM)</span>
@@ -543,16 +559,37 @@
                 </div>
                 <input type="hidden" id="up-scale" value="2" />
                 <div id="upscale-quality-block">
-                    <label class="lbl" data-tip="up_model">Модель Real-ESRGAN</label>
+                    <label class="lbl" data-tip="up_backend">Backend апскейла</label>
+                    <select id="up-backend" class="inp" style="margin-bottom:8px">
+                        <option value="realesrgan" selected>Real-ESRGAN</option>
+                        <option value="realcugan">Real-CUGAN</option>
+                        <option value="span">SPAN</option>
+                    </select>
+                    <p id="up-install-hint" class="field-hint" style="display:none;margin-bottom:8px"></p>
+                    <label class="lbl" data-tip="up_model">Модель</label>
                     <select id="up-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
                         <option value="anime_6B">Точный (x4plus-anime, только ×4)</option>
                     </select>
+                    <div id="up-cugan-extra" style="display:none;margin-bottom:10px">
+                        <label class="lbl" data-tip="up_cugan_noise">CUGAN denoise</label>
+                        <input type="range" id="up-cugan-noise" min="-1" max="3" step="1" value="-1" class="inp" style="width:100%;margin-bottom:8px" />
+                        <label class="lbl" data-tip="up_cugan_syncgap">CUGAN syncgap</label>
+                        <select id="up-cugan-syncgap" class="inp">
+                            <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                            <option value="3" selected>3</option>
+                        </select>
+                    </div>
                     <label class="lbl" data-tip="up_gpu">GPU (Vulkan)</label>
                     <select id="up-gpu" class="inp" style="margin-bottom:12px">
                         <option value="0" selected>0 — видеокарта (Vulkan)</option>
                         <option value="-1">−1 — только CPU</option>
                     </select>
+                    <details id="models-setup-details" style="margin-bottom:12px;font-size:11px;color:var(--muted)">
+                        <summary style="cursor:pointer;color:var(--accent)">Скачать / проверить модели</summary>
+                        <pre id="models-setup-box" style="margin-top:8px;white-space:pre-wrap;word-break:break-word;font-size:10px;line-height:1.45;background:var(--bg2);padding:8px;border-radius:6px;max-height:200px;overflow:auto"></pre>
+                        <button type="button" class="btn btn-e" style="margin-top:6px;font-size:11px" onclick="loadModelsSetup(true)">Обновить статус</button>
+                    </details>
                 </div>
                 <button class="btn btn-p" id="btn-upscale" onclick="runUpscale()">▶ Запустить апскейл</button>
             </div>
@@ -578,6 +615,7 @@
                     <option value="opencv_shake">Shake (OpenCV)</option>
                     <option value="static">Статичный кадр</option>
                     <option value="depthflow" id="opt-depthflow">Parallax (DepthFlow)</option>
+                    <option value="tpsmm" id="opt-tpsmm">TPSMM (медленно)</option>
                 </select>
                 <div class="trow">
                     <span class="tlbl" data-tip="vid_upscale">Апскейл перед видео</span>
@@ -590,11 +628,27 @@
                 </div>
                 <input type="hidden" id="vid-scale" value="2" />
                 <div id="video-quality-block">
+                    <label class="lbl" data-tip="up_backend">Backend апскейла</label>
+                    <select id="vid-backend" class="inp" style="margin-bottom:8px">
+                        <option value="realesrgan" selected>Real-ESRGAN</option>
+                        <option value="realcugan">Real-CUGAN</option>
+                        <option value="span">SPAN</option>
+                    </select>
+                    <p id="vid-install-hint" class="field-hint" style="display:none;margin-bottom:8px"></p>
                     <label class="lbl" data-tip="vid_model">Модель апскейла</label>
                     <select id="vid-model" class="inp" style="margin-bottom:10px">
                         <option value="animevideov3" selected>Быстрый (animevideov3)</option>
                         <option value="anime_6B">Точный (x4plus-anime, только ×4)</option>
                     </select>
+                    <div id="vid-cugan-extra" style="display:none;margin-bottom:10px">
+                        <label class="lbl" data-tip="up_cugan_noise">CUGAN denoise</label>
+                        <input type="range" id="vid-cugan-noise" min="-1" max="3" step="1" value="-1" class="inp" style="width:100%;margin-bottom:8px" />
+                        <label class="lbl" data-tip="up_cugan_syncgap">CUGAN syncgap</label>
+                        <select id="vid-cugan-syncgap" class="inp">
+                            <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                            <option value="3" selected>3</option>
+                        </select>
+                    </div>
                     <label class="lbl" data-tip="vid_gpu">GPU (Vulkan)</label>
                     <select id="vid-gpu" class="inp" style="margin-bottom:10px">
                         <option value="0" selected>0 — видеокарта</option>
@@ -628,6 +682,14 @@
                         <option value="dolly">Dolly</option>
                     </select>
                     <p class="field-hint" id="vid-df-hint" style="display:none">DepthFlow: выберите режим «Parallax» выше.</p>
+                    <label class="lbl" data-tip="vid_tpsmm_driving" id="lbl-vid-tpsmm-driving" style="display:none">TPSMM driving video (MP4)</label>
+                    <div class="path-row" id="row-vid-tpsmm-driving" style="display:none;margin-bottom:10px">
+                        <input type="text" id="vid-tpsmm-driving" placeholder="driving.mp4" />
+                        <button type="button" class="path-browse" onclick="pickPath('vid-tpsmm-driving','file','Driving video MP4')">Обзор…</button>
+                    </div>
+                    <p class="field-hint" id="vid-tpsmm-hint" style="display:none;color:var(--warn,#c90)">
+                        TPSMM на CPU: ~1.5 с/кадр. Нужны модели в models/anim/tpsmm/
+                    </p>
                 </div>
                 <div class="range-row">
                     <div class="range-head"><span class="rlbl" data-tip="vid_duration">Длина клипа (сек)</span><span class="rval" id="vid-duration-val">3.0</span></div>
@@ -736,9 +798,74 @@ function initRangeDisplays() {
 }
 
 const X4_ONLY_UPSCALE_MODEL = 'anime_6B';
+let upscaleOptionsCache = null;
 
 function isX4OnlyUpscaleModel(model) {
     return model === X4_ONLY_UPSCALE_MODEL;
+}
+
+async function loadModelsSetup(force) {
+    const box = $('models-setup-box');
+    if (!box) return;
+    if (box.dataset.loaded === '1' && !force) return;
+    try {
+        const r = await fetch('/api/models/setup');
+        const data = await r.json();
+        const lines = [];
+        (data.backends || []).forEach(b => {
+            lines.push(`${b.installed ? '✓' : '✗'} ${b.label} (${b.id})`);
+            if (!b.installed && b.install_hint) lines.push('   ' + b.install_hint.replace(/\n/g, '\n   '));
+        });
+        lines.push('', 'Команды:');
+        (data.scripts || []).forEach(s => lines.push(`• ${s.label}\n  ${s.command}`));
+        box.textContent = lines.join('\n');
+        box.dataset.loaded = '1';
+    } catch (e) {
+        box.textContent = 'Не удалось загрузить /api/models/setup: ' + e.message;
+    }
+}
+
+async function loadSplitOptions(keepUserSelection = false) {
+    const hint = $('panel-detector-hint');
+    const sel = $('panel-detector');
+    if (!sel) return;
+    try {
+        const r = await fetch('/api/split/options');
+        const data = await r.json();
+        // Только при первой загрузке — из config.yaml; при смене пользователем не сбрасывать
+        if (!keepUserSelection && data.panel_detector) sel.value = data.panel_detector;
+        const det = data.detectors?.find(d => d.id === sel.value);
+        if (hint && det) {
+            hint.textContent = det.installed
+                ? `✓ ${det.label}`
+                : (det.download_hint || 'Модель не установлена');
+            hint.style.color = det.installed ? 'var(--ok)' : 'var(--err)';
+        }
+    } catch (_) { /* offline */ }
+}
+
+async function loadUpscaleOptions() {
+    if (upscaleOptionsCache) return upscaleOptionsCache;
+    try {
+        const r = await fetch('/api/upscale/options');
+        upscaleOptionsCache = await r.json();
+    } catch (_) {
+        upscaleOptionsCache = { backends: [] };
+    }
+    return upscaleOptionsCache;
+}
+
+function upscalePayloadFields(prefix) {
+    const p = {
+        upscale_backend: $(`${prefix}-backend`)?.value || 'realesrgan',
+        upscale_model: $(`${prefix}-model`)?.value,
+        gpu_id: parseInt($(`${prefix}-gpu`)?.value, 10) || 0,
+    };
+    if (p.upscale_backend === 'realcugan') {
+        p.cugan_noise = parseInt($(`${prefix}-cugan-noise`)?.value, 10);
+        p.cugan_syncgap = parseInt($(`${prefix}-cugan-syncgap`)?.value, 10);
+    }
+    return p;
 }
 
 function setSegScale(segId, hiddenId, val) {
@@ -752,21 +879,55 @@ function setSegScale(segId, hiddenId, val) {
     });
 }
 
-/** Disable ×2 when x4plus-anime selected; force ×4 if needed. */
+/** Scale segment buttons from /api/upscale/options (backend + model). */
 function syncUpscaleScaleForModel(modelSelectId, segId, hiddenId) {
+    const prefix = modelSelectId.startsWith('vid') ? 'vid' : 'up';
+    const backend = $(`${prefix}-backend`)?.value || 'realesrgan';
     const model = $(modelSelectId)?.value;
     const seg = $(segId);
     if (!seg) return;
-    const btn2 = seg.querySelector('.seg-btn[data-v="2"]');
-    const x4only = isX4OnlyUpscaleModel(model);
-    if (btn2) {
-        btn2.disabled = x4only;
-        btn2.classList.toggle('disabled', x4only);
-    }
+    let scales = [2, 4];
+    const bentry = upscaleOptionsCache?.backends?.find(b => b.id === backend);
+    const mentry = bentry?.models?.find(m => m.id === model);
+    if (mentry?.scales?.length) scales = mentry.scales;
+    else if (backend === 'realesrgan' && isX4OnlyUpscaleModel(model)) scales = [4];
+
+    seg.querySelectorAll('.seg-btn').forEach(btn => {
+        const v = parseInt(btn.dataset.v, 10);
+        const ok = scales.includes(v);
+        btn.disabled = !ok;
+        btn.classList.toggle('disabled', !ok);
+        btn.style.display = ok ? '' : 'none';
+    });
     const hid = $(hiddenId);
-    if (x4only && hid && hid.value === '2') {
-        setSegScale(segId, hiddenId, '4');
+    const cur = parseInt(hid?.value || '2', 10);
+    if (!scales.includes(cur)) setSegScale(segId, hiddenId, String(scales[0]));
+}
+
+function refreshUpscaleUI(prefix) {
+    const backend = $(`${prefix}-backend`)?.value || 'realesrgan';
+    const bentry = upscaleOptionsCache?.backends?.find(b => b.id === backend);
+    const hint = $(`${prefix}-install-hint`);
+    if (hint) {
+        if (bentry && bentry.installed === false) {
+            hint.textContent = (bentry.install_hint || 'Скачайте: scripts/download_upscale_backends.ps1').replace(/\n/g, ' ');
+            hint.style.display = 'block';
+        } else hint.style.display = 'none';
     }
+    const cugan = $(`${prefix}-cugan-extra`);
+    if (cugan) cugan.style.display = backend === 'realcugan' ? '' : 'none';
+
+    const modelSel = $(`${prefix}-model`);
+    const models = bentry?.models || [];
+    const prev = modelSel?.value;
+    if (modelSel && models.length) {
+        modelSel.innerHTML = models.map(m =>
+            `<option value="${m.id}">${m.label}</option>`
+        ).join('');
+        if (models.some(m => m.id === prev)) modelSel.value = prev;
+        else modelSel.value = models[0].id;
+    }
+    syncUpscaleScaleForModel(`${prefix}-model`, `${prefix}-scale-seg`, `${prefix}-scale`);
 }
 
 function initSegScales() {
@@ -781,20 +942,20 @@ function initSegScales() {
         });
         setSegScale(seg.id, seg.dataset.target, target.value || '2');
     });
-    const upModel = $('up-model');
-    const vidModel = $('vid-model');
-    if (upModel) {
-        upModel.addEventListener('change', () => {
-            syncUpscaleScaleForModel('up-model', 'up-scale-seg', 'up-scale');
-        });
-        syncUpscaleScaleForModel('up-model', 'up-scale-seg', 'up-scale');
-    }
-    if (vidModel) {
-        vidModel.addEventListener('change', () => {
-            syncUpscaleScaleForModel('vid-model', 'vid-scale-seg', 'vid-scale');
-        });
-        syncUpscaleScaleForModel('vid-model', 'vid-scale-seg', 'vid-scale');
-    }
+    ['up', 'vid'].forEach(prefix => {
+        const be = $(`${prefix}-backend`);
+        const me = $(`${prefix}-model`);
+        if (be) be.addEventListener('change', () => refreshUpscaleUI(prefix));
+        if (me) me.addEventListener('change', () => syncUpscaleScaleForModel(
+            `${prefix}-model`, `${prefix}-scale-seg`, `${prefix}-scale`
+        ));
+    });
+    loadSplitOptions(false);
+    $('panel-detector')?.addEventListener('change', () => loadSplitOptions(true));
+    loadUpscaleOptions().then(() => {
+        refreshUpscaleUI('up');
+        refreshUpscaleUI('vid');
+    });
 }
 
 function escapeHtml(s) {
@@ -1065,12 +1226,14 @@ function applyPresetModeUI() {
     if (upq) upq.style.display = isQ ? '' : 'none';
     const vq = $('video-quality-block');
     if (vq) vq.style.display = isQ ? '' : 'none';
-    const optDf = $('opt-depthflow');
-    if (optDf) {
-        optDf.disabled = !isQ;
-        optDf.hidden = !isQ;
-    }
-    if (!isQ && $('vid-mode')?.value === 'depthflow') $('vid-mode').value = 'opencv_zoom';
+    ['opt-depthflow', 'opt-tpsmm'].forEach(id => {
+        const opt = $(id);
+        if (opt) {
+            opt.disabled = !isQ;
+            opt.hidden = !isQ;
+        }
+    });
+    if (!isQ && ['depthflow', 'tpsmm'].includes($('vid-mode')?.value)) $('vid-mode').value = 'opencv_zoom';
 
     syncVideoAdvancedVisibility();
 }
@@ -1083,18 +1246,24 @@ function fillFormFromPreset(payload) {
     $('rtl').checked = !!s.rtl;
     setRange('conf-thr', s.confidence_threshold ?? 0.35);
     setRange('iou-thr', s.iou_threshold ?? 0.45);
+    if ($('up-backend')) $('up-backend').value = a.upscale_backend || 'realesrgan';
     $('up-model').value = a.upscale_model || 'animevideov3';
+    if ($('up-cugan-noise')) $('up-cugan-noise').value = String(a.cugan_noise ?? -1);
+    if ($('up-cugan-syncgap')) $('up-cugan-syncgap').value = String(a.cugan_syncgap ?? 3);
+    refreshUpscaleUI('up');
     let upScale = a.upscale_scale ?? 2;
     if (isX4OnlyUpscaleModel($('up-model').value) && upScale === 2) upScale = 4;
-    syncUpscaleScaleForModel('up-model', 'up-scale-seg', 'up-scale');
     setSegScale('up-scale-seg', 'up-scale', upScale);
     const gpu = String(a.gpu_id ?? 0);
     if ($('up-gpu').querySelector(`option[value="${gpu}"]`)) $('up-gpu').value = gpu;
     else $('up-gpu').value = '0';
+    if ($('vid-backend')) $('vid-backend').value = a.upscale_backend || 'realesrgan';
     $('vid-model').value = a.upscale_model || 'animevideov3';
+    if ($('vid-cugan-noise')) $('vid-cugan-noise').value = String(a.cugan_noise ?? -1);
+    if ($('vid-cugan-syncgap')) $('vid-cugan-syncgap').value = String(a.cugan_syncgap ?? 3);
+    refreshUpscaleUI('vid');
     let vidScale = a.upscale_scale ?? 2;
     if (isX4OnlyUpscaleModel($('vid-model').value) && vidScale === 2) vidScale = 4;
-    syncUpscaleScaleForModel('vid-model', 'vid-scale-seg', 'vid-scale');
     setSegScale('vid-scale-seg', 'vid-scale', vidScale);
     const vgpu = String(a.gpu_id ?? 0);
     if ($('vid-gpu').querySelector(`option[value="${vgpu}"]`)) $('vid-gpu').value = vgpu;
@@ -1127,13 +1296,21 @@ function updateSamHint() {
 }
 
 function syncVideoAdvancedVisibility() {
-    const df = $('vid-mode').value === 'depthflow';
+    const mode = $('vid-mode').value;
+    const df = mode === 'depthflow';
+    const tps = mode === 'tpsmm';
     const dfHint = $('vid-df-hint');
     const dfSel = $('vid-df-anim');
-    // Hint only makes sense when quality fields are visible
     const isQ = currentPreset === 'quality';
     if (dfHint) dfHint.style.display = (isQ && !df) ? 'block' : 'none';
     if (dfSel) dfSel.style.opacity = (df ? '1' : '0.55');
+    const tpsLbl = $('lbl-vid-tpsmm-driving');
+    const tpsRow = $('row-vid-tpsmm-driving');
+    const tpsHint = $('vid-tpsmm-hint');
+    const showTps = isQ && tps;
+    if (tpsLbl) tpsLbl.style.display = showTps ? '' : 'none';
+    if (tpsRow) tpsRow.style.display = showTps ? '' : 'none';
+    if (tpsHint) tpsHint.style.display = showTps ? 'block' : 'none';
     const timing = $('preset-timing');
     if (timing) {
         timing.textContent = PRESET_TIMING_HINT[currentPreset] || '';
@@ -1195,7 +1372,8 @@ function switchTab(name) {
     document.querySelector('main').classList.toggle('batch-mode', !isSplit);
     if (name === 'upscale') {
         $('batch-title').textContent = 'Апскейл';
-        $('batch-desc').textContent = 'Real-ESRGAN NCNN (AMD Vulkan). Обработка может занять несколько минут.';
+        $('batch-desc').textContent = 'Real-ESRGAN / CUGAN / SPAN (Vulkan). Обработка может занять несколько минут.';
+        loadModelsSetup(false);
     } else if (name === 'video') {
         $('batch-title').textContent = 'Видео-креатор';
         $('batch-desc').textContent = 'Harmonize 16:9 + анимация + ffmpeg. Для теста используйте режим static или opencv_zoom.';
@@ -1269,8 +1447,7 @@ async function runUpscale() {
                 panels_dir,
                 output_dir,
                 scale,
-                upscale_model: $('up-model').value,
-                gpu_id: parseInt($('up-gpu').value, 10),
+                ...upscalePayloadFields('up'),
             }),
         });
         const data = await r.json();
@@ -1320,13 +1497,13 @@ async function runVideo() {
                 duration: getRange('vid-duration'),
                 fps: Math.round(getRange('vid-fps')),
                 do_concat: $('vid-concat').checked,
-                upscale_model: $('vid-model').value,
-                gpu_id: parseInt($('vid-gpu').value, 10),
+                ...upscalePayloadFields('vid'),
                 harmonize_mode: $('vid-harm-mode').value,
                 harmonize_blur_sigma: Math.round(getRange('vid-harm-blur')),
                 harmonize_vignette: getRange('vid-harm-vig'),
                 intensity: getRange('vid-intensity'),
                 depthflow_animation: $('vid-df-anim').value,
+                tpsmm_driving_video: $('vid-tpsmm-driving')?.value || '',
             }),
         });
         const data = await r.json();
@@ -1365,6 +1542,7 @@ async function runDetection() {
             headers:{'Content-Type':'application/json; charset=utf-8'},
             body: JSON.stringify({
                 image_path: path,
+                panel_detector: $('panel-detector')?.value || 'comic',
                 use_sam:       $('use-sam').checked,
                 reading_order: $('reading-order').checked,
                 rtl:           $('rtl').checked,

@@ -1,4 +1,4 @@
-﻿# Модели
+# Модели
 
 Файлы моделей в git не хранятся (см. `.gitignore`).
 
@@ -10,14 +10,20 @@
 
 | Файл | Назначение |
 |------|------------|
-| `yolo_comic_int8.onnx` | Детекция панелей (YOLO) |
+| `yolo_comic_int8.onnx` | Детекция панелей — западный комикс (`panel_detector: comic`) |
+| `yolo_manga_int8.onnx` | Детекция панелей — манга (`panel_detector: manga`) |
 | `mobilesam_encoder_int8.onnx` | MobileSAM encoder |
 | `mobilesam_decoder_int8.onnx` | MobileSAM decoder |
 
 ```powershell
 .\scripts\split_models_craft_scripts\download_models.ps1
 python scripts\split_models_craft_scripts\quantize_models.py
+
+# Манга (отдельно)
+powershell -ExecutionPolicy Bypass -File scripts\export_manga_yolo.ps1
 ```
+
+Когда какой детектор: [spec_s/SPLIT_DETECTORS.md](../spec_s/SPLIT_DETECTORS.md)
 
 ## Anim (апскейл + видео)
 
@@ -25,8 +31,10 @@ python scripts\split_models_craft_scripts\quantize_models.py
 
 | Путь | Назначение |
 |------|------------|
-| `upscale/realesrgan-ncnn-vulkan.exe` | Апскейл NCNN/Vulkan (AMD iGPU) |
-| `upscale/models/*.bin`, `*.param` | NCNN: `realesr-animevideov3-x2/x3/x4`, `realesrgan-x4plus-anime` (конфиг id `anime_6B`, только ×4) |
+| `upscale/realesrgan-ncnn-vulkan.exe` | Апскейл NCNN/Vulkan (AMD iGPU) — **в пайплайне** |
+| `upscale/models/*.bin`, `*.param` | Real-ESRGAN: videov3, x4plus-anime (`anime_6B`, только ×4) |
+| `upscale/realcugan/realcugan-ncnn-vulkan.exe` | Real-CUGAN — **скачано, verify OK; UI — в разработке** |
+| `upscale/span/span-ncnn-vulkan.exe` | SPAN — **скачано, verify OK; UI — в разработке** |
 | `depth/midas_v21_small_256.onnx` | MiDaS исходная |
 | `depth/midas_v21_small_256_int8.onnx` | MiDaS INT8 (для CPU inference) |
 | `tpsmm/kp_detector.onnx` | TPSMM keypoints |
@@ -39,8 +47,10 @@ DepthFlow — Python-пакет (`pip install depthflow`), не файл в `mod
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\download_animate_models.ps1
+powershell -ExecutionPolicy Bypass -File scripts\download_upscale_backends.ps1
 python scripts\quantize_animate_models.py
 python scripts\quantize_animate_models.py --verify
+python scripts\verify_upscale_backends.py
 ```
 
 Подробнее: `scripts/MODELS_SETUP_GUIDE.md`

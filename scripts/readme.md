@@ -1,4 +1,4 @@
-﻿## Что за файлы в этой папке:
+## Что за файлы в этой папке:
 
 **`MODELS_SETUP_GUIDE.md`** — полный справочник: откуда что берётся, куда кладётся, зачем, с таблицами и пояснениями.
 
@@ -33,3 +33,16 @@ powershell -ExecutionPolicy Bypass -File scripts\benchmark_upscale.ps1 -Quick
 ```
 
 Полная матрица (GPU+CPU, tile 0 и 128) — без `-Quick`, дольше. Параметр `tile_size` в `config_animate.yaml` (0 = auto).
+
+## Favicon веб-UI (:8000)
+
+Исходник: `favicon-pack/`. Копирование в `frontend/`:
+
+```powershell
+Copy-Item favicon-pack\favicon*.png, favicon-pack\favicon.ico frontend\ -Force
+Copy-Item favicon-pack\favicon-180x180.png frontend\apple-touch-icon.png -Force
+Copy-Item favicon-pack\favicon-192x192.png frontend\icon-192.png -Force
+Copy-Item favicon-pack\favicon-512x512.png frontend\icon-512.png -Force
+```
+
+Старый генератор из SVG: `scripts\generate_favicon.py` (если понадобится другой дизайн).

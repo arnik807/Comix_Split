@@ -1,4 +1,4 @@
-﻿# scripts/download_animate_models.ps1
+# scripts/download_animate_models.ps1
 # Download models for anim/ module
 # Run: powershell -ExecutionPolicy Bypass -File scripts\download_animate_models.ps1
 
@@ -202,5 +202,6 @@ Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host " Download finished." -ForegroundColor Cyan
 Write-Host " Next: python scripts\quantize_animate_models.py" -ForegroundColor White
+Write-Host " Optional: scripts\download_upscale_backends.ps1 (Real-CUGAN + SPAN)" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""

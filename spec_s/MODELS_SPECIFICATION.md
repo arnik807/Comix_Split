@@ -1,4 +1,4 @@
-﻿# Спецификация моделей ComicSplit
+# Спецификация моделей ComicSplit
 
 **Версия:** 1.1 (2 июня 2026)  
 **Проект:** `SPLIT_PANELS_DEV`  
@@ -141,6 +141,42 @@ Encoder один раз на страницу + decoder на каждую пан
 - Anime-модели: https://github.com/xinntao/Real-ESRGAN/blob/master/docs/anime_model.md  
 - Anime video v3: https://github.com/xinntao/Real-ESRGAN/blob/master/docs/anime_video_model.md  
 - NCNN Vulkan: https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan  
+
+---
+
+### 2.2 Real-CUGAN (NCNN + Vulkan) — подготовлено, UI позже
+
+| | |
+|--|--|
+| **В проекте** | `models/anim/upscale/realcugan/realcugan-ncnn-vulkan.exe`, веса `models-se/` |
+| **Скачивание** | `scripts/download_upscale_backends.ps1` |
+| **Реестр** | `config/models_registry.yaml` → backend `realcugan` |
+| **Verify** | `python scripts/verify_upscale_backends.py --backend realcugan` |
+| **Роль** | Чистые края, line art, плоские цветовые зоны аниме/комикс |
+| **Ключевые флаги CLI** | `-n` denoise (-1..3), `-s` scale, `-m` models-se/pro, `-c` syncgap, `-g`, `-t` |
+
+**Под ваше железо: ⭐⭐⭐ (Vulkan)** — smoke на Vega ~3–4 с/панель ×2.  
+**Бенчмарк:** `scripts/benchmark_upscale.ps1 -Quick` (все установленные backend).
+
+**Ссылки:** https://github.com/nihui/realcugan-ncnn-vulkan  
+
+---
+
+### 2.3 SPAN (NCNN + Vulkan)
+
+| | |
+|--|--|
+| **В проекте** | `models/anim/upscale/span/span-ncnn-vulkan.exe`, `models/` |
+| **Скачивание** | `scripts/download_upscale_backends.ps1` |
+| **Реестр** | `config/models_registry.yaml` → backend `span` |
+| **Verify** | `python scripts/verify_upscale_backends.py --backend span` |
+| **Дефолт smoke** | `-n spanx4_ch48 -s 4` |
+| **Роль** | Efficient SR (NTIRE-class); сравнить с videov3 на своих панелях |
+
+**Под ваше железо: ⭐⭐⭐ (Vulkan)**  
+**В приложении:** dropdown backend «SPAN» в режиме «Качество»; бенчмарк `scripts/benchmark_upscale.ps1 -Quick`.
+
+**Ссылки:** https://github.com/TNTwise/SPAN-ncnn-vulkan  
 
 ---
 

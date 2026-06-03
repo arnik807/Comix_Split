@@ -1,13 +1,44 @@
-﻿# Changelog
+# Changelog
 
 Все значимые изменения проекта ComicSplit (`SPLIT_PANELS_DEV`).  
 Формат ориентирован на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/).
 
 ## [Unreleased]
 
+### Добавлено (B2 — TPSMM, черновик интеграции)
+
+- `anim/animate_tpsmm.py`, режим `tpsmm` в `anim_pipeline.py`
+- `config_animate.yaml`: `tpsmm_driving_video`, `tpsmm_mode`
+- API / Gradio / :8000: режим TPSMM + driving MP4, предупреждение о скорости
+
+### Добавлено (B1 — manga YOLO)
+
+- Детекторы split: `comic` | `manga` — `utils/panel_detector.py`, `config.yaml`, `pipeline.py` (multi-class YOLO)
+- Экспорт манги: `scripts/export_manga_yolo.py`, `scripts/export_manga_yolo.ps1` → `yolo_manga_int8.onnx`
+- API: `GET /api/split/options`, поле `panel_detector` в `POST /api/process`
+- Gradio + :8000: dropdown «Детектор панелей»; пресеты детектор не перезаписывают
+- Док: [SPLIT_DETECTORS.md](spec_s/SPLIT_DETECTORS.md); бенчмарк: `scripts/benchmark_split_detectors.py`
+- Реестр: секция `split` в `models_registry.yaml`, статус в `GET /api/models/setup`
+
+### Добавлено (подготовка апскейлеров, этап P1)
+
+- Скачивание **Real-CUGAN** и **SPAN** NCNN Vulkan: `scripts/download_upscale_backends.ps1`
+- Реестр моделей: `config/models_registry.yaml`, `utils/models_registry.py`
+- Проверка: `scripts/verify_upscale_backends.py`, тесты `tests/test_models_registry.py`
+- Документация: MODELS_SETUP_GUIDE §1b, MODELS_SPECIFICATION §2.2–2.3, ROADMAP v1.3
+
+### Добавлено (интеграция B4)
+
+- `anim/upscale.py`: backend realesrgan / realcugan / span
+- API v1.3: `GET /api/upscale/options`, расширенные поля POST `/api/upscale` и `/api/animate`
+- Gradio + :8000: выбор backend, модель, CUGAN noise/syncgap, подсказка если модель не установлена
+- [UPSCALE_UI_PARAMS.md](spec_s/UPSCALE_UI_PARAMS.md), тесты `tests/test_upscale_options.py`
+- B4.4: `benchmark_upscale.py` — все backend через `anim/upscale.py`
+- B0.3: `GET /api/models/setup`, блок «Скачать / проверить модели» в Gradio и :8000
+
 ### Планируется
 
-- [ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) — **блок B** (реестр моделей, manga YOLO, TPSMM в пайплайне)
+- [ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) — **B2** TPSMM; **B1.4** benchmark после установки `yolo_manga_int8.onnx`
 - OpenCV fast-path в split-каскаде
 - Wails / gRPC (спека v2.0)
 - Опционально из блока A: `localStorage` для ручных настроек на :8000

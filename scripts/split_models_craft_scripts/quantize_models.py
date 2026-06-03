@@ -1,4 +1,4 @@
-﻿# quantize_models.py
+# quantize_models.py
 import sys
 import shutil
 import tempfile
@@ -51,6 +51,7 @@ def main() -> None:
 
     to_quantize = [
         "yolo_comic.onnx",
+        "yolo_manga.onnx",
         "mobilesam_encoder.onnx",
         "mobilesam_decoder.onnx",
     ]

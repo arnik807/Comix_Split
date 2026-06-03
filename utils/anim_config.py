@@ -1,4 +1,4 @@
-﻿"""Load config_animate.yaml for the anim pipeline."""
+"""Load config_animate.yaml for the anim pipeline."""
 
 from __future__ import annotations
 
@@ -20,9 +20,32 @@ NCNN_MODELS = {
 # Config id anime_6B → NCNN realesrgan-x4plus-anime (not RealESRGAN_x4plus_anime_6B weights).
 X4_ONLY_UPSCALE_MODEL = "anime_6B"
 
+UPSCALE_BACKENDS = ("realesrgan", "realcugan", "span")
 
-def resolve_upscale_scale(model: str, scale: int) -> int:
-    """NCNN x4plus-anime: only scale 4 is safe on our stack; 2/3 → artifacts."""
+# variant_id -> (ncnn -n name, forced scale, UI label)
+SPAN_VARIANTS: dict[str, tuple[str, int, str]] = {
+    "span_x2_ch48": ("spanx2_ch48", 2, "SPAN ×2 ch48"),
+    "span_x4_ch48": ("spanx4_ch48", 4, "SPAN ×4 ch48"),
+}
+
+CUGAN_WEIGHTS_DIRS = {
+    "cugan_se": "models-se",
+    "cugan_pro": "models-pro",
+}
+
+
+def normalize_upscale_backend(raw: str) -> str:
+    b = str(raw or "realesrgan").strip().lower()
+    if b in ("ncnn_vulkan", "realesrgan", "esrgan", ""):
+        return "realesrgan"
+    if b in ("realcugan", "cugan"):
+        return "realcugan"
+    if b == "span":
+        return "span"
+    return "realesrgan"
+
+
+def resolve_realesrgan_scale(model: str, scale: int) -> int:
     s = int(scale)
     if s not in (2, 3, 4):
         s = 2
@@ -31,14 +54,44 @@ def resolve_upscale_scale(model: str, scale: int) -> int:
     return s
 
 
+def resolve_upscale_scale(backend: str, model: str, scale: int) -> int:
+    """Clamp scale per backend/model (x4plus-anime, SPAN weights, etc.)."""
+    b = normalize_upscale_backend(backend)
+    if b == "realesrgan":
+        return resolve_realesrgan_scale(model, scale)
+    if b == "span":
+        if model in SPAN_VARIANTS:
+            return SPAN_VARIANTS[model][1]
+        return 4 if int(scale) == 4 else 2
+    if b == "realcugan":
+        s = int(scale)
+        return s if s in (1, 2, 3, 4) else 2
+    return 2
+
+
+def span_ncnn_name(model: str) -> str:
+    if model in SPAN_VARIANTS:
+        return SPAN_VARIANTS[model][0]
+    return str(model) if model.startswith("span") else "spanx4_ch48"
+
+
+def cugan_model_path(model: str, weights_override: str) -> str:
+    if weights_override:
+        return weights_override
+    return CUGAN_WEIGHTS_DIRS.get(model, "models-se")
+
+
 @dataclass
 class UpscaleConfig:
     enabled: bool = True
     scale: int = 2
     model: str = "animevideov3"
-    backend: str = "ncnn_vulkan"
+    backend: str = "realesrgan"
     gpu_id: int = 0
     tile_size: int = 0  # 0 = auto (-t 0); try 64/128/256 on AMD iGPU if tile seams
+    cugan_noise: int = -1
+    cugan_syncgap: int = 3
+    cugan_weights: str = "models-se"
 
     @property
     def ncnn_model_name(self) -> str:
@@ -46,7 +99,11 @@ class UpscaleConfig:
 
     @property
     def effective_scale(self) -> int:
-        return resolve_upscale_scale(self.model, self.scale)
+        return resolve_upscale_scale(self.backend, self.model, self.scale)
+
+    @property
+    def normalized_backend(self) -> str:
+        return normalize_upscale_backend(self.backend)
 
 
 @dataclass
@@ -66,6 +123,8 @@ class AnimationConfig:
     fps: int = 24
     intensity: float = 0.3
     depthflow_animation: str = "zoom"
+    tpsmm_driving_video: str = ""
+    tpsmm_mode: str = "relative"  # relative | standard
 
 
 @dataclass
@@ -133,9 +192,12 @@ def load_anim_config(path: Optional[pathlib.Path] = None) -> AnimConfig:
             enabled=bool(up.get("enabled", True)),
             scale=int(up.get("scale", 2)),
             model=str(up.get("model", "animevideov3")),
-            backend=str(up.get("backend", "ncnn_vulkan")),
+            backend=normalize_upscale_backend(str(up.get("backend", "realesrgan"))),
             gpu_id=int(up.get("gpu_id", 0)),
             tile_size=int(up.get("tile_size", 0)),
+            cugan_noise=int(up.get("cugan_noise", -1)),
+            cugan_syncgap=int(up.get("cugan_syncgap", 3)),
+            cugan_weights=str(up.get("cugan_weights", "models-se")),
         ),
         harmonize=HarmonizeConfig(
             enabled=bool(hm.get("enabled", True)),
@@ -151,6 +213,8 @@ def load_anim_config(path: Optional[pathlib.Path] = None) -> AnimConfig:
             fps=int(an.get("fps", 24)),
             intensity=float(an.get("intensity", 0.3)),
             depthflow_animation=str(an.get("depthflow_animation", "zoom")),
+            tpsmm_driving_video=str(an.get("tpsmm_driving_video", "")),
+            tpsmm_mode=str(an.get("tpsmm_mode", "relative")),
         ),
         render=RenderConfig(
             concat_panels=bool(rn.get("concat_panels", True)),
@@ -183,9 +247,12 @@ def save_anim_config(
             "enabled": cfg.upscale.enabled,
             "scale": cfg.upscale.scale,
             "model": cfg.upscale.model,
-            "backend": cfg.upscale.backend,
+            "backend": cfg.upscale.normalized_backend,
             "gpu_id": cfg.upscale.gpu_id,
             "tile_size": cfg.upscale.tile_size,
+            "cugan_noise": cfg.upscale.cugan_noise,
+            "cugan_syncgap": cfg.upscale.cugan_syncgap,
+            "cugan_weights": cfg.upscale.cugan_weights,
         },
         "harmonize": {
             "enabled": cfg.harmonize.enabled,
@@ -201,6 +268,8 @@ def save_anim_config(
             "fps": cfg.animation.fps,
             "intensity": cfg.animation.intensity,
             "depthflow_animation": cfg.animation.depthflow_animation,
+            "tpsmm_driving_video": cfg.animation.tpsmm_driving_video,
+            "tpsmm_mode": cfg.animation.tpsmm_mode,
         },
         "render": {
             "concat_panels": cfg.render.concat_panels,

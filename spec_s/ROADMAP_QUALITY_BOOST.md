@@ -1,10 +1,14 @@
-﻿# Roadmap: раскрытие потенциала качества ComicSplit
+# Roadmap: раскрытие потенциала качества ComicSplit
 
-**Версия:** 1.2 (2 июня 2026)  
+**Версия:** 1.3 (2 июня 2026)  
 **Целевое железо:** Ryzen 5 5600H, AMD Radeon iGPU, 16 GB RAM, Windows, без CUDA  
 **Опора:** [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
 
-> **Блок A закрыт (02.06.2026).** Следующий этап — **блок B** (реестр моделей, manga YOLO, TPSMM).
+> **Блок A закрыт (02.06.2026).** Идёт **подготовка моделей** (Real-CUGAN, SPAN) → затем интеграция в UI (блок B).
+
+### Принцип расширения (без замены)
+
+Новые апскейлеры — **дополнение** к Real-ESRGAN: dropdown в режиме «Качество», пресеты `standard`/`quality` **не меняем**, пока бенчмарк на Vega не покажет выигрыш. Depth Anything V2 для parallax уже в DepthFlow (MiDaS ONNX — задел TPSMM, не задача апскейла).
 
 ---
 
@@ -160,25 +164,39 @@ stateDiagram-v2
 
 **Результат блока:** альтернативные детекторы и motion transfer выбираются в UI; скрипты загрузки; verify.
 
+### Этап P1 — Боевая готовность моделей (в работе)
+
+| # | Задача | Статус |
+|---|--------|--------|
+| P1.1 | Скрипт `scripts/download_upscale_backends.ps1` (Real-CUGAN + SPAN) | ✅ |
+| P1.2 | `config/models_registry.yaml` + `utils/models_registry.py` | ✅ |
+| P1.3 | `scripts/verify_upscale_backends.py` (registry + smoke upscale) | ✅ |
+| P1.4 | Доки: MODELS_SETUP_GUIDE, models/README, MODELS_SPEC §2.2–2.3 | ✅ |
+| P1.5 | Таблица «параметры качества» CUGAN/SPAN для UI (этап 2) | ✅ [UPSCALE_UI_PARAMS.md](UPSCALE_UI_PARAMS.md) |
+
+**Следующий шаг:** B4.4 benchmark; B1/B2 по приоритету.
+
+---
+
 ### Этап B0 — Реестр моделей в приложении (1 день)
 
 | # | Задача |
 |---|--------|
-| B0.1 | `config/models_registry.yaml`: id, путь, тип, железо, ссылка HF/GitHub |
-| B0.2 | `utils/models_registry.py`: проверка «модель установлена» перед запуском |
-| B0.3 | UI: серая кнопка + «Скачать модели» со ссылкой на скрипт, если файла нет |
+| B0.1 | `config/models_registry.yaml`: id, путь, тип, железо, ссылка HF/GitHub | ✅ (базовая версия) |
+| B0.2 | `utils/models_registry.py`: проверка «модель установлена» перед запуском | ✅ |
+| B0.3 | UI: статус моделей + команды скачивания (`GET /api/models/setup`, Gradio/:8000) | ✅ |
 
 ---
 
 ### Этап B1 — Manga / альтернативный YOLO (3–5 дней)
 
-| # | Задача |
-|---|--------|
-| B1.1 | Скрипт: export `leoxs22/manga-panel-detector-yolo26n` → ONNX INT8 |
-| B1.2 | `pipeline.py`: выбор детектора `comic` \| `manga` (env или config) |
-| B1.3 | UI: Dropdown «Детектор: Западный комикс / Манга» + пресет не ломает выбор |
-| B1.4 | Benchmark на `exam_imgs` + 1 manga page |
-| B1.5 | Док: когда какой детектор |
+| # | Задача | Статус |
+|---|--------|--------|
+| B1.1 | Скрипт: export `leoxs22/manga-panel-detector-yolo26n` → ONNX INT8 | ✅ `scripts/export_manga_yolo.ps1` |
+| B1.2 | `pipeline.py`: выбор детектора `comic` \| `manga` | ✅ |
+| B1.3 | UI: Dropdown + API; пресет не меняет детектор | ✅ |
+| B1.4 | Benchmark на `exam_imgs` + 1 manga page | 📋 (после установки manga ONNX) |
+| B1.5 | Док: когда какой детектор | ✅ [SPLIT_DETECTORS.md](SPLIT_DETECTORS.md) |
 
 **Не в scope v1:** два детектора на одной странице.
 
@@ -186,13 +204,13 @@ stateDiagram-v2
 
 ### Этап B2 — TPSMM motion transfer (5–8 дней)
 
-| # | Задача |
-|---|--------|
-| B2.1 | `anim/animate_tpsmm.py` — ONNX CPU, driving video / кадры |
-| B2.2 | `anim_pipeline.py` + режим `tpsmm` |
-| B2.3 | UI: mode `tpsmm`, путь к driving video, опционально сегментация |
-| B2.4 | Gradio + :8000 + API поля |
-| B2.5 | Предупреждение в UI: «медленно, N мин/панель» |
+| # | Задача | Статус |
+|---|--------|--------|
+| B2.1 | `anim/animate_tpsmm.py` — ONNX CPU, driving video | ✅ |
+| B2.2 | `anim_pipeline.py` + режим `tpsmm` | ✅ |
+| B2.3 | UI: mode `tpsmm`, путь к driving video | ✅ (сегментация — B3) |
+| B2.4 | Gradio + :8000 + API поля | ✅ |
+| B2.5 | Предупреждение в UI: «медленно, N мин/панель» | ✅ |
 
 **Зависимость:** модели уже в `models/anim/tpsmm/` — verify `quantize_animate_models.py --verify`.
 
@@ -208,23 +226,29 @@ stateDiagram-v2
 
 ---
 
-### Этап B4 — Waifu2x / второй апскейлер (опционально)
+### Этап B4 — Дополнительные NCNN-апскейлеры (Real-CUGAN, SPAN)
 
 | # | Задача |
 |---|--------|
-| B4.1 | Оценка waifu2x-ncnn-vulkan на 10 панелях vs Real-ESRGAN 6B |
-| B4.2 | При выигрыше — registry + dropdown backend |
+| B4.0 | P1: скачать + verify (без квантования) | ✅ |
+| B4.1 | `anim/upscale.py`: router `backend` → realesrgan / realcugan / span | ✅ |
+| B4.2 | UI: dropdown backend + вариант; условные поля (CUGAN: noise, syncgap) | ✅ |
+| B4.3 | API `GET /api/upscale/options` + POST поля; пресеты без смены дефолта | ✅ |
+| B4.4 | Расширить `benchmark_upscale` на CUGAN/SPAN; док с рекомендациями | ✅ |
+| B4.5 | MangaJaNai — только B&W, вместе с B1 (не в цветной dropdown) |
+
+Waifu2x — низкий приоритет, если B4 не даст выигрыша.
 
 ---
 
 ### Итог блока B
 
 ```text
-[ ] B0 Реестр моделей
-[ ] B1 Manga YOLO
-[ ] B2 TPSMM в пайплайне
+[x] B0 Реестр + UI статуса установки
+[~] B1 Manga YOLO (код готов; `yolo_manga_int8.onnx` — локально через export)
+[~] B2 TPSMM (код + UI; модели `models/anim/tpsmm/` — download + verify)
 [ ] B3 Segment / SAM2 / FP16 (по необходимости)
-[ ] B4 Waifu2x (опционально)
+[x] B4 CUGAN + SPAN (пайплайн, UI, benchmark)
 ```
 
 **Оценка:** B0+B1+B2 ≈ 2–3 недели; B3–B4 по запросу.
@@ -301,3 +325,4 @@ gantt
 |------|-----------|
 | 2026-05-31 | Первая версия roadmap (блоки A и B, пресеты, паритет UI) |
 | 2026-06-02 | Блок A закрыт: финал доков, апскейл ×4/x4plus-anime, tile_size, benchmark; A0.4 отложен |
+| 2026-06-02 | P1: Real-CUGAN + SPAN скачаны, models_registry, verify_upscale_backends; B4 переформулирован |

@@ -1,4 +1,4 @@
-﻿# main.py — Gradio UI: Split / Upscale / Video
+# main.py — Gradio UI: Split / Upscale / Video
 from __future__ import annotations
 
 import os
@@ -43,7 +43,9 @@ import gradio as gr
 from pipeline import process_page, process_source
 from utils.config import get_config, load_config
 from utils.anim_config import load_anim_config
-from utils.anim_config import X4_ONLY_UPSCALE_MODEL
+from utils.anim_config import normalize_upscale_backend
+from utils.gradio_upscale_ui import UPSCALE_BACKEND_CHOICES, upscale_controls_update
+from utils.upscale_options import apply_upscale_fields
 from utils.presets import apply_preset, preset_ui_payload
 from utils.ui_tooltips import FIELD_TIPS as TIP
 from utils.path_dialog import pick_file, pick_folder
@@ -73,6 +75,7 @@ def run_comicsplit(
     use_sam: bool,
     reading_order: bool,
     rtl: bool,
+    panel_detector: str = "comic",
     confidence_threshold: float = 0.35,
     iou_threshold: float = 0.45,
 ) -> str:
@@ -86,8 +89,11 @@ def run_comicsplit(
     cfg.quality_mode = "accurate" if use_sam else "fast"
     cfg.reading_order = reading_order
     cfg.reading_direction = "rtl" if rtl else "ltr"
+    from utils.panel_detector import normalize_detector
+
     cfg.confidence_threshold = float(confidence_threshold)
     cfg.iou_threshold = float(iou_threshold)
+    cfg.panel_detector = normalize_detector(panel_detector)
     apply_config_to_pipeline()
     out_path = Path(output_dir) if output_dir else Path("output")
     out_path.mkdir(parents=True, exist_ok=True)
@@ -106,6 +112,7 @@ def run_comicsplit(
             use_sam=use_sam,
             reading_order=reading_order,
             rtl=rtl,
+            panel_detector=cfg.panel_detector,
         )
         out_root = Path(sr.output_dir)
         images = sorted(out_root.glob("*.png"))
@@ -123,6 +130,7 @@ def run_comicsplit(
         use_sam=use_sam,
         reading_order=reading_order,
         rtl=rtl,
+        panel_detector=cfg.panel_detector,
     )
     comic_name = src.stem
     panel_dir = out_path / comic_name
@@ -131,12 +139,36 @@ def run_comicsplit(
     return f"Готово: {len(images)} панелей → {panel_dir}\n\nФайлы:\n{files}"
 
 
+def models_setup_help_md() -> str:
+    from utils.models_registry import models_setup_payload
+
+    p = models_setup_payload()
+    lines = ["### Детекторы раскройки (YOLO)", ""]
+    for d in p.get("split_detectors", []):
+        mark = "установлен" if d["installed"] else "**не установлен**"
+        lines.append(f"- **{d['label']}** (`{d['id']}`): {mark}")
+    lines.extend(["", "### Статус моделей апскейла", ""])
+    for b in p["backends"]:
+        mark = "установлен" if b["installed"] else "**не установлен**"
+        lines.append(f"- **{b['label']}** ({b['id']}): {mark}")
+    lines.extend(["", "### Команды (из корня репозитория)", ""])
+    for s in p["scripts"]:
+        lines.append(f"**{s['label']}**  \n`{s['command']}`")
+    lines.append(
+        "\nПосле загрузки: `python scripts\\verify_upscale_backends.py`"
+    )
+    return "\n".join(lines)
+
+
 def run_upscale_only(
     panels_dir: str,
     output_dir: str,
     scale: int,
+    upscale_backend: str = "realesrgan",
     upscale_model: str = "animevideov3",
     gpu_id: int = 0,
+    cugan_noise: int = -1,
+    cugan_syncgap: int = 3,
 ) -> str:
     if not panels_dir or not Path(panels_dir).is_dir():
         return "Укажите существующую папку с PNG/JPG панелями."
@@ -146,9 +178,15 @@ def run_upscale_only(
 
     cfg = load_anim_config()
     cfg.upscale.enabled = True
-    cfg.upscale.scale = int(scale)
-    cfg.upscale.model = str(upscale_model)
-    cfg.upscale.gpu_id = int(gpu_id)
+    apply_upscale_fields(
+        cfg.upscale,
+        backend=upscale_backend,
+        model=upscale_model,
+        scale=int(scale),
+        gpu_id=int(gpu_id),
+        cugan_noise=int(cugan_noise),
+        cugan_syncgap=int(cugan_syncgap),
+    )
 
     out = Path(output_dir or "output_upscaled")
     out.mkdir(parents=True, exist_ok=True)
@@ -177,13 +215,18 @@ def run_video_pipeline(
     duration: float,
     fps: int,
     do_concat: bool,
+    upscale_backend: str = "realesrgan",
     upscale_model: str = "animevideov3",
     gpu_id: int = 0,
+    cugan_noise: int = -1,
+    cugan_syncgap: int = 3,
     harmonize_mode: str = "auto",
     harmonize_blur_sigma: int = 60,
     harmonize_vignette: float = 0.7,
     intensity: float = 0.3,
     depthflow_animation: str = "zoom",
+    tpsmm_driving_video: str = "",
+    tpsmm_mode: str = "relative",
 ) -> str:
     if not panels_dir or not Path(panels_dir).is_dir():
         return "Укажите существующую папку с PNG/JPG панелями."
@@ -197,9 +240,15 @@ def run_video_pipeline(
 
     cfg = load_anim_config()
     cfg.upscale.enabled = bool(do_upscale)
-    cfg.upscale.scale = int(scale)
-    cfg.upscale.model = str(upscale_model)
-    cfg.upscale.gpu_id = int(gpu_id)
+    apply_upscale_fields(
+        cfg.upscale,
+        backend=upscale_backend,
+        model=upscale_model,
+        scale=int(scale),
+        gpu_id=int(gpu_id),
+        cugan_noise=int(cugan_noise),
+        cugan_syncgap=int(cugan_syncgap),
+    )
     cfg.harmonize.enabled = True
     cfg.harmonize.mode = str(harmonize_mode)
     cfg.harmonize.blur_sigma = int(harmonize_blur_sigma)
@@ -209,6 +258,8 @@ def run_video_pipeline(
     cfg.animation.fps = int(fps)
     cfg.animation.intensity = float(intensity)
     cfg.animation.depthflow_animation = str(depthflow_animation)
+    cfg.animation.tpsmm_driving_video = str(tpsmm_driving_video or "")
+    cfg.animation.tpsmm_mode = str(tpsmm_mode or "relative")
     cfg.render.concat_panels = bool(do_concat)
 
     out = Path(output_dir or "story_out")
@@ -239,6 +290,7 @@ load_config()
 def _split_defaults():
     cfg = get_config()
     return (
+        cfg.panel_detector,
         cfg.use_sam,
         cfg.reading_order,
         cfg.reading_direction == "rtl",
@@ -250,8 +302,11 @@ def _split_defaults():
 def _anim_defaults():
     ac = load_anim_config()
     return (
+        ac.upscale.normalized_backend,
         ac.upscale.scale,
         ac.upscale.model,
+        ac.upscale.cugan_noise,
+        ac.upscale.cugan_syncgap,
         ac.upscale.gpu_id,
         ac.harmonize.mode,
         ac.harmonize.blur_sigma,
@@ -262,20 +317,31 @@ def _anim_defaults():
         ac.animation.fps,
         ac.animation.intensity,
         ac.animation.depthflow_animation,
+        ac.animation.tpsmm_driving_video,
+        ac.animation.tpsmm_mode,
         ac.render.concat_panels,
     )
 
 
 (
+    panel_detector_def,
     use_sam_def,
     order_def,
     rtl_def,
     conf_def,
     iou_def,
 ) = _split_defaults()
+
+PANEL_DETECTORS = [
+    ("Западный комикс", "comic"),
+    ("Манга (Manga109)", "manga"),
+]
 (
+    up_backend_def,
     scale_def,
     up_model_def,
+    cugan_noise_def,
+    cugan_syncgap_def,
     gpu_def,
     harm_mode_def,
     harm_blur_def,
@@ -286,6 +352,8 @@ def _anim_defaults():
     fps_def,
     intensity_def,
     df_anim_def,
+    tpsmm_driving_def,
+    tpsmm_mode_def,
     concat_def,
 ) = _anim_defaults()
 
@@ -294,18 +362,12 @@ ANIM_MODES = [
     ("Shake (OpenCV)", "opencv_shake"),
     ("Статичный кадр", "static"),
     ("Parallax (DepthFlow)", "depthflow"),
+    ("TPSMM (медленно, driving MP4)", "tpsmm"),
 ]
 UPSCALE_MODELS = [
     ("Быстрый (animevideov3)", "animevideov3"),
     ("Точный (x4plus-anime, только ×4)", "anime_6B"),
 ]
-def _upscale_scale_radio_update(model: str, scale: int = 2):
-    """x4plus-anime (anime_6B) supports only scale 4 in NCNN; ×2 corrupts output."""
-    scale = int(scale) if scale in (2, 4) else 2
-    if model == X4_ONLY_UPSCALE_MODEL:
-        extra = " Для realesrgan-x4plus-anime доступен только ×4."
-        return gr.update(choices=[4], value=4, info=TIP["up_scale"] + extra)
-    return gr.update(choices=[2, 4], value=scale, info=TIP["up_scale"])
 HARMONIZE_MODES = [
     "auto",
     "blurred_pillarbox",
@@ -319,7 +381,19 @@ def _apply_preset_to_gradio(name: str, persist: bool):
     p = apply_preset(name, persist=persist)
     s, a = p["split"], p["anim"]
     is_quality = name == "quality"
-    mode_choices = ANIM_MODES if is_quality else [x for x in ANIM_MODES if x[1] != "depthflow"]
+    backend = normalize_upscale_backend(a.get("upscale_backend", "realesrgan"))
+    up_ui = upscale_controls_update(
+        backend,
+        a["upscale_model"],
+        a["upscale_scale"],
+        a.get("cugan_noise", -1),
+        a.get("cugan_syncgap", 3),
+    )
+    mode_choices = (
+        ANIM_MODES
+        if is_quality
+        else [x for x in ANIM_MODES if x[1] not in ("depthflow", "tpsmm")]
+    )
     mode_badge_md = (
         "**MODE: QUALITY** — точный режим, доступны расширенные настройки."
         if is_quality
@@ -331,10 +405,11 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         gr.update(value=s["rtl"]),
         gr.update(value=s["confidence_threshold"]),
         gr.update(value=s["iou_threshold"]),
-        _upscale_scale_radio_update(a["upscale_model"], a["upscale_scale"]),
-        _upscale_scale_radio_update(a["upscale_model"], a["upscale_scale"]),
-        gr.update(value=a["upscale_model"], visible=is_quality),
-        gr.update(value=a["upscale_model"], visible=is_quality),
+        gr.update(value=backend, visible=is_quality),
+        *up_ui,
+        gr.update(visible=is_quality),
+        gr.update(value=backend, visible=is_quality),
+        *up_ui,
         gr.update(value=a["gpu_id"], visible=is_quality),
         gr.update(value=a["harmonize_mode"], visible=is_quality),
         gr.update(value=a["harmonize_blur_sigma"], visible=is_quality),
@@ -404,6 +479,13 @@ with gr.Blocks(title="ComicSplit") as demo:
                         info=TIP["split_output"],
                     )
                     split_out_browse_btn = gr.Button("Обзор папки вывода", size="sm")
+                    panel_detector = gr.Dropdown(
+                        label="Детектор панелей",
+                        choices=PANEL_DETECTORS,
+                        value=panel_detector_def,
+                        info=TIP["panel_detector"],
+                    )
+                    panel_detector_hint = gr.Markdown("")
                     use_sam = gr.Checkbox(
                         label="Точные контуры (SAM)",
                         value=use_sam_def,
@@ -451,15 +533,37 @@ with gr.Blocks(title="ComicSplit") as demo:
                         lines=18,
                     )
 
+            def _panel_detector_hint(det: str) -> str:
+                from utils.panel_detector import DETECTORS, ensure_detector_installed
+
+                spec = DETECTORS.get(det, DETECTORS["comic"])
+                try:
+                    ensure_detector_installed(spec)
+                    return f"✓ {spec.label} — модель на диске."
+                except FileNotFoundError as exc:
+                    return str(exc).replace("\n", "  \n")
+
+            panel_detector.change(
+                fn=_panel_detector_hint,
+                inputs=panel_detector,
+                outputs=panel_detector_hint,
+            )
+            demo.load(
+                fn=_panel_detector_hint,
+                inputs=panel_detector,
+                outputs=panel_detector_hint,
+            )
+
             split_btn.click(
-                fn=lambda f, srcp, folder, o, s, ro, rt, c, i: run_comicsplit(
-                    _resolve_path(f, srcp, folder), o, s, ro, rt, c, i
+                fn=lambda f, srcp, folder, o, det, s, ro, rt, c, i: run_comicsplit(
+                    _resolve_path(f, srcp, folder), o, s, ro, rt, det, c, i
                 ),
                 inputs=[
                     source,
                     source_path_box,
                     folder_path,
                     split_output,
+                    panel_detector,
                     use_sam,
                     reading_order,
                     rtl,
@@ -475,7 +579,7 @@ with gr.Blocks(title="ComicSplit") as demo:
         # ── Upscale ───────────────────────────────────────────────────
         with gr.Tab("Upscale — апскейл"):
             gr.Markdown(
-                "Папка с PNG-панелями (например `output\\имя_комикса`) → апскейл Real-ESRGAN NCNN."
+                "Папка с PNG-панелями → апскейл (Real-ESRGAN / Real-CUGAN / SPAN, Vulkan)."
             )
             with gr.Row():
                 with gr.Column(scale=1):
@@ -497,11 +601,38 @@ with gr.Blocks(title="ComicSplit") as demo:
                         value=scale_def,
                         info=TIP["up_scale"],
                     )
+                    up_backend = gr.Dropdown(
+                        label="Backend апскейла",
+                        choices=UPSCALE_BACKEND_CHOICES,
+                        value=up_backend_def,
+                        info=TIP["up_backend"],
+                        visible=False,
+                    )
+                    up_install_md = gr.Markdown("", visible=False)
+                    with gr.Accordion("Скачать / проверить модели", open=False, visible=False) as up_models_acc:
+                        up_models_setup_md = gr.Markdown(models_setup_help_md())
+                        up_models_refresh_btn = gr.Button("Обновить статус", size="sm")
                     up_model = gr.Dropdown(
-                        label="Модель Real-ESRGAN",
+                        label="Модель",
                         choices=UPSCALE_MODELS,
                         value=up_model_def,
                         info=TIP["up_model"],
+                        visible=False,
+                    )
+                    up_cugan_noise = gr.Slider(
+                        label="CUGAN denoise",
+                        minimum=-1,
+                        maximum=3,
+                        step=1,
+                        value=cugan_noise_def,
+                        info=TIP["up_cugan_noise"],
+                        visible=False,
+                    )
+                    up_cugan_syncgap = gr.Radio(
+                        label="CUGAN syncgap",
+                        choices=[0, 1, 2, 3],
+                        value=cugan_syncgap_def,
+                        info=TIP["up_cugan_syncgap"],
                         visible=False,
                     )
                     up_gpu = gr.Radio(
@@ -522,15 +653,47 @@ with gr.Blocks(title="ComicSplit") as demo:
 
             up_btn.click(
                 fn=run_upscale_only,
-                inputs=[up_input, up_output, up_scale, up_model, up_gpu],
+                inputs=[
+                    up_input,
+                    up_output,
+                    up_scale,
+                    up_backend,
+                    up_model,
+                    up_gpu,
+                    up_cugan_noise,
+                    up_cugan_syncgap,
+                ],
                 outputs=up_status,
             )
             up_input_browse.click(fn=browse_folder, inputs=up_input, outputs=up_input)
             up_output_browse.click(fn=browse_folder, inputs=up_output, outputs=up_output)
+            _upscale_ui_inputs = [
+                up_backend,
+                up_model,
+                up_scale,
+                up_cugan_noise,
+                up_cugan_syncgap,
+            ]
+            _upscale_ui_outputs = [
+                up_model,
+                up_scale,
+                up_cugan_noise,
+                up_cugan_syncgap,
+                up_install_md,
+            ]
+            up_backend.change(
+                fn=upscale_controls_update,
+                inputs=_upscale_ui_inputs,
+                outputs=_upscale_ui_outputs,
+            )
             up_model.change(
-                fn=_upscale_scale_radio_update,
-                inputs=[up_model, up_scale],
-                outputs=up_scale,
+                fn=upscale_controls_update,
+                inputs=_upscale_ui_inputs,
+                outputs=_upscale_ui_outputs,
+            )
+            up_models_refresh_btn.click(
+                fn=models_setup_help_md,
+                outputs=up_models_setup_md,
             )
 
         # ── Video ───────────────────────────────────────────────────
@@ -569,11 +732,35 @@ with gr.Blocks(title="ComicSplit") as demo:
                         value=scale_def,
                         info=TIP["vid_scale"],
                     )
+                    vid_backend = gr.Dropdown(
+                        label="Backend апскейла",
+                        choices=UPSCALE_BACKEND_CHOICES,
+                        value=up_backend_def,
+                        info=TIP["up_backend"],
+                        visible=False,
+                    )
+                    vid_install_md = gr.Markdown("", visible=False)
                     vid_model = gr.Dropdown(
                         label="Модель апскейла",
                         choices=UPSCALE_MODELS,
                         value=up_model_def,
                         info=TIP["vid_model"],
+                        visible=False,
+                    )
+                    vid_cugan_noise = gr.Slider(
+                        label="CUGAN denoise",
+                        minimum=-1,
+                        maximum=3,
+                        step=1,
+                        value=cugan_noise_def,
+                        info=TIP["up_cugan_noise"],
+                        visible=False,
+                    )
+                    vid_cugan_syncgap = gr.Radio(
+                        label="CUGAN syncgap",
+                        choices=[0, 1, 2, 3],
+                        value=cugan_syncgap_def,
+                        info=TIP["up_cugan_syncgap"],
                         visible=False,
                     )
                     vid_gpu = gr.Radio(
@@ -629,6 +816,16 @@ with gr.Blocks(title="ComicSplit") as demo:
                         info=TIP["vid_df_anim"],
                         visible=False,
                     )
+                    vid_tpsmm_driving = gr.Textbox(
+                        label="TPSMM driving video (MP4)",
+                        value=tpsmm_driving_def,
+                        info=TIP["vid_tpsmm_driving"],
+                        visible=False,
+                    )
+                    vid_tpsmm_hint = gr.Markdown(
+                        "⚠ TPSMM на CPU: ориентир **~1.5 с/кадр** (72 кадра ≈ 2 мин на панель).",
+                        visible=False,
+                    )
                     vid_duration = gr.Slider(
                         label="Длина клипа (сек)",
                         minimum=1,
@@ -659,6 +856,20 @@ with gr.Blocks(title="ComicSplit") as demo:
                         lines=18,
                     )
 
+            def _vid_mode_ui(mode: str):
+                is_tps = mode == "tpsmm"
+                return (
+                    gr.update(visible=mode == "depthflow"),
+                    gr.update(visible=is_tps),
+                    gr.update(visible=is_tps),
+                )
+
+            vid_mode.change(
+                fn=_vid_mode_ui,
+                inputs=vid_mode,
+                outputs=[vid_df_anim, vid_tpsmm_driving, vid_tpsmm_hint],
+            )
+
             vid_btn.click(
                 fn=run_video_pipeline,
                 inputs=[
@@ -670,22 +881,45 @@ with gr.Blocks(title="ComicSplit") as demo:
                     vid_duration,
                     vid_fps,
                     vid_concat,
+                    vid_backend,
                     vid_model,
                     vid_gpu,
+                    vid_cugan_noise,
+                    vid_cugan_syncgap,
                     vid_harm_mode,
                     vid_harm_blur,
                     vid_harm_vig,
                     vid_intensity,
                     vid_df_anim,
+                    vid_tpsmm_driving,
                 ],
                 outputs=vid_status,
             )
             vid_input_browse.click(fn=browse_folder, inputs=vid_input, outputs=vid_input)
             vid_output_browse.click(fn=browse_folder, inputs=vid_output, outputs=vid_output)
+            _vid_upscale_ui_inputs = [
+                vid_backend,
+                vid_model,
+                vid_scale,
+                vid_cugan_noise,
+                vid_cugan_syncgap,
+            ]
+            _vid_upscale_ui_outputs = [
+                vid_model,
+                vid_scale,
+                vid_cugan_noise,
+                vid_cugan_syncgap,
+                vid_install_md,
+            ]
+            vid_backend.change(
+                fn=upscale_controls_update,
+                inputs=_vid_upscale_ui_inputs,
+                outputs=_vid_upscale_ui_outputs,
+            )
             vid_model.change(
-                fn=_upscale_scale_radio_update,
-                inputs=[vid_model, vid_scale],
-                outputs=vid_scale,
+                fn=upscale_controls_update,
+                inputs=_vid_upscale_ui_inputs,
+                outputs=_vid_upscale_ui_outputs,
             )
 
     _preset_outputs = [
@@ -694,10 +928,19 @@ with gr.Blocks(title="ComicSplit") as demo:
         rtl,
         conf_thr,
         iou_thr,
-        up_scale,
-        vid_scale,
+        up_backend,
         up_model,
+        up_scale,
+        up_cugan_noise,
+        up_cugan_syncgap,
+        up_install_md,
+        up_models_acc,
+        vid_backend,
         vid_model,
+        vid_scale,
+        vid_cugan_noise,
+        vid_cugan_syncgap,
+        vid_install_md,
         up_gpu,
         vid_harm_mode,
         vid_harm_blur,

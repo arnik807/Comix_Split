@@ -1,4 +1,4 @@
-﻿"""Load and access ComicSplit config.yaml."""
+"""Load and access ComicSplit config.yaml."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ class AppConfig:
     iou_threshold: float = 0.45
     overlap_filter_threshold: float = 0.7
     output_pattern: str = "{order:03d}_page_{page:03d}_panel_{panel:02d}.png"
+    panel_detector: str = "comic"  # comic | manga
 
     @property
     def use_sam(self) -> bool:
@@ -58,6 +59,7 @@ def load_config(path: Optional[pathlib.Path] = None) -> AppConfig:
         confidence_threshold=float(raw.get("confidence_threshold", 0.35)),
         iou_threshold=float(raw.get("iou_threshold", 0.45)),
         overlap_filter_threshold=float(raw.get("overlap_filter_threshold", 0.7)),
+        panel_detector=str(raw.get("panel_detector", "comic")),
         output_pattern=str(
             raw.get(
                 "output_pattern",
@@ -87,6 +89,7 @@ def save_config(cfg: Optional[AppConfig] = None, path: Optional[pathlib.Path] = 
         "confidence_threshold": cfg.confidence_threshold,
         "iou_threshold": cfg.iou_threshold,
         "overlap_filter_threshold": cfg.overlap_filter_threshold,
+        "panel_detector": cfg.panel_detector,
         "output_pattern": cfg.output_pattern,
     }
     with open(cfg_path, "w", encoding="utf-8") as f:
