@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 
 <head>
@@ -572,8 +572,11 @@
                         <option value="anime_6B">Точный (x4plus-anime, только ×4)</option>
                     </select>
                     <div id="up-cugan-extra" style="display:none;margin-bottom:10px">
-                        <label class="lbl" data-tip="up_cugan_noise">CUGAN denoise</label>
-                        <input type="range" id="up-cugan-noise" min="-1" max="3" step="1" value="-1" class="inp" style="width:100%;margin-bottom:8px" />
+                        <div class="range-row">
+                            <div class="range-head"><span class="rlbl" data-tip="up_cugan_noise">CUGAN denoise</span><span class="rval" id="up-cugan-noise-val">-1</span></div>
+                            <input type="range" id="up-cugan-noise" min="-1" max="3" step="1" value="-1"
+                                data-display="up-cugan-noise-val" data-format="int" />
+                        </div>
                         <label class="lbl" data-tip="up_cugan_syncgap">CUGAN syncgap</label>
                         <select id="up-cugan-syncgap" class="inp">
                             <option value="0">0</option><option value="1">1</option><option value="2">2</option>
@@ -641,8 +644,11 @@
                         <option value="anime_6B">Точный (x4plus-anime, только ×4)</option>
                     </select>
                     <div id="vid-cugan-extra" style="display:none;margin-bottom:10px">
-                        <label class="lbl" data-tip="up_cugan_noise">CUGAN denoise</label>
-                        <input type="range" id="vid-cugan-noise" min="-1" max="3" step="1" value="-1" class="inp" style="width:100%;margin-bottom:8px" />
+                        <div class="range-row">
+                            <div class="range-head"><span class="rlbl" data-tip="up_cugan_noise">CUGAN denoise</span><span class="rval" id="vid-cugan-noise-val">-1</span></div>
+                            <input type="range" id="vid-cugan-noise" min="-1" max="3" step="1" value="-1"
+                                data-display="vid-cugan-noise-val" data-format="int" />
+                        </div>
                         <label class="lbl" data-tip="up_cugan_syncgap">CUGAN syncgap</label>
                         <select id="vid-cugan-syncgap" class="inp">
                             <option value="0">0</option><option value="1">1</option><option value="2">2</option>
@@ -685,7 +691,7 @@
                     <label class="lbl" data-tip="vid_tpsmm_driving" id="lbl-vid-tpsmm-driving" style="display:none">TPSMM driving video (MP4)</label>
                     <div class="path-row" id="row-vid-tpsmm-driving" style="display:none;margin-bottom:10px">
                         <input type="text" id="vid-tpsmm-driving" placeholder="driving.mp4" />
-                        <button type="button" class="path-browse" onclick="pickPath('vid-tpsmm-driving','file','Driving video MP4')">Обзор…</button>
+                        <button type="button" class="path-browse" onclick="pickPath('vid-tpsmm-driving','video','Driving video MP4')">Обзор…</button>
                     </div>
                     <p class="field-hint" id="vid-tpsmm-hint" style="display:none;color:var(--warn,#c90)">
                         TPSMM на CPU: ~1.5 с/кадр. Нужны модели в models/anim/tpsmm/
@@ -812,6 +818,13 @@ async function loadModelsSetup(force) {
         const r = await fetch('/api/models/setup');
         const data = await r.json();
         const lines = [];
+        (data.split_detectors || []).forEach(d => {
+            lines.push(`${d.installed ? '✓' : '✗'} ${d.label} (${d.id})`);
+            if (!d.installed && d.install_hint) {
+                lines.push('   ' + d.install_hint.replace(/\n/g, '\n   '));
+            }
+        });
+        lines.push('', 'Апскейл:');
         (data.backends || []).forEach(b => {
             lines.push(`${b.installed ? '✓' : '✗'} ${b.label} (${b.id})`);
             if (!b.installed && b.install_hint) lines.push('   ' + b.install_hint.replace(/\n/g, '\n   '));
@@ -1248,7 +1261,7 @@ function fillFormFromPreset(payload) {
     setRange('iou-thr', s.iou_threshold ?? 0.45);
     if ($('up-backend')) $('up-backend').value = a.upscale_backend || 'realesrgan';
     $('up-model').value = a.upscale_model || 'animevideov3';
-    if ($('up-cugan-noise')) $('up-cugan-noise').value = String(a.cugan_noise ?? -1);
+    if ($('up-cugan-noise')) setRange('up-cugan-noise', a.cugan_noise ?? -1);
     if ($('up-cugan-syncgap')) $('up-cugan-syncgap').value = String(a.cugan_syncgap ?? 3);
     refreshUpscaleUI('up');
     let upScale = a.upscale_scale ?? 2;
@@ -1259,7 +1272,7 @@ function fillFormFromPreset(payload) {
     else $('up-gpu').value = '0';
     if ($('vid-backend')) $('vid-backend').value = a.upscale_backend || 'realesrgan';
     $('vid-model').value = a.upscale_model || 'animevideov3';
-    if ($('vid-cugan-noise')) $('vid-cugan-noise').value = String(a.cugan_noise ?? -1);
+    if ($('vid-cugan-noise')) setRange('vid-cugan-noise', a.cugan_noise ?? -1);
     if ($('vid-cugan-syncgap')) $('vid-cugan-syncgap').value = String(a.cugan_syncgap ?? 3);
     refreshUpscaleUI('vid');
     let vidScale = a.upscale_scale ?? 2;

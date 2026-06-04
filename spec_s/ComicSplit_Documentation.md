@@ -1,12 +1,12 @@
 ﻿# ComicSplit — документация (актуальная)
 
-**Версия документа:** 1.4 (2 июня 2026) — финал блока A  
-**Статус приложения:** рабочий MVP — split (YOLO+SAM) + anim (апскейл, 16:9, видео); пресеты **Стандарт / Качество**; Gradio и веб-редактор на :8000; опционально Go CLI.
+**Версия документа:** 1.5 (июнь 2026) — блоки A, B0, B1, B4; TPSMM (B2) в пайплайне  
+**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.3**); опционально Go CLI.
 
 Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video), **Go CLI**.
 
 Статус реализации по модулям: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).  
-Исторические материалы: `ComicSplit_Specification_v2.0.md`, `implementation_plan_mvp.md`.
+Исторические материалы: [archive/](archive/) (`ComicSplit_Specification_v2.0.md`, `implementation_plan_mvp.md` и др.).
 
 ---
 
@@ -67,7 +67,7 @@ SPLIT_PANELS_DEV/
 ├── models/anim/            # NCNN, MiDaS, TPSMM, ffmpeg (не в git)
 ├── anim/                   # upscale, harmonize, render, animate_*
 ├── utils/                  # config, anim_config, presets, io_helpers, path_resolve, ui_tooltips, path_dialog
-├── api/server.py           # FastAPI v1.2 (:8000)
+├── api/server.py           # FastAPI v1.3 (:8000)
 ├── frontend/index.html     # Konva + вкладки Split/Upscale/Video
 ├── scripts/                # модели split + anim
 ├── cmd/comicsplit/         # Go CLI
@@ -135,6 +135,7 @@ $env:no_proxy = "127.0.0.1,localhost"
 | `reading_direction` | `ltr` / `rtl` | Западный комикс / манга |
 | `max_workers` | `4` | Параллельный analyze страниц в архиве |
 | `confidence_threshold` | `0.35` | Порог YOLO |
+| `panel_detector` | `comic` / `manga` | Детектор панелей (пресеты не меняют) |
 | `output_pattern` | см. файл | Шаблон имён PNG |
 
 Пример имени: `{order:03d}_page_{page:03d}_panel_{panel:02d}.png` → `007_page_003_panel_02.png`.
@@ -157,14 +158,29 @@ CLI и Gradio читают этот файл при запуске. В Gradio и
 
 Подробнее: [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md) §2.1 и §8.
 
-### 5.2. Апскейл NCNN (модели и масштаб)
+### 5.2. Детекторы панелей (split)
 
-| Выбор в UI | NCNN `-n` | Масштаб |
-|------------|-----------|---------|
-| Быстрый (animevideov3) | `realesr-animevideov3` | ×2 или ×4 |
-| Точный (x4plus-anime) | `realesrgan-x4plus-anime` | **только ×4** |
+| ID | Контент | Модель |
+|----|---------|--------|
+| `comic` | Franco-Belgian, American, цветные комиксы | `yolo_comic_int8.onnx` |
+| `manga` | Японская манга, Manga109 | `yolo_manga_int8.onnx` |
 
-Параметр `upscale.tile_size` в `config_animate.yaml` (0 = auto; 64/128/256) передаётся в `-t`. Диагностика: `powershell -File scripts\benchmark_upscale.ps1 -Quick`.
+Выбор в Gradio и :8000 (dropdown «Детектор панелей»). Пресеты **не** перезаписывают детектор. Экспорт манги: `scripts/export_manga_yolo.py`. Подробнее: [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md) §1.2.
+
+### 5.3. Апскейл NCNN (backend и модели)
+
+| Backend | Когда использовать | Ключевые поля |
+|---------|-------------------|---------------|
+| `realesrgan` | По умолчанию, пакетная обработка | `model`: animevideov3 / anime_6B |
+| `realcugan` | Line art, чёткие края | `cugan_noise`, `cugan_syncgap` |
+| `span` | Максимальное качество NTIRE | `span_model_name`: spanx2 / spanx4 |
+
+| Выбор (Real-ESRGAN) | NCNN `-n` | Масштаб |
+|---------------------|-----------|---------|
+| animevideov3 | `realesr-animevideov3` | ×2 или ×4 |
+| x4plus-anime (anime_6B) | `realesrgan-x4plus-anime` | **только ×4** |
+
+Параметр `upscale.tile_size` (0 = auto; 64/128/256) → `-t`. Скачивание CUGAN/SPAN: `scripts/download_upscale_backends.ps1`. Диагностика: `scripts\benchmark_upscale.ps1 -Quick`. Подробнее: [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md) §2.
 
 ---
 
@@ -193,7 +209,7 @@ python main.py
 | Вкладка | Назначение |
 |---------|------------|
 | **Split — раскройка** | CBZ/папка/страница → PNG панелей |
-| **Upscale — апскейл** | Папка PNG → Real-ESRGAN NCNN (x2/x4) |
+| **Upscale — апскейл** | Папка PNG → NCNN (Real-ESRGAN / CUGAN / SPAN) |
 | **Video — оживление** | Папка PNG → harmonize 16:9 → MP4 + `storyboard.mp4` |
 
 ### 6.3. Split — элементы
@@ -204,6 +220,7 @@ python main.py
 | **Папка вывода** | По умолчанию `output`; «Обзор…» |
 | **MobileSAM** | Accurate (YOLO + SAM); виден в режиме «Качество» |
 | **Пороги YOLO** | `confidence_threshold`, `iou_threshold` — блок «Дополнительно», режим «Качество» |
+| **Детектор панелей** | `comic` или `manga` (не меняется пресетом) |
 | **Порядок чтения / RTL** | Сортировка панелей |
 | **Запустить** | Сохранение PNG на диск |
 | **Результат** | Текст со списком путей |
@@ -225,7 +242,7 @@ python main.py
 
 ### 6.6. Upscale / Video в Gradio
 
-Укажите **папку с PNG** после split (кнопка «Обзор…» или путь вручную). Режимы видео: `opencv_zoom`, `opencv_shake`, `static`, `depthflow` (только в пресете «Качество»). В режиме «Качество»: x4plus-anime (только ×4), GPU, harmonize, intensity, DepthFlow. Для ×2 используйте videov3 (пресет «Стандарт»). Настройки по умолчанию — `config_animate.yaml` и `config/presets.yaml`.
+Укажите **папку с PNG** после split. Режимы видео: `opencv_zoom`, `opencv_shake`, `static`, `depthflow`, **`tpsmm`** (нужен driving MP4). В «Качество»: backend апскейла (Real-ESRGAN / CUGAN / SPAN), GPU, harmonize, DepthFlow. TPSMM не включён в пресеты — выберите режим и укажите driving video вручную. По умолчанию в `config_animate.yaml`: `mode: opencv_zoom`. См. `config/presets.yaml`.
 
 ### 6.7. Ограничения Gradio
 
@@ -307,7 +324,7 @@ PNG с альфа-каналом: фон прозрачный, панель вы
 
 ## 9. Способ 3 — веб-редактор (порт 8000)
 
-Split с ручной правкой + апскейл и видео без Gradio. FastAPI **v1.2** + `frontend/index.html`. Функционал настроек **согласован с Gradio** (пресеты, tooltips, расширенные поля anim).
+Split с ручной правкой + апскейл и видео без Gradio. FastAPI **v1.3** + `frontend/index.html`. Функционал **согласован с Gradio** (пресеты, tooltips, детектор comic/manga, backend апскейла, TPSMM + driving MP4).
 
 ### 9.1. Запуск
 
@@ -333,7 +350,8 @@ uvicorn api.server:app --reload --port 8000
 | Элемент | Поведение |
 |---------|-----------|
 | **Детекция** | `POST /api/process` — только координаты в память, **файлы на диск не пишет** |
-| **Accurate (YOLO + SAM)** | Точный контур при детекции; блок виден в режиме «Качество» |
+| **Детектор** | `comic` / `manga`; `GET /api/split/options` |
+| **Accurate (YOLO + SAM)** | Точный контур; блок «Качество» |
 | **Пороги YOLO** | Слайдеры confidence / IoU — режим «Качество» |
 | **Полигон (ломаная форма)** | Редактирование вершин; **экспорт по маске** только при включённом полигоне или после ручной правки |
 | **Экспорт PNG** | `POST /api/export` → ваша папка `output_dir\<имя_страницы>\` |
@@ -344,8 +362,8 @@ uvicorn api.server:app --reload --port 8000
 
 | Вкладка | API | Результат |
 |---------|-----|-----------|
-| Upscale | `POST /api/upscale` | PNG в выбранной папке (NCNN); модель и GPU — в режиме «Качество» |
-| Video | `POST /api/animate` | MP4 на панель + опционально `storyboard.mp4`; harmonize / DepthFlow — в «Качество» |
+| Upscale | `POST /api/upscale` | PNG (backend, CUGAN/SPAN поля); `GET /api/upscale/options` |
+| Video | `POST /api/animate` | MP4 + `storyboard.mp4`; режимы incl. `tpsmm` + driving video |
 
 ### 9.5. Пути к файлам
 
@@ -363,8 +381,11 @@ uvicorn api.server:app --reload --port 8000
 |-------|------|------------|
 | POST | `/api/process` | Детекция (пороги YOLO в теле запроса) |
 | POST | `/api/export` | PNG панелей |
-| POST | `/api/upscale` | Апскейл папки (model, scale, gpu_id) |
-| POST | `/api/animate` | Видео-пайплайн (mode, harmonize, intensity, depthflow…) |
+| POST | `/api/upscale` | Апскейл (`backend`, model, scale, CUGAN/SPAN…) |
+| POST | `/api/animate` | Видео (`mode`, `tpsmm_driving_video`, harmonize, depthflow…) |
+| GET | `/api/split/options` | Детекторы + статус моделей split |
+| GET | `/api/upscale/options` | Доступные backend апскейла |
+| GET | `/api/models/setup` | Статус установки моделей |
 | GET | `/api/presets` | Список пресетов |
 | GET | `/api/presets/{name}` | Значения пресета для UI |
 | POST | `/api/presets/apply` | Применить пресет к конфигам |
@@ -388,9 +409,10 @@ python anim_pipeline.py panels\exam_imgs story_out --mode depthflow
 
 | Флаг | Назначение |
 |------|------------|
-| `--mode` | `opencv_zoom`, `opencv_shake`, `static`, `depthflow` |
-| `--no-upscale` | Без Real-ESRGAN |
-| `--scale` | 2 или 4 |
+| `--mode` | `opencv_zoom`, `opencv_shake`, `static`, `depthflow`, `tpsmm` |
+| `--tpsmm-driving-video` | MP4 для TPSMM (при `mode tpsmm`) |
+| `--no-upscale` | Без апскейла |
+| `--scale` | 2 или 4 (зависит от backend) |
 | `--duration`, `--fps` | Длина клипа |
 
 Выход: `story_out/upscaled/`, `harmonized/`, `animated/*.mp4`, при concat — `storyboard.mp4`.
@@ -482,6 +504,9 @@ pyinstaller packaging/comicsplit.spec
 | Go split batch | `.\comicsplit.exe --input exam_imgs --output panels --python .\venv_311\Scripts\python.exe` |
 | Точные контуры (детекция) | `--sam` / Accurate |
 | Экспорт по маске (:8000) | Включить «Полигон» или править форму |
-| Манга | `--rtl` |
+| Манга RTL | `--rtl` |
+| Детектор манга | `panel_detector: manga` в config или UI |
+| Апскейл CUGAN/SPAN | Backend в UI «Качество» или `config_animate.yaml` |
+| TPSMM | `--mode tpsmm --tpsmm-driving-video drive.mp4` |
 
 **Split:** PNG в `output/<источник>/`. **Anim:** MP4 в `story_out/animated/`, склейка `storyboard.mp4`.

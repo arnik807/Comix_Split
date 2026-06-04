@@ -1,150 +1,207 @@
-# ComicSplit — статус реализации (июнь 2026)
+﻿# ComicSplit — статус реализации
 
-Актуальный снимок кодовой базы `SPLIT_PANELS_DEV`. Установка и запуск: [ComicSplit_Documentation.md](ComicSplit_Documentation.md).
+**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован в пайплайн)  
+**Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)  
+**Технологический стек и архитектура:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ---
 
-## Сводка
+## Сводная таблица компонентов
 
 | Компонент | Статус |
 |-----------|--------|
-| ML split (YOLO + SAM, CPU ONNX) | **Готово** |
-| Пакетная обработка CBZ/ZIP/папка | **Готово** (`process_source`) |
-| `config.yaml` + `config/presets.yaml` | **Готово** |
-| Пресеты **Стандарт / Качество** (API + оба UI) | **Готово** (`utils/presets.py`) |
-| Gradio (`main.py`, :7860) — Split / Upscale / Video | **Готово** (пресеты, подсказки, «Обзор…») |
-| Python CLI split (`pipeline.py`) | **Готово** |
-| Anim CLI (`anim_pipeline.py`) | **Готово** |
-| Anim модули (`anim/`: upscale, harmonize, opencv, depthflow, render) | **Готово** (TPSMM/segment — нет) |
-| Веб-редактор (FastAPI + Konva, :8000) — Split / Upscale / Video | **Готово** (паритет с Gradio по настройкам) |
-| Подсказки ко всем настройкам | **Готово** (`utils/ui_tooltips.py`, `GET /api/tooltips`) |
-| Выбор путей (Windows-диалог + ручной ввод) | **Готово** (`utils/path_dialog.py`, `POST /api/path/pick`) |
-| Go CLI (`comicsplit.exe`) | **Частично** (CBZ/папка/JPG; CBR только в Python) |
-| OpenCV fast-path каскад | **Нет** |
-| Wails desktop | **Нет** |
-| gRPC Go↔Python | **Нет** |
-| PyInstaller EXE | **Spec есть**, сборка вручную |
-| Benchmark &lt;600 ms/стр. | **Не закрыт** |
+| ML split (YOLO + SAM, CPU ONNX) | ✅ **Готово** |
+| Пакетная обработка CBZ/ZIP/папка | ✅ **Готово** (`process_source`) |
+| `config.yaml` + `config/presets.yaml` | ✅ **Готово** |
+| Пресеты **Стандарт / Качество** (API + оба UI) | ✅ **Готово** (`utils/presets.py`) |
+| Детектор манга-панелей (`yolo_manga_int8.onnx`) | ✅ **Готово** (`utils/panel_detector.py`) |
+| Gradio (`:7860`) — Split / Upscale / Video | ✅ **Готово** (пресеты, tooltips, «Обзор…») |
+| CLI split (`pipeline.py`) | ✅ **Готово** |
+| CLI anim (`anim_pipeline.py`) | ✅ **Готово** |
+| Anim модули (`anim/`: upscale, harmonize, opencv, depthflow, render) | ✅ **Готово** |
+| Backend апскейла: Real-ESRGAN / Real-CUGAN / SPAN (NCNN) | ✅ **Готово** (`anim/upscale.py`) |
+| Веб-редактор FastAPI + Konva (`:8000`) — Split / Upscale / Video | ✅ **Готово** |
+| Подсказки (tooltips) во всех настройках | ✅ **Готово** (`utils/ui_tooltips.py`) |
+| Выбор путей (диалог + ручной ввод) | ✅ **Готово** (`utils/path_dialog.py`) |
+| Реестр моделей + статус установки в UI | ✅ **Готово** (`config/models_registry.yaml`, `utils/models_registry.py`) |
+| API v1.3 (presets, tooltips, path/pick, models/setup, split/options, upscale/options) | ✅ **Готово** |
+| TPSMM animate (`mode: tpsmm` + driving MP4) | 🟡 **Готово в коде/UI** — медленно на CPU; сегментация (B3) опциональна |
+| Go CLI (`comicsplit.exe`) | 🟡 **Частично** — CBZ/папка/JPG; CBR только Python |
+| OpenCV fast-path каскад (split) | ❌ **Нет** |
+| Wails desktop | ❌ **Нет** |
+| gRPC Go↔Python | ❌ **Нет** |
+| PyInstaller EXE | 🟡 Spec есть, сборка вручную |
+| Benchmark < 600 ms/стр. | 🟡 Цель не закрыта |
 
 ---
 
-## Реализованные модули
+## Реализованные модули (файловая карта)
 
 | Путь | Назначение |
 |------|------------|
 | `pipeline.py` | `analyze_page`, `process_page`, `process_source`, CLI split |
 | `anim_pipeline.py` | CLI: upscale → harmonize 16:9 → animate → MP4 + storyboard |
-| `anim/` | `upscale`, `harmonize`, `animate_opencv`, `animate_depthflow`, `render`, `io_utils` |
-| `config.yaml` | Split: YOLO/SAM, порядок чтения, имена PNG |
-| `config_animate.yaml` | Anim: upscale, harmonize, animation, render |
-| `config/presets.yaml` | Пресеты `standard` / `quality` (split + anim) |
-| `utils/config.py`, `utils/anim_config.py` | Загрузка конфигов |
-| `utils/presets.py` | load / apply / snapshot пресетов |
+| `anim/upscale.py` | NCNN subprocess (realesrgan / realcugan / span), ONNX fallback |
+| `anim/harmonize.py` | OpenCV 16:9 (blurred_pillarbox / dominant_color / smart_crop) |
+| `anim/animate_opencv.py` | opencv_zoom / opencv_shake / static |
+| `anim/animate_depthflow.py` | DepthFlow parallax (dolly / zoom / orbital) |
+| `anim/animate_tpsmm.py` | TPSMM motion transfer — ONNX CPU; режим `tpsmm` в `anim_pipeline.py` |
+| `anim/render.py` | ffmpeg: кадры → MP4, concat storyboard |
+| `config/presets.yaml` | Эталон пресетов Стандарт / Качество (split + anim) |
+| `config/models_registry.yaml` | Реестр: путь, тип, backend, статус установки |
+| `utils/config.py` | AppConfig, load_config() |
+| `utils/anim_config.py` | AnimConfig, load_anim_config() |
+| `utils/presets.py` | load / apply / snapshot / diff пресетов |
 | `utils/ui_tooltips.py` | Тексты подсказок для Gradio и веб-UI |
-| `utils/path_dialog.py` | Нативные диалоги выбора файла/папки (tkinter) |
-| `utils/io_helpers.py` | CBZ, CBR, ZIP, папка, imdecode для кириллицы |
-| `utils/path_resolve.py` | Пути с кириллицей (API :8000) |
-| `main.py` | Gradio 5.x, 3 вкладки, пресеты, tooltips, browse |
-| `api/server.py` v1.2 | REST: process, export, upscale, animate, video, presets, tooltips, path/pick |
-| `frontend/index.html` | Konva-редактор + Upscale/Video + пресеты + tooltips + «Обзор…» |
+| `utils/path_dialog.py` | Нативные диалоги Windows (tkinter) |
+| `utils/models_registry.py` | Проверка наличия моделей перед запуском |
+| `utils/panel_detector.py` | Выбор детектора `comic` \| `manga` |
+| `utils/io_helpers.py` | CBZ, CBR, ZIP, папка, imdecode (кириллица) |
+| `utils/path_resolve.py` | Пути с кириллицей и mojibake |
+| `main.py` | Gradio 5.x, 3 вкладки |
+| `api/server.py` v1.3.0 | FastAPI REST |
+| `frontend/index.html` | Konva-редактор + Upscale/Video + пресеты + tooltips |
 | `ml_worker/main.py` | IPC для Go |
-| `cmd/comicsplit/` + `internal/*` | Go-оркестратор |
-| `scripts/download_animate_models.ps1`, `quantize_animate_models.py` | Модели anim |
-| `scripts/benchmark_upscale.ps1`, `benchmark_upscale.py` | Бенчмарк NCNN upscale |
-| `scripts/split_models_craft_scripts/` | Модели split |
-| `benchmark.py`, `yolo_test.py`, `sam_test.py` | QA split |
-| `tests/` | pytest (**25** тестов в 7 файлах) |
+| `cmd/comicsplit/` + `internal/*` | Go CLI |
+| `scripts/split_models_craft_scripts/` | Скачивание + квантование split моделей |
+| `scripts/download_animate_models.ps1` | Скачивание anim моделей |
+| `scripts/download_upscale_backends.ps1` | CUGAN + SPAN |
+| `scripts/quantize_animate_models.py` | INT8 квантование + verify |
+| `scripts/verify_upscale_backends.py` | Проверка CUGAN/SPAN |
+| `scripts/benchmark_upscale.ps1` | Бенчмарк всех NCNN backend |
+| `tests/` | **41 тест** в 10 файлах |
 | `packaging/comicsplit.spec` | PyInstaller |
 
 ---
 
-## Пресеты качества (блок A)
+## Пресеты качества
 
-| Пресет | ID | Split | Anim (кратко) |
-|--------|-----|-------|---------------|
-| **Стандарт** | `standard` | YOLO без SAM, порог 0.35 | animevideov3, OpenCV zoom |
-| **Качество** | `quality` | YOLO + SAM, порог 0.30 | x4plus-anime (`anime_6B`) **×4**, blurred_pillarbox, DepthFlow dolly |
+| Пресет | ID | Split | Anim |
+|--------|-----|-------|------|
+| **Стандарт** | `standard` | YOLO без SAM, порог 0.35 | animevideov3 ×2, OpenCV zoom |
+| **Качество** | `quality` | YOLO + SAM, порог 0.30 | x4plus-anime ×4, blurred_pillarbox, DepthFlow dolly |
 
-- Эталон: `config/presets.yaml`; опциональные локальные правки — `config/presets.user.yaml` (в `.gitignore`).
-- API: `GET /api/presets`, `GET /api/presets/{name}`, `POST /api/presets/apply`.
-- UI: кнопки «Стандарт» / «Качество»; бейдж **MODE: STANDARD** / **MODE: QUALITY**; расширенные поля видны только в режиме «Качество».
+- Эталон: `config/presets.yaml`
+- Локальные правки: `config/presets.user.yaml` (в `.gitignore`)
+- API: `GET /api/presets`, `GET /api/presets/{name}`, `POST /api/presets/apply`
 
-### Апскейл NCNN (важно)
+### Апскейл — важное
 
-| ID в конфиге | NCNN `-n` | Масштаб |
-|--------------|-----------|---------|
-| `animevideov3` | `realesr-animevideov3` | ×2 или ×4 (есть веса `*-x2/x3/x4.bin`) |
-| `anime_6B` | `realesrgan-x4plus-anime` | **только ×4** (UI + `anim/upscale.py`; ×2 даёт артефакты) |
-
-- `config_animate.yaml` → `upscale.tile_size` (0 = auto; 64/128/256 для AMD Vega).
-- Бенчмарк: `scripts/benchmark_upscale.ps1 -Quick`.
+| ID в конфиге | NCNN флаг `-n` | Масштаб |
+|---|---|---|
+| `animevideov3` | `realesr-animevideov3` | ×2 или ×4 |
+| `anime_6B` | `realesrgan-x4plus-anime` | **только ×4** (×2 даёт артефакты) |
+| `cugan_se` | `models-se` | ×1–×4 (`-s`) |
+| `spanx2_ch48` / `spanx4_ch48` | по имени модели | фиксировано по выбранным весам |
 
 ---
 
-## Веб-редактор (:8000) — детали
+## Детекторы панелей
 
-| Функция | Поведение |
-|---------|-----------|
-| `POST /api/process` | Только детекция в память (`analyze_page`), **файлы не пишет** |
-| `POST /api/export` | PNG в папку пользователя (`output_dir/имя_страницы/`) |
-| `POST /api/upscale` | Real-ESRGAN NCNN по папке панелей |
-| `POST /api/animate` | `anim_pipeline.process_folder` |
-| `GET /api/video` | Отдача MP4 для превью |
-| `GET /api/presets`, `POST /api/presets/apply` | Пресеты качества |
-| `GET /api/tooltips` | Тексты подсказок для полей UI |
-| `POST /api/path/pick` | Нативный диалог выбора файла/папки на машине сервера |
-| Split: Accurate (SAM) vs Полигон | SAM — контур при детекции; **маска при экспорте** только если включён «Полигон» или форма правилась вручную |
-| Устаревшее | Папка `out_ui/` больше **не создаётся** API |
+| Детектор | ID | Контент | Модель |
+|----------|-----|---------|--------|
+| Западный комикс | `comic` | Franco-Belgian, American, цветные комиксы | `yolo_comic_int8.onnx` |
+| Манга | `manga` | Японская манга, Manga109 | `yolo_manga_int8.onnx` |
+
+Манга-модель обнаруживает два класса (`panel`, `text bubble`); пайплайн использует только `panel`.  
+Пресеты **не** меняют детектор — выбор сохраняется в сессии.
 
 ---
 
 ## Модели (не в git)
 
-**Split** — `models/`:
+**Split** → `models/`:
 
-- `yolo_comic_int8.onnx`
-- `mobilesam_encoder_int8.onnx`
-- `mobilesam_decoder_int8.onnx`
+```
+yolo_comic_int8.onnx
+yolo_manga_int8.onnx
+mobilesam_encoder_int8.onnx
+mobilesam_decoder_int8.onnx
+```
 
-**Anim** — `models/anim/` (см. `models/README.md`, `scripts/MODELS_SETUP_GUIDE.md`):
+**Anim** → `models/anim/`:
 
-- NCNN Real-ESRGAN / Real-CUGAN / SPAN — в `anim/upscale.py` (backend в UI, пресеты = Real-ESRGAN)
-- MiDaS ONNX, TPSMM ONNX (INT8 опционально)
-- `config/models_registry.yaml`, `utils/models_registry.py`
-- `ffmpeg` в `models/anim/ffmpeg/bin/`
-- DepthFlow — pip-пакет `depthflow` (не файл в `models/`)
+```
+upscale/
+  realesrgan-ncnn-vulkan.exe + models/*.bin   (Real-ESRGAN)
+  realcugan/realcugan-ncnn-vulkan.exe + models-se/
+  span/span-ncnn-vulkan.exe + models/
+depth/
+  midas_v21_small_256.onnx, *_int8.onnx
+tpsmm/
+  kp_detector.onnx, tpsmm_rel.onnx (+ INT8)
+ffmpeg/bin/ffmpeg.exe
+```
+
+DepthFlow: `pip install depthflow` (кэш DA-V2 Small качается при первом запуске).
 
 ---
 
-## Тестовые данные в репозитории
+## Сопоставление: план MVP → факт
 
-| Путь | Содержание |
-|------|------------|
-| `test_page.jpg` | Одна страница для быстрого теста |
-| `exam_imgs/` | 2 страницы Asterix для benchmark и smoke-тестов |
-| `comic.cbz` | **Нет** — подставьте свой CBZ или `exam_imgs` |
+| Пункт исходного плана | Статус |
+|----------------------|--------|
+| Python 3.11 + ONNX Runtime CPU | ✅ |
+| YOLO + MobileSAM (fast/accurate) | ✅ |
+| CBZ/CBR/ZIP/папка (`io_helpers`) | ✅ |
+| OpenCV fast-path каскад | ❌ |
+| `process_source` + batch | ✅ |
+| Gradio UI (3 вкладки) | ✅ |
+| FastAPI + Konva + anim API | ✅ |
+| Anim pipeline (upscale/video) | ✅ |
+| Пресеты Стандарт / Качество | ✅ |
+| Tooltips, path pickers | ✅ |
+| Manga YOLO detector | ✅ |
+| Backend CUGAN / SPAN | ✅ |
+| TPSMM в anim_pipeline + UI/API | ✅ (B3 segment — в планах) |
+| Benchmark < 600 ms/стр. | ❌ |
+| PyInstaller EXE | 🟡 |
+| Go orchestrator | 🟡 |
+| Wails desktop | ❌ |
+| gRPC Go↔Python | ❌ |
 
 ---
 
-## Roadmap (кратко)
+## Рабочие команды проверки
 
-| Фаза | Спека v2.0 | Факт (июнь 2026) |
-|------|------------|------------------|
-| 0 Спецификация | ✅ | ✅ |
-| 1 Python PoC split | 🔄 | ~85% (anim-пайплайн добавлен отдельно) |
-| 2 Go CLI | 📋 | Частично (`comicsplit.exe`) |
-| 3 gRPC | 📋 | Нет |
-| 4 UI | 📋 | Gradio + Konva :8000 (не Wails) |
-| Anim (отдельная спека) | 📋 | MVP: NCNN upscale, harmonize, OpenCV/DepthFlow, ffmpeg |
-| Блок A (пресеты + UI) | 📋 | ✅ закрыт — см. [ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md) |
-| Блок B (новые модели) | 📋 | B4 ✅; B1 manga YOLO (код ✅); B2 TPSMM (код + UI ✅, модели на диске — download) |
+```powershell
+.\venv_311\Scripts\activate
+pip install -r requirements.txt
+
+# Smoke split
+python pipeline.py test_page.jpg output --order
+python pipeline.py exam_imgs output --order
+
+# Gradio
+$env:NO_PROXY="127.0.0.1,localhost"; python main.py
+
+# Веб-редактор
+uvicorn api.server:app --port 8000
+
+# Anim CLI
+python anim_pipeline.py output\exam_imgs story_out --mode opencv_zoom --no-upscale
+
+# Тесты
+pytest -q
+
+# Go CLI
+go build -o comicsplit.exe ./cmd/comicsplit
+.\comicsplit.exe --input exam_imgs --output panels --python .\venv_311\Scripts\python.exe --order
+
+# Бенчмарк апскейла
+.\scripts\benchmark_upscale.ps1 -Quick
+```
 
 ---
 
 ## Известные ограничения
 
-- Gradio: без галереи превью; результат split — текстовое поле с путями.
-- DepthFlow: первый запуск качает depth-модель; на CPU/GPU долго на 1920×1080.
-- TPSMM и `segment.py` из anim-спеки — **не подключены** к `anim_pipeline.py`.
-- :8000 — при кириллице в путях предпочтительны относительные пути (`exam_imgs\...`); диалог «Обзор…» открывается на машине, где запущен uvicorn.
-- Go CLI: subprocess Python; CBR только через `pipeline.py`.
+| Компонент | Ограничение |
+|-----------|-------------|
+| Gradio | Нет галереи превью; результат split — список путей в текстовом поле |
+| DepthFlow | Первый запуск качает DA-V2 Small; на CPU/iGPU — минуты на панель 1920×1080 |
+| TPSMM | Медленно на CPU; нужен driving MP4; сегментация персонажа (B3) улучшит качество |
+| Веб `:8000` | Диалог «Обзор…» открывается на машине сервера; кириллические пути — через относительные |
+| `anime_6B` | Только ×4; ×2 через этот backend даёт артефакты |
+| Go CLI | CBR только через Python subprocess |
+| Benchmark | Цель < 600 ms/стр. не достигнута в Accurate+SAM; Fast — зависит от страницы |

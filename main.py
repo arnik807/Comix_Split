@@ -1,4 +1,4 @@
-# main.py — Gradio UI: Split / Upscale / Video
+﻿# main.py — Gradio UI: Split / Upscale / Video
 from __future__ import annotations
 
 import os
@@ -63,6 +63,20 @@ def _resolve_path(file_path, explicit_path: str | None, folder: str | None) -> s
 
 def browse_file_or_archive(current: str | None = None) -> str:
     return pick_file(current) or (current or "")
+
+
+def browse_driving_video(current: str | None = None) -> str:
+    return (
+        pick_file(
+            current,
+            title="Driving video (MP4)",
+            filetypes=[
+                ("Video", "*.mp4 *.mov *.webm *.avi"),
+                ("All files", "*.*"),
+            ],
+        )
+        or (current or "")
+    )
 
 
 def browse_folder(current: str | None = None) -> str:
@@ -822,6 +836,9 @@ with gr.Blocks(title="ComicSplit") as demo:
                         info=TIP["vid_tpsmm_driving"],
                         visible=False,
                     )
+                    vid_tpsmm_browse_btn = gr.Button(
+                        "Обзор MP4…", size="sm", visible=False
+                    )
                     vid_tpsmm_hint = gr.Markdown(
                         "⚠ TPSMM на CPU: ориентир **~1.5 с/кадр** (72 кадра ≈ 2 мин на панель).",
                         visible=False,
@@ -862,12 +879,33 @@ with gr.Blocks(title="ComicSplit") as demo:
                     gr.update(visible=mode == "depthflow"),
                     gr.update(visible=is_tps),
                     gr.update(visible=is_tps),
+                    gr.update(visible=is_tps),
                 )
 
             vid_mode.change(
                 fn=_vid_mode_ui,
                 inputs=vid_mode,
-                outputs=[vid_df_anim, vid_tpsmm_driving, vid_tpsmm_hint],
+                outputs=[
+                    vid_df_anim,
+                    vid_tpsmm_driving,
+                    vid_tpsmm_hint,
+                    vid_tpsmm_browse_btn,
+                ],
+            )
+            demo.load(
+                fn=_vid_mode_ui,
+                inputs=vid_mode,
+                outputs=[
+                    vid_df_anim,
+                    vid_tpsmm_driving,
+                    vid_tpsmm_hint,
+                    vid_tpsmm_browse_btn,
+                ],
+            )
+            vid_tpsmm_browse_btn.click(
+                fn=browse_driving_video,
+                inputs=vid_tpsmm_driving,
+                outputs=vid_tpsmm_driving,
             )
 
             vid_btn.click(
@@ -970,6 +1008,7 @@ with gr.Blocks(title="ComicSplit") as demo:
 
 
 if __name__ == "__main__":
+    _favicon = Path(__file__).resolve().parent / "frontend" / "favicon.ico"
     demo.launch(
         server_name="127.0.0.1",
         server_port=7860,
@@ -978,4 +1017,5 @@ if __name__ == "__main__":
         share=False,
         inbrowser=True,
         quiet=True,
+        favicon_path=str(_favicon) if _favicon.is_file() else None,
     )

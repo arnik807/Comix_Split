@@ -1,4 +1,4 @@
-# Модели
+﻿# Модели
 
 Файлы моделей в git не хранятся (см. `.gitignore`).
 
@@ -23,7 +23,7 @@ python scripts\split_models_craft_scripts\quantize_models.py
 powershell -ExecutionPolicy Bypass -File scripts\export_manga_yolo.ps1
 ```
 
-Когда какой детектор: [spec_s/SPLIT_DETECTORS.md](../spec_s/SPLIT_DETECTORS.md)
+Когда какой детектор: [spec_s/MODELS_SPECIFICATION.md](../spec_s/MODELS_SPECIFICATION.md) §1.2
 
 ## Anim (апскейл + видео)
 

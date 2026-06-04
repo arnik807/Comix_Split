@@ -1,11 +1,17 @@
-# Changelog
+﻿# Changelog
 
 Все значимые изменения проекта ComicSplit (`SPLIT_PANELS_DEV`).  
 Формат ориентирован на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/).
 
 ## [Unreleased]
 
-### Добавлено (B2 — TPSMM, черновик интеграции)
+### Изменено (документация)
+
+- Консолидация `spec_s/`: 7 активных документов (`ARCHITECTURE`, `IMPLEMENTATION_STATUS`, `MODELS_SPECIFICATION`, `ROADMAP`, …) + `spec_s/archive/`
+- Устаревшие файлы перенесены в архив (`SPLIT_DETECTORS.md`, `UPSCALE_UI_PARAMS.md`, `ROADMAP_QUALITY_BOOST.md` и др.)
+- Исправлены статусы TPSMM (интегрирован в `anim_pipeline`), API v1.3, ~41 pytest
+
+### Добавлено (B2 — TPSMM)
 
 - `anim/animate_tpsmm.py`, режим `tpsmm` в `anim_pipeline.py`
 - `config_animate.yaml`: `tpsmm_driving_video`, `tpsmm_mode`
@@ -17,7 +23,7 @@
 - Экспорт манги: `scripts/export_manga_yolo.py`, `scripts/export_manga_yolo.ps1` → `yolo_manga_int8.onnx`
 - API: `GET /api/split/options`, поле `panel_detector` в `POST /api/process`
 - Gradio + :8000: dropdown «Детектор панелей»; пресеты детектор не перезаписывают
-- Док: [SPLIT_DETECTORS.md](spec_s/SPLIT_DETECTORS.md); бенчмарк: `scripts/benchmark_split_detectors.py`
+- Док: [MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md) §1.2; бенчмарк: `scripts/benchmark_split_detectors.py`
 - Реестр: секция `split` в `models_registry.yaml`, статус в `GET /api/models/setup`
 
 ### Добавлено (подготовка апскейлеров, этап P1)
@@ -32,7 +38,7 @@
 - `anim/upscale.py`: backend realesrgan / realcugan / span
 - API v1.3: `GET /api/upscale/options`, расширенные поля POST `/api/upscale` и `/api/animate`
 - Gradio + :8000: выбор backend, модель, CUGAN noise/syncgap, подсказка если модель не установлена
-- [UPSCALE_UI_PARAMS.md](spec_s/UPSCALE_UI_PARAMS.md), тесты `tests/test_upscale_options.py`
+- [MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md) §2.2–2.3, тесты `tests/test_upscale_options.py`
 - B4.4: `benchmark_upscale.py` — все backend через `anim/upscale.py`
 - B0.3: `GET /api/models/setup`, блок «Скачать / проверить модели» в Gradio и :8000
 
@@ -110,6 +116,8 @@
 | Документ | Назначение |
 |----------|------------|
 | [spec_s/ComicSplit_Documentation.md](spec_s/ComicSplit_Documentation.md) | Руководство пользователя |
+| [spec_s/ARCHITECTURE.md](spec_s/ARCHITECTURE.md) | Архитектура и API |
 | [spec_s/IMPLEMENTATION_STATUS.md](spec_s/IMPLEMENTATION_STATUS.md) | Статус модулей |
-| [spec_s/ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) | Roadmap качества |
+| [spec_s/MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md) | Модели и параметры |
+| [spec_s/ROADMAP.md](spec_s/ROADMAP.md) | Roadmap качества |
 | [spec_s/README.md](spec_s/README.md) | Индекс документации |

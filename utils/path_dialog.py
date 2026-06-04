@@ -15,19 +15,27 @@ def _tk_root():
     return root
 
 
-def pick_file(initial: Optional[str] = None) -> Optional[str]:
+def pick_file(
+    initial: Optional[str] = None,
+    *,
+    title: str = "Выберите файл",
+    filetypes: Optional[list[tuple[str, str]]] = None,
+) -> Optional[str]:
     import tkinter.filedialog as fd
+
+    if filetypes is None:
+        filetypes = [
+            ("Images/Archives", "*.jpg *.jpeg *.png *.bmp *.cbz *.zip *.cbr"),
+            ("All files", "*.*"),
+        ]
 
     root = _tk_root()
     try:
         init_dir = str(Path(initial).parent) if initial else str(Path.cwd())
         path = fd.askopenfilename(
-            title="Выберите файл",
+            title=title,
             initialdir=init_dir,
-            filetypes=[
-                ("Images/Archives", "*.jpg *.jpeg *.png *.bmp *.cbz *.zip *.cbr"),
-                ("All files", "*.*"),
-            ],
+            filetypes=filetypes,
         )
         return path or None
     finally:

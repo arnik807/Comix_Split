@@ -1,4 +1,4 @@
-"""
+﻿"""
 ComicSplit API Server
 FastAPI backend + static frontend на одном порту.
 
@@ -276,10 +276,19 @@ def api_path_pick(req: PathPickRequest):
         kind = (req.kind or "").strip().lower()
         if kind == "file":
             picked = pick_file(req.initial)
+        elif kind == "video":
+            picked = pick_file(
+                req.initial,
+                title=req.title or "Driving video (MP4)",
+                filetypes=[
+                    ("Video", "*.mp4 *.mov *.webm *.avi"),
+                    ("All files", "*.*"),
+                ],
+            )
         elif kind == "folder":
             picked = pick_folder(req.initial, title=req.title or "Выберите папку")
         else:
-            raise HTTPException(400, detail="kind must be 'file' or 'folder'")
+            raise HTTPException(400, detail="kind must be 'file', 'video', or 'folder'")
     except HTTPException:
         raise
     except Exception as exc:

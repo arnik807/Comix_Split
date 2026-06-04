@@ -1,67 +1,36 @@
 ﻿# Документация ComicSplit (`spec_s/`)
 
-**Обновлено:** 2 июня 2026 (блок A закрыт)
+**Обновлено:** июнь 2026 (консолидация: 7 активных документов + `archive/`)
 
-## С чего начать
+## Актуальные документы
 
 | Документ | Для кого | Содержание |
 |----------|----------|------------|
-| **[ComicSplit_Documentation.md](ComicSplit_Documentation.md)** | Пользователь, админ | Split + Anim: Gradio, CLI, :8000, Go, модели |
-| **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** | Разработчик | Что реализовано / не реализовано |
-| **[comic_panel_animation_spec.md](comic_panel_animation_spec.md)** | Anim-пайплайн | Спека оживления + **блок статуса реализации** |
-| **[MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md)** | ML / инференс | Все модели, ссылки, пригодность под Ryzen 5600H + AMD iGPU, рекомендации по качеству |
-| **[ROADMAP_QUALITY_BOOST.md](ROADMAP_QUALITY_BOOST.md)** | План работ | **Блок A ✓** (пресеты, UI, tooltips, path pickers); блок B — новые модели |
-| [../README.md](../README.md) | Все | Быстрый старт в корне |
-| [../CHANGELOG.md](../CHANGELOG.md) | Все | История релизов и правок |
+| **[ComicSplit_Documentation.md](ComicSplit_Documentation.md)** | Пользователь | Установка, Gradio, CLI, веб :8000, Go, параметры |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Разработчик | Стек, потоки данных, API v1.3, структура проекта |
+| **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** | Разработчик | Статус модулей, файловая карта, ограничения |
+| **[MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md)** | ML / инференс | Все модели, ссылки, Ryzen 5600H + AMD iGPU |
+| **[ROADMAP.md](ROADMAP.md)** | План работ | Блоки A, B0, B1, B4 ✅; B2 🟡; B3 📋 |
 
-## Спецификация и планы
+## Вне `spec_s/`
 
-| Документ | Статус | Описание |
-|----------|--------|----------|
-| [ComicSplit_Specification_v2.0.md](ComicSplit_Specification_v2.0.md) | Целевая архитектура | Go, Wails, gRPC; обновлён roadmap |
-| [implementation_plan_mvp.md](implementation_plan_mvp.md) | План MVP | Исходный план + таблица «план vs факт» |
-| [work_on_my_side.md](work_on_my_side.md) | Gap-анализ | Спека v2.0 vs код |
-| [Export_antigraviy_chat.md](Export_antigraviy_chat.md) | Архив | Экспорт чата планирования (без правок) |
+| Документ | Содержание |
+|----------|------------|
+| [../README.md](../README.md) | Быстрый старт |
+| [../CHANGELOG.md](../CHANGELOG.md) | История изменений |
+| [../scripts/MODELS_SETUP_GUIDE.md](../scripts/MODELS_SETUP_GUIDE.md) | Пошаговая установка моделей |
+| [../models/README.md](../models/README.md) | Краткий список файлов в `models/` |
 
-## Способы работы (актуально)
+## Архив
 
-```mermaid
-flowchart TB
-  subgraph ui [Интерфейсы]
-    G[Gradio :7860]
-    W[Web :8000]
-    C[CLI pipeline.py]
-    A[CLI anim_pipeline.py]
-    Go[comicsplit.exe]
-  end
-  subgraph core [Ядро]
-    P[pipeline.py split]
-    AP[anim_pipeline.py]
-  end
-  G --> P
-  G --> AP
-  W --> P
-  W --> AP
-  C --> P
-  A --> AP
-  Go --> ML[ml_worker] --> P
-```
+Устаревшие и поглощённые документы: **[archive/](archive/)** (спека v2.0, MVP-план, `SPLIT_DETECTORS.md`, `UPSCALE_UI_PARAMS.md`, `ROADMAP_QUALITY_BOOST.md` и др.).
+
+## Способы работы
 
 | # | Задача | Команда |
 |---|--------|---------|
 | 1 | Split Gradio | `python main.py` → :7860 |
 | 2 | Split CLI | `python pipeline.py <источник> output --order` |
-| 3 | Редактор split + anim | `uvicorn api.server:app --port 8000` |
+| 3 | Редактор + anim | `uvicorn api.server:app --port 8000` |
 | 4 | Anim CLI | `python anim_pipeline.py <panels_dir> story_out --mode opencv_zoom` |
 | 5 | Go batch split | `.\comicsplit.exe --input exam_imgs --output panels ...` |
-
----
-
-## Журнал обновлений документации
-
-| Дата | Файлы | Изменения |
-|------|-------|-----------|
-| 2026-05 (начало) | `ComicSplit_Documentation.md`, `README.md` | Первая пользовательская документация |
-| 2026-05-31 | Все рабочие доки + `CHANGELOG.md` | Anim-пайплайн, Gradio/веб 3 вкладки, API v1.1, убран `out_ui`, логика экспорта полигона, DepthFlow CLI |
-| 2026-06-02 | Все рабочие доки + `CHANGELOG.md` | **Финал блока A:** пресеты, API v1.2, UI, tooltips, paths, апскейл ×4/x4plus-anime, tile_size, benchmark, 25 pytest |
-| — | `Export_antigraviy_chat.md` | Архив без правок |
