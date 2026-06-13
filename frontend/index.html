@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 
 <head>
@@ -398,6 +398,13 @@
         }
         .vlinks a:hover { text-decoration: underline; }
         video.preview { max-width: 100%; margin-top: 12px; border-radius: 8px; border: 1px solid var(--border); }
+        .tab-reset-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+        .btn-reset {
+            font-size: 10px; font-family: var(--mono); letter-spacing: 0.02em;
+            padding: 4px 10px; border-radius: 6px; cursor: pointer;
+            border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+        }
+        .btn-reset:hover { color: var(--accent); border-color: var(--accent); }
     </style>
 </head>
 
@@ -440,6 +447,9 @@
         </div>
 
         <div id="tab-split" class="tab-panel active">
+        <div class="tab-reset-row">
+            <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('split')">↺ Сброс Split</button>
+        </div>
         <div class="sec">
             <div class="sec-title">Источник</div>
             <label class="lbl" data-tip="img_path">Путь к изображению</label>
@@ -537,6 +547,9 @@
         </div><!-- /tab-split -->
 
         <div id="tab-upscale" class="tab-panel">
+            <div class="tab-reset-row">
+                <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('upscale')">↺ Сброс Upscale</button>
+            </div>
             <div class="sec">
                 <div class="sec-title">Апскейл панелей</div>
                 <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
@@ -599,6 +612,9 @@
         </div>
 
         <div id="tab-video" class="tab-panel">
+            <div class="tab-reset-row">
+                <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('video')">↺ Сброс Video</button>
+            </div>
             <div class="sec">
                 <div class="sec-title">Video — оживление</div>
                 <p class="field-hint">Папка с панелями → 16:9, анимация, MP4 на панель + <code style="color:var(--accent)">storyboard.mp4</code>. На CPU долго.</p>
@@ -745,6 +761,7 @@
 <div id="tip-layer" aria-hidden="true"></div>
 <div id="toast"></div>
 
+<script src="ui_state.js"></script>
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────
 const COLORS = [
@@ -1218,6 +1235,7 @@ let currentPreset = 'standard';
 
 function _setPresetActive(name) {
     currentPreset = name;
+    window.currentPreset = name;
     $('preset-std').classList.toggle('active', name === 'standard');
     $('preset-q').classList.toggle('active', name === 'quality');
 }
@@ -1296,6 +1314,9 @@ function fillFormFromPreset(payload) {
     updateSamHint();
     syncVideoAdvancedVisibility();
     applyPresetModeUI();
+    if (window.ComicSplitUiState && !window.__uiRestoring) {
+        ComicSplitUiState.scheduleSave();
+    }
 }
 
 const PRESET_TIMING_HINT = {
@@ -1372,6 +1393,7 @@ async function applyPreset(name) {
 
 function switchTab(name) {
     activeTab = name;
+    window.activeTab = name;
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === name);
     });
@@ -1392,6 +1414,7 @@ function switchTab(name) {
         $('batch-desc').textContent = 'Harmonize 16:9 + анимация + ffmpeg. Для теста используйте режим static или opencv_zoom.';
     }
     setStatus(isSplit ? 'Редактор панелей' : (name === 'upscale' ? 'Апскейл' : 'Видео'), '');
+    if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
 }
 
 function setBatchLog(text) {
@@ -2129,23 +2152,52 @@ const OFFLINE_PRESET_STANDARD = {
     },
 };
 
+window.__uiStateHooks = {
+    setRange,
+    refreshUpscaleUI,
+    setSegScale,
+    applyPresetModeUI,
+    loadSplitOptions,
+    syncVideoAdvancedVisibility,
+    updateSamHint,
+    switchTab,
+    setPresetActive: _setPresetActive,
+    toast,
+    isX4OnlyUpscaleModel,
+};
+
 async function initApp() {
     initRangeDisplays();
     initSegScales();
     attachFieldTips(await loadFieldTips());
-    if (!$('img-path').value.trim()) {
-        $('img-path').value = 'exam_imgs\\01_Asterix_the_Gaul_page-0004.jpg';
+    window.activeTab = activeTab;
+    window.currentPreset = currentPreset;
+    window.__uiRestoring = false;
+
+    const hadSaved = window.ComicSplitUiState
+        ? await ComicSplitUiState.restore()
+        : false;
+
+    if (!hadSaved) {
+        if (!$('img-path').value.trim()) {
+            $('img-path').value = 'exam_imgs\\01_Asterix_the_Gaul_page-0004.jpg';
+        }
+        _setPresetActive('standard');
+        window.__uiRestoring = true;
+        try {
+            const r = await fetch('/api/presets/standard');
+            if (r.ok) fillFormFromPreset(await r.json());
+            else fillFormFromPreset(OFFLINE_PRESET_STANDARD);
+        } catch (_) {
+            fillFormFromPreset(OFFLINE_PRESET_STANDARD);
+        }
+        window.__uiRestoring = false;
     }
-    _setPresetActive('standard');
-    try {
-        const r = await fetch('/api/presets/standard');
-        if (r.ok) fillFormFromPreset(await r.json());
-        else fillFormFromPreset(OFFLINE_PRESET_STANDARD);
-    } catch (_) {
-        fillFormFromPreset(OFFLINE_PRESET_STANDARD);
-    }
+
+    await loadSplitOptions(true);
     syncVideoAdvancedVisibility();
     applyPresetModeUI();
+    if (window.ComicSplitUiState) ComicSplitUiState.bindAutoSave();
 }
 
 initApp();

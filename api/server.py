@@ -1,4 +1,4 @@
-﻿"""
+"""
 ComicSplit API Server
 FastAPI backend + static frontend на одном порту.
 
@@ -25,7 +25,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 if sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
@@ -47,6 +47,12 @@ from utils.presets import (  # noqa: E402
 )
 from utils.ui_tooltips import FIELD_TIPS  # noqa: E402
 from utils.path_dialog import pick_file, pick_folder  # noqa: E402
+from utils.ui_state import (  # noqa: E402
+    default_state,
+    load_ui_state,
+    patch_ui_state,
+    reset_ui_section,
+)
 
 load_config()
 
@@ -326,6 +332,54 @@ def api_presets_apply(req: PresetApplyRequest):
     except KeyError as exc:
         raise HTTPException(400, detail=str(exc)) from exc
     return JSONResponse({"ok": True, "applied": req.name, "persist": req.persist, **payload})
+
+
+class UiStatePatchRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    global_: Optional[dict] = Field(default=None, alias="global")
+    split: Optional[dict] = None
+    upscale: Optional[dict] = None
+    video: Optional[dict] = None
+
+
+class UiStateResetRequest(BaseModel):
+    section: str = "all"  # split | upscale | video | global | all
+
+
+@app.get("/api/ui/state")
+def api_ui_state_get():
+    """Сохранённые настройки UI (файл config/ui_state.user.json)."""
+    return JSONResponse(load_ui_state())
+
+
+@app.put("/api/ui/state")
+def api_ui_state_put(req: UiStatePatchRequest):
+    """Частичное обновление настроек UI."""
+    state = patch_ui_state(
+        global_=req.global_,
+        split=req.split,
+        upscale=req.upscale,
+        video=req.video,
+    )
+    return JSONResponse({"ok": True, **state})
+
+
+@app.post("/api/ui/state/reset")
+def api_ui_state_reset(req: UiStateResetRequest):
+    """Сброс секции split / upscale / video / global / all к заводским значениям."""
+    section = req.section.strip().lower()
+    if section not in ("split", "upscale", "video", "global", "all"):
+        raise HTTPException(400, detail="section must be split|upscale|video|global|all")
+    state = reset_ui_section(section)  # type: ignore[arg-type]
+    return JSONResponse({"ok": True, "section": section, **state})
+
+
+@app.get("/api/ui/state/defaults")
+def api_ui_state_defaults():
+    """Заводские значения по секциям (для кнопок «Сброс»)."""
+    d = default_state()
+    return JSONResponse(d)
 
 
 @app.post("/api/process")

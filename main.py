@@ -1,4 +1,4 @@
-﻿# main.py — Gradio UI: Split / Upscale / Video
+# main.py — Gradio UI: Split / Upscale / Video
 from __future__ import annotations
 
 import os
@@ -49,6 +49,16 @@ from utils.upscale_options import apply_upscale_fields
 from utils.presets import apply_preset, preset_ui_payload
 from utils.ui_tooltips import FIELD_TIPS as TIP
 from utils.path_dialog import pick_file, pick_folder
+from utils.gradio_ui_state import (
+    initial_tab_selected,
+    restore_gradio_ui,
+    reset_gradio_section,
+    save_global_ui,
+    save_split_ui,
+    save_tab_from_select,
+    save_upscale_ui,
+    save_video_ui,
+)
 
 
 def _resolve_path(file_path, explicit_path: str | None, folder: str | None) -> str | None:
@@ -413,6 +423,7 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         if is_quality
         else "**MODE: STANDARD** — быстрый режим, минимум настроек."
     )
+    save_global_ui(name, persist)
     return (
         gr.update(value=s["use_sam"], visible=is_quality),
         gr.update(value=s["reading_order"]),
@@ -463,9 +474,9 @@ with gr.Blocks(title="ComicSplit") as demo:
             f"**Качество** — {TIP['preset_quality']}"
         )
 
-    with gr.Tabs():
+    with gr.Tabs(selected=initial_tab_selected()) as main_tabs:
         # ── Split ─────────────────────────────────────────────────────
-        with gr.Tab("Split — раскройка"):
+        with gr.Tab("Split — раскройка", id="split"):
             gr.Markdown(
                 "Страница (JPG/PNG), CBZ/ZIP или папка со страницами → PNG-панели."
             )
@@ -538,6 +549,10 @@ with gr.Blocks(title="ComicSplit") as demo:
                             value=iou_def,
                             info=TIP["iou_thr"],
                         )
+                    split_reset_btn = gr.Button(
+                        "↺ Сброс настроек Split",
+                        size="sm",
+                    )
                     split_btn = gr.Button("Запустить раскройку", variant="primary")
 
                 with gr.Column(scale=2):
@@ -591,7 +606,7 @@ with gr.Blocks(title="ComicSplit") as demo:
             split_out_browse_btn.click(fn=browse_folder, inputs=split_output, outputs=split_output)
 
         # ── Upscale ───────────────────────────────────────────────────
-        with gr.Tab("Upscale — апскейл"):
+        with gr.Tab("Upscale — апскейл", id="upscale"):
             gr.Markdown(
                 "Папка с PNG-панелями → апскейл (Real-ESRGAN / Real-CUGAN / SPAN, Vulkan)."
             )
@@ -656,6 +671,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                         info=TIP["up_gpu"],
                         visible=False,
                     )
+                    up_reset_btn = gr.Button("↺ Сброс настроек Upscale", size="sm")
                     up_btn = gr.Button("Запустить апскейл", variant="primary")
 
                 with gr.Column(scale=2):
@@ -711,7 +727,7 @@ with gr.Blocks(title="ComicSplit") as demo:
             )
 
         # ── Video ───────────────────────────────────────────────────
-        with gr.Tab("Video — оживление"):
+        with gr.Tab("Video — оживление", id="video"):
             gr.Markdown(
                 "Папка с панелями → 16:9, анимация, MP4 на каждую панель + `storyboard.mp4`."
             )
@@ -864,6 +880,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                         value=concat_def,
                         info=TIP["vid_concat"],
                     )
+                    vid_reset_btn = gr.Button("↺ Сброс настроек Video", size="sm")
                     vid_btn = gr.Button("Создать видео", variant="primary")
 
                 with gr.Column(scale=2):
@@ -994,6 +1011,139 @@ with gr.Blocks(title="ComicSplit") as demo:
         mode_badge,
         preset_status,
     ]
+
+    _ui_state_outputs = [
+        source_path_box,
+        folder_path,
+        split_output,
+        panel_detector,
+        use_sam,
+        reading_order,
+        rtl,
+        conf_thr,
+        iou_thr,
+        up_input,
+        up_output,
+        up_scale,
+        up_backend,
+        up_model,
+        up_cugan_noise,
+        up_cugan_syncgap,
+        up_install_md,
+        up_models_acc,
+        vid_input,
+        vid_output,
+        vid_mode,
+        vid_upscale,
+        vid_scale,
+        vid_backend,
+        vid_model,
+        vid_cugan_noise,
+        vid_cugan_syncgap,
+        vid_install_md,
+        vid_gpu,
+        vid_harm_mode,
+        vid_harm_blur,
+        vid_harm_vig,
+        vid_intensity,
+        vid_df_anim,
+        vid_tpsmm_driving,
+        vid_duration,
+        vid_fps,
+        vid_concat,
+        yolo_adv,
+        preset_persist,
+        mode_badge,
+        main_tabs,
+    ]
+
+    main_tabs.select(fn=save_tab_from_select, inputs=None, outputs=[])
+
+    demo.load(fn=restore_gradio_ui, outputs=_ui_state_outputs)
+
+    def _noop_save_split(*args):
+        save_split_ui(*args)
+        return gr.update()
+
+    _split_save_ins = [
+        source_path_box,
+        folder_path,
+        split_output,
+        panel_detector,
+        use_sam,
+        reading_order,
+        rtl,
+        conf_thr,
+        iou_thr,
+    ]
+    for _c in _split_save_ins:
+        _c.change(fn=_noop_save_split, inputs=_split_save_ins, outputs=[])
+
+    def _noop_save_up(*args):
+        save_upscale_ui(*args)
+        return gr.update()
+
+    _up_save_ins = [
+        up_input,
+        up_output,
+        up_scale,
+        up_backend,
+        up_model,
+        up_gpu,
+        up_cugan_noise,
+        up_cugan_syncgap,
+    ]
+    for _c in _up_save_ins:
+        _c.change(fn=_noop_save_up, inputs=_up_save_ins, outputs=[])
+
+    def _noop_save_vid(*args):
+        save_video_ui(*args)
+        return gr.update()
+
+    _vid_save_ins = [
+        vid_input,
+        vid_output,
+        vid_mode,
+        vid_upscale,
+        vid_scale,
+        vid_duration,
+        vid_fps,
+        vid_concat,
+        vid_backend,
+        vid_model,
+        vid_gpu,
+        vid_cugan_noise,
+        vid_cugan_syncgap,
+        vid_harm_mode,
+        vid_harm_blur,
+        vid_harm_vig,
+        vid_intensity,
+        vid_df_anim,
+        vid_tpsmm_driving,
+    ]
+    for _c in _vid_save_ins:
+        _c.change(fn=_noop_save_vid, inputs=_vid_save_ins, outputs=[])
+
+    def _save_persist_checkbox(persist: bool):
+        from utils.ui_state import load_ui_state
+
+        g = load_ui_state()["global"]
+        save_global_ui(g.get("active_preset", "standard"), persist)
+
+    preset_persist.change(fn=_save_persist_checkbox, inputs=preset_persist, outputs=[])
+
+    split_reset_btn.click(
+        fn=lambda: reset_gradio_section("split"),
+        outputs=_ui_state_outputs,
+    )
+    up_reset_btn.click(
+        fn=lambda: reset_gradio_section("upscale"),
+        outputs=_ui_state_outputs,
+    )
+    vid_reset_btn.click(
+        fn=lambda: reset_gradio_section("video"),
+        outputs=_ui_state_outputs,
+    )
 
     preset_std_btn.click(
         fn=lambda p: _apply_preset_to_gradio("standard", p),
