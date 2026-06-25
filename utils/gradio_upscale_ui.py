@@ -7,7 +7,7 @@ import gradio as gr
 from utils.anim_config import X4_ONLY_UPSCALE_MODEL, normalize_upscale_backend
 from utils.models_registry import check_backend, format_install_hint
 from utils.ui_tooltips import FIELD_TIPS as TIP
-from utils.upscale_options import allowed_scales, models_for_backend
+from utils.upscale_options import allowed_scales, cpu_gpu_allowed, models_for_backend
 
 UPSCALE_BACKEND_CHOICES = [
     ("Real-ESRGAN", "realesrgan"),
@@ -16,12 +16,35 @@ UPSCALE_BACKEND_CHOICES = [
 ]
 
 
+def upscale_gpu_control(backend: str, gpu_id: int = 0):
+    """Real-ESRGAN: Vulkan only — CPU option disabled (NCNN CPU path is unreliable)."""
+    backend = normalize_upscale_backend(backend)
+    if not cpu_gpu_allowed(backend):
+        return gr.update(
+            choices=[("0 — видеокарта (Vulkan)", 0)],
+            value=0,
+            info="Real-ESRGAN: только GPU (Vulkan). Режим CPU для этого backend недоступен.",
+        )
+    gid = int(gpu_id)
+    if gid not in (0, -1):
+        gid = 0
+    return gr.update(
+        choices=[
+            ("0 — видеокарта (Vulkan)", 0),
+            ("−1 — CPU (медленно, не рекомендуется)", -1),
+        ],
+        value=gid,
+        info=TIP["up_gpu"],
+    )
+
+
 def upscale_controls_update(
     backend: str,
     model: str,
     scale: int | float = 2,
     cugan_noise: int = -1,
     cugan_syncgap: int = 3,
+    gpu_id: int = 0,
 ):
     """Refresh model list, scale choices, CUGAN fields, install hint."""
     backend = normalize_upscale_backend(backend)
@@ -54,4 +77,5 @@ def upscale_controls_update(
         gr.update(visible=cugan, value=int(cugan_noise)),
         gr.update(visible=cugan, value=int(cugan_syncgap)),
         gr.update(value=hint, visible=bool(hint)),
+        upscale_gpu_control(backend, gpu_id),
     )

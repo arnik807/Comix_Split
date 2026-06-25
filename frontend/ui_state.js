@@ -70,6 +70,52 @@
         };
     }
 
+    function collectStory2a() {
+        return {
+            project: $('s2a-project')?.value?.trim() || '',
+            panels_dir: $('s2a-panels-dir')?.value?.trim() || '',
+        };
+    }
+
+    function collectStory2aForPersist() {
+        const s = collectStory2a();
+        const out = {};
+        if (s.project) out.project = s.project;
+        if (s.panels_dir) out.panels_dir = s.panels_dir;
+        return Object.keys(out).length ? out : null;
+    }
+
+    function mergeStory2aSection(server, local) {
+        const s = server || {};
+        const l = local || {};
+        return {
+            project: (l.project && String(l.project).trim()) || s.project || '',
+            panels_dir: (l.panels_dir && String(l.panels_dir).trim()) || s.panels_dir || '',
+        };
+    }
+
+    function mergeUiState(server, local) {
+        const base = server && server.version === VERSION ? server : { version: VERSION };
+        if (!local || local.version !== VERSION) {
+            return {
+                version: VERSION,
+                global: base.global || {},
+                split: base.split || {},
+                upscale: base.upscale || {},
+                video: base.video || {},
+                story2a: base.story2a || {},
+            };
+        }
+        return {
+            version: VERSION,
+            global: { ...(base.global || {}), ...(local.global || {}) },
+            split: { ...(base.split || {}), ...(local.split || {}) },
+            upscale: { ...(base.upscale || {}), ...(local.upscale || {}) },
+            video: { ...(base.video || {}), ...(local.video || {}) },
+            story2a: mergeStory2aSection(base.story2a, local.story2a),
+        };
+    }
+
     function collectAll() {
         return {
             version: VERSION,
@@ -77,6 +123,7 @@
             split: collectSplit(),
             upscale: collectUpscale('up'),
             video: collectVideo(),
+            story2a: collectStory2a(),
         };
     }
 
@@ -118,6 +165,7 @@
         const s = st.split || {};
         const u = st.upscale || {};
         const v = st.video || {};
+        const s2 = st.story2a || {};
 
         if (g.active_preset && hooks().setPresetActive) hooks().setPresetActive(g.active_preset);
         if ($('preset-persist')) $('preset-persist').checked = !!g.preset_persist;
@@ -152,6 +200,10 @@
         setRange('vid-fps', v.fps ?? 24);
         if ($('vid-concat')) $('vid-concat').checked = v.do_concat !== false;
 
+        if ($('s2a-project')) $('s2a-project').value = s2.project || '';
+        if ($('s2a-panels-dir')) $('s2a-panels-dir').value = s2.panels_dir || '';
+        if (hooks().syncStory2aFromUi) hooks().syncStory2aFromUi();
+
         if (g.active_tab && hooks().switchTab) hooks().switchTab(g.active_tab);
 
         if (hooks().updateSamHint) hooks().updateSamHint();
@@ -171,15 +223,18 @@
             localStorage.setItem(LS_KEY, JSON.stringify(body));
         } catch (_) { /* quota */ }
         try {
+            const patch = {
+                global: body.global,
+                split: body.split,
+                upscale: body.upscale,
+                video: body.video,
+            };
+            const s2a = collectStory2aForPersist();
+            if (s2a) patch.story2a = s2a;
             await fetch('/api/ui/state', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({
-                    global: body.global,
-                    split: body.split,
-                    upscale: body.upscale,
-                    video: body.video,
-                }),
+                body: JSON.stringify(patch),
             });
         } catch (_) { /* offline */ }
     }
@@ -191,18 +246,27 @@
     }
 
     async function restore() {
-        let st = null;
+        let local = null;
         try {
             const raw = localStorage.getItem(LS_KEY);
-            if (raw) st = JSON.parse(raw);
+            if (raw) local = JSON.parse(raw);
         } catch (_) { /* ignore */ }
-        if (!st || st.version !== VERSION) {
+
+        let server = null;
+        try {
+            const r = await fetch('/api/ui/state');
+            if (r.ok) server = await r.json();
+        } catch (_) { /* offline */ }
+
+        if (!local && !server) return false;
+        const st = mergeUiState(server, local);
+        const ok = applyState(st);
+        if (ok) {
             try {
-                const r = await fetch('/api/ui/state');
-                if (r.ok) st = await r.json();
-            } catch (_) { /* offline */ }
+                localStorage.setItem(LS_KEY, JSON.stringify(collectAll()));
+            } catch (_) { /* quota */ }
         }
-        return applyState(st);
+        return ok;
     }
 
     async function resetSection(section) {

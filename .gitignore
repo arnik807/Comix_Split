@@ -56,6 +56,13 @@ Desktop.ini
 config/presets.user.yaml
 config/ui_state.user.json
 
+# API keys (Story Analyzer / SiliconFlow)
+.env
+.env.local
+
+# Debug artifacts (Stage 2a diagnose)
+debug/
+
 # Временные файлы
 *.tmp
 ~$*

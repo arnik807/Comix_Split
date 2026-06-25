@@ -1,4 +1,4 @@
-﻿# ComicSplit — Техническая архитектура
+# ComicSplit — Техническая архитектура
 
 **Версия:** 1.0 (июнь 2026)  
 **Отражает:** фактическую реализацию MVP (split + anim + пресеты)  
@@ -165,12 +165,23 @@ SPLIT_PANELS_DEV/
 │   ├── ui_tooltips.py        # Тексты подсказок UI
 │   ├── path_dialog.py        # Нативные диалоги выбора файла/папки
 │   ├── models_registry.py    # Проверка установки моделей
-│   └── panel_detector.py     # Выбор comic / manga YOLO
+│   ├── panel_detector.py     # Выбор comic / manga YOLO
+│   ├── ui_state.py           # Память UI v1 (split/upscale/video/story2a)
+│   └── gradio_ui_state.py    # Восстановление Gradio из ui_state
 │
 ├── api/
-│   └── server.py             # FastAPI v1.3.0 (:8000)
+│   ├── server.py             # FastAPI v1.3.0 (:8000)
+│   └── story_stage_2a.py     # Story Analyzer Stage 2a API
+├── story_analyzer/           # Story Analyzer (Stage 2a+)
+│   ├── stages/               # bubble_detector, ocr_*, stage_2a_processor
+│   ├── providers/            # siliconflow_ocr
+│   └── config.py
+├── config/story_stage_2a.yaml
 ├── frontend/
-│   └── index.html            # Konva + вкладки Split/Upscale/Video
+│   ├── index.html            # Konva + вкладки Split/Upscale/Video/Story 2a
+│   ├── ui_state.js           # localStorage + sync /api/ui/state
+│   ├── reading_order.js      # Порядок чтения (Split панели + Stage 2a баблы)
+│   └── story_2a.js           # UI Story Analyzer Stage 2a
 │
 ├── models/                   # Split ONNX (не в git)
 │   └── anim/                 # NCNN, MiDaS, TPSMM, ffmpeg (не в git)
@@ -221,10 +232,46 @@ SPLIT_PANELS_DEV/
 | `/api/split/options` | GET | Детекторы comic/manga + статус моделей |
 | `/api/upscale/options` | GET | Backend: realesrgan \| realcugan \| span |
 | `/api/models/setup` | GET | Статус установки всех моделей |
+| `/api/ui/state` | GET/PUT | Память UI (split, upscale, video, story2a, global) |
+| `/api/ui/state/reset` | POST | Сброс секции UI |
+| `/api/story/stage_2a/*` | GET/POST/PUT | Story Analyzer Stage 2a: bbox + OCR → `stage_2a.json` |
+
+Подробнее Stage 2a: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
 
 ---
 
-## 8. Запуск (кратко)
+## 9. Story Analyzer — Stage 2a (июнь 2026)
+
+Расширение веб-редактора `:8000`: вкладка **Story 2a** — детекция speech bubbles, VLM OCR и **интерактивный HITL**.
+
+```
+panels/ (upscaled PNG)
+  → yolo_manga_int8 (tiled YOLO, class 1)
+  → crop bubble
+  → SiliconFlow VLM OCR (Qwen3-VL-8B)  [default]
+  → stage_2a.json + Konva editor (bbox, text, reading_order)
+```
+
+| Слой | Технология |
+|------|------------|
+| Детекция | ONNX CPU, `story_analyzer/stages/bubble_detector.py` |
+| OCR primary | SiliconFlow API, `story_analyzer/providers/siliconflow_ocr.py` |
+| OCR fallback | PaddleOCR / EasyOCR (`ocr_engine: paddle \| easyocr \| auto`) |
+| reading_order | `Bubble.reading_order`, `assign_bubble_reading_orders()`, `reading_order.js` |
+| UI HITL | drag/resize bbox, chrome №/↻/×, detached text frame, ручной бабл |
+| Persist | `utils/ui_state.py` секция `story2a`; `config/ui_state.user.json` |
+| Конфиг | `config/story_stage_2a.yaml`, секреты `.env` |
+| Модули | `story_analyzer/`, `api/story_stage_2a.py`, `frontend/story_2a.js` |
+
+**Split (та же вкладка :8000):** порядок панелей через `reading_order.js`; технические метаданные (`panel_id`, bbox, %) скрыты в sidebar — только № и «Панель».
+
+**Следующий UX-шаг Split:** snap grid / snap to objects — блок S в [ROADMAP.md](ROADMAP.md).
+
+Локальный PaddleOCR как основной OCR **заморожен** — см. `problems_fix/bubbles_detect_problems/LEGACY_LOCAL_OCR.md`.
+
+---
+
+## 10. Запуск (кратко)
 
 ```powershell
 # Активация окружения

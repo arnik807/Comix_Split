@@ -1,9 +1,9 @@
-﻿# ComicSplit — документация (актуальная)
+# ComicSplit — документация (актуальная)
 
-**Версия документа:** 1.5 (июнь 2026) — блоки A, B0, B1, B4; TPSMM (B2) в пайплайне  
-**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.3**); опционально Go CLI.
+**Версия документа:** 1.6 (июнь 2026) — блоки A, B0, B1, B4; TPSMM (B2); **Story 2a HITL**; Split reading_order  
+**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.3**, вкладки Split / Upscale / Video / **Story 2a**); опционально Go CLI.
 
-Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video), **Go CLI**.
+Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video / Story 2a), **Go CLI**.
 
 Статус реализации по модулям: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).  
 Исторические материалы: [archive/](archive/) (`ComicSplit_Specification_v2.0.md`, `implementation_plan_mvp.md` и др.).
@@ -68,7 +68,7 @@ SPLIT_PANELS_DEV/
 ├── anim/                   # upscale, harmonize, render, animate_*
 ├── utils/                  # config, anim_config, presets, io_helpers, path_resolve, ui_tooltips, path_dialog
 ├── api/server.py           # FastAPI v1.3 (:8000)
-├── frontend/index.html     # Konva + вкладки Split/Upscale/Video
+├── frontend/index.html     # Konva + вкладки Split/Upscale/Video/Story 2a
 ├── scripts/                # модели split + anim
 ├── cmd/comicsplit/         # Go CLI
 ├── ml_worker/main.py
@@ -324,7 +324,7 @@ PNG с альфа-каналом: фон прозрачный, панель вы
 
 ## 9. Способ 3 — веб-редактор (порт 8000)
 
-Split с ручной правкой + апскейл и видео без Gradio. FastAPI **v1.3** + `frontend/index.html`. Функционал **согласован с Gradio** (пресеты, tooltips, детектор comic/manga, backend апскейла, TPSMM + driving MP4).
+Split с ручной правкой + апскейл, видео и **Story 2a** без Gradio. FastAPI **v1.3** + `frontend/index.html`. Функционал **согласован с Gradio** (пресеты, tooltips, детектор comic/manga, backend апскейла, TPSMM + driving MP4).
 
 ### 9.1. Запуск
 
@@ -344,6 +344,8 @@ uvicorn api.server:app --reload --port 8000
 | **Подсказки «!»** | Наведение или клик — всплывающее объяснение; закрытие по ESC, клику снаружи или крестику |
 | **Обзор…** | `POST /api/path/pick` — нативный диалог на машине, где запущен uvicorn |
 | **Пути** | Ручной ввод в текстовое поле (относительные пути предпочтительны при кириллице) |
+| **Память UI** | Пути, настройки и активная вкладка сохраняются (`localStorage` + `config/ui_state.user.json`) |
+| **↺ Сброс** | Кнопки сброса Split / Upscale / Video / Story 2a — заводские значения из config |
 
 ### 9.3. Вкладка Split
 
@@ -355,6 +357,8 @@ uvicorn api.server:app --reload --port 8000
 | **Пороги YOLO** | Слайдеры confidence / IoU — режим «Качество» |
 | **Полигон (ломаная форма)** | Редактирование вершин; **экспорт по маске** только при включённом полигоне или после ручной правки |
 | **Экспорт PNG** | `POST /api/export` → ваша папка `output_dir\<имя_страницы>\` |
+| **Порядок панелей** | № на канвасе и в sidebar; ↑↓ и popup №; экспорт в порядке `reading_order` |
+| **Sidebar** | Только **№ · точка · «Панель»**; `panel_id` и координаты — в tooltip при наведении |
 
 После экспорта пути подставляются во вкладки Upscale и Video.
 
@@ -365,7 +369,21 @@ uvicorn api.server:app --reload --port 8000
 | Upscale | `POST /api/upscale` | PNG (backend, CUGAN/SPAN поля); `GET /api/upscale/options` |
 | Video | `POST /api/animate` | MP4 + `storyboard.mp4`; режимы incl. `tpsmm` + driving video |
 
-### 9.5. Пути к файлам
+### 9.5. Вкладка Story 2a
+
+Story Analyzer Stage 2a: детекция speech bubbles + OCR + ручная правка. Подробнее: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
+
+| Элемент | Поведение |
+|---------|-----------|
+| **Обработка** | `POST /api/story/stage_2a/process` — папка upscaled PNG → `stage_2a.json` |
+| **Редактор** | Drag/resize bbox; chrome на рамке: **№ / ↻ re-OCR / ×** |
+| **Текст** | Отдельное окно `#s2a-bubble-frame` (не привязано к bbox) |
+| **Порядок** | `reading_order` баблов — как у панелей Split |
+| **Ручной бабл** | «+ Добавить бабл» — рамка без рисования rect |
+| **OCR** | SiliconFlow VLM по умолчанию; нужен `.env` с `SILICONFLOW_API_KEY` |
+| **Persist** | Проект и пути — секция `story2a` в ui_state |
+
+### 9.6. Пути к файлам
 
 | Рекомендация | Пример |
 |--------------|--------|
@@ -375,7 +393,7 @@ uvicorn api.server:app --reload --port 8000
 
 При кириллице в путях — `utils/path_resolve.py`; при ошибке mojibake используйте относительные пути.
 
-### 9.6. REST API (кратко)
+### 9.7. REST API (кратко)
 
 | Метод | Путь | Назначение |
 |-------|------|------------|
@@ -393,6 +411,12 @@ uvicorn api.server:app --reload --port 8000
 | POST | `/api/path/pick` | Нативный выбор файла/папки (`kind`: `file` \| `folder`) |
 | GET | `/api/image?path=` | Исходник для Konva |
 | GET | `/api/video?path=` | MP4 для `<video>` |
+| GET/PUT | `/api/ui/state` | Память UI (split, upscale, video, story2a) |
+| POST | `/api/ui/state/reset` | Сброс секции UI |
+| GET | `/api/story/stage_2a/options` | OCR-движки, языки, VLM-модель |
+| POST | `/api/story/stage_2a/process` | Batch: панели → JSON |
+| GET/PUT | `/api/story/stage_2a/{project}` | Чтение / сохранение правок |
+| POST | `/api/story/stage_2a/{project}/reocr` | Re-OCR одного бабла |
 
 ---
 

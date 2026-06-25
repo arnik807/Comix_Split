@@ -151,6 +151,12 @@ def list_setup_scripts() -> list[dict[str, str]]:
             "script": "scripts/export_manga_yolo.ps1",
             "command": "powershell -ExecutionPolicy Bypass -File scripts\\export_manga_yolo.ps1",
         },
+        {
+            "id": "paddle_ocr",
+            "label": "PaddleOCR (Story 2a)",
+            "script": "scripts/install_paddle_ocr.ps1",
+            "command": "powershell -ExecutionPolicy Bypass -File scripts\\install_paddle_ocr.ps1",
+        },
     ]
 
 

@@ -93,3 +93,12 @@ pip:
     label: "DepthFlow (DA-V2 inside package)"
     check: "import depthflow"
     install: "pip install depthflow"
+
+story_2a:
+  paddleocr:
+    label: "PaddleOCR (bubble OCR, Stage 2a)"
+    base_dir: models/paddleocr
+    required_files:
+      - models/paddleocr/whl/rec/cyrillic/cyrillic_PP-OCRv3_rec_infer/inference.pdmodel
+      - models/paddleocr/whl/det/ml/Multilingual_PP-OCRv3_det_infer/inference.pdmodel
+    download_script: scripts/install_paddle_ocr.ps1

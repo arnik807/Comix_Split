@@ -1,4 +1,4 @@
-﻿aiofiles==23.2.1
+aiofiles==23.2.1
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.13.0
@@ -61,5 +61,16 @@ tzdata==2026.2
 urllib3==2.7.0
 uvicorn==0.46.0
 websockets==12.0
+easyocr==1.7.2
+# easyocr тянет opencv-python-headless; на Windows с opencv-python ставьте:
+#   pip install easyocr==1.7.2 --no-deps
+#   pip install scikit-image imageio lazy-loader ninja
+paddlepaddle==3.0.0
+paddleocr==2.10.0
+# PaddleOCR: scripts/install_paddle_ocr.ps1 (остановите сервер перед установкой)
+scikit-image>=0.22
+imageio>=2.33
+lazy-loader>=0.4
+ninja>=1.11
 pytest==8.3.5
 pyinstaller==6.12.0

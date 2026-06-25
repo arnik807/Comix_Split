@@ -1,4 +1,4 @@
-﻿# Модели
+# Модели
 
 Файлы моделей в git не хранятся (см. `.gitignore`).
 
@@ -24,6 +24,28 @@ powershell -ExecutionPolicy Bypass -File scripts\export_manga_yolo.ps1
 ```
 
 Когда какой детектор: [spec_s/MODELS_SPECIFICATION.md](../spec_s/MODELS_SPECIFICATION.md) §1.2
+
+## Story 2a (OCR баблов)
+
+**Основной OCR (июнь 2026):** SiliconFlow VLM `Qwen/Qwen3-VL-8B-Instruct` — ключ в `.env`, без файлов в `models/`.  
+Документация: [spec_s/STORY_ANALYZER_STAGE_2A.md](../spec_s/STORY_ANALYZER_STAGE_2A.md)
+
+**Офлайн fallback** — папка `models/paddleocr/` (структура кэша PaddleOCR, не в git):
+
+| Путь | Назначение |
+|------|------------|
+| `whl/rec/cyrillic/cyrillic_PP-OCRv3_rec_infer/` | Распознавание кириллицы (ru) |
+| `whl/det/ml/Multilingual_PP-OCRv3_det_infer/` | Детектор (при init PaddleOCR) |
+| `whl/cls/ch_ppocr_mobile_v2.0_cls_infer/` | Классификатор угла (опционально) |
+
+```powershell
+# Только если нужен ocr_engine: paddle | easyocr | auto
+powershell -ExecutionPolicy Bypass -File scripts\install_paddle_ocr.ps1
+```
+
+Конфиг: `config/story_stage_2a.yaml` → `ocr_engine: siliconflow` (default), `paddle_ocr_base_dir: models/paddleocr`
+
+Smoke-test облака: `python scripts/test_siliconflow_api.py`
 
 ## Anim (апскейл + видео)
 

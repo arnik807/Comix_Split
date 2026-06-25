@@ -1,9 +1,24 @@
-﻿# Changelog
+# Changelog
 
 Все значимые изменения проекта ComicSplit (`SPLIT_PANELS_DEV`).  
 Формат ориентирован на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/).
 
 ## [Unreleased]
+
+### Добавлено (R1 — Story Analyzer Stage 2a, интерактив)
+
+- Stage 2a HITL: drag/resize bbox, chrome №/↻/×, detached text frame, ручной бабл «+ Добавить»
+- `Bubble.reading_order` + `assign_bubble_reading_orders()`; общий `frontend/reading_order.js`
+- Split: порядок панелей № в sidebar и на канвасе; UX cleanup (скрыты `panel_id`, bbox, %)
+- UI state: секция `story2a` в `utils/ui_state.py` / `frontend/ui_state.js`; merge без затирания путей
+- Re-OCR: `panel_abs_path` + округление bbox; тесты `tests/test_ui_state.py`, `tests/test_stage_2a_sync.py`
+
+### Добавлено (R1 — Story Analyzer Stage 2a)
+
+- Stage 2a: tiled YOLO bubble detection, API `/api/story/stage_2a/*`, UI `frontend/story_2a.js`
+- OCR: SiliconFlow VLM `Qwen/Qwen3-VL-8B-Instruct` (default), движки `paddle` / `easyocr` / `auto`
+- `story_analyzer/providers/siliconflow_ocr.py`, `scripts/test_siliconflow_api.py`, `scripts/diagnose_stage_2a.py`
+- Документация: `spec_s/STORY_ANALYZER_STAGE_2A.md`, `LEGACY_LOCAL_OCR.md`, обновлён `ROADMAP_STAGE_2A.md`
 
 ### Изменено (документация)
 
@@ -44,10 +59,10 @@
 
 ### Планируется
 
-- [ROADMAP_QUALITY_BOOST.md](spec_s/ROADMAP_QUALITY_BOOST.md) — **B2** TPSMM; **B1.4** benchmark после установки `yolo_manga_int8.onnx`
+- [ROADMAP.md](spec_s/ROADMAP.md) — **S** Split snap grid/objects; **R1.3** formal ACCEPTANCE; **R1.4** Stage 2b
+- [ROADMAP.md](spec_s/ROADMAP.md) блок B2/B3 — TPSMM тесты, сегментация
 - OpenCV fast-path в split-каскаде
 - Wails / gRPC (спека v2.0)
-- Опционально из блока A: `localStorage` для ручных настроек на :8000
 
 ---
 

@@ -1,4 +1,4 @@
-﻿# ComicSplit — Roadmap качества
+# ComicSplit — Roadmap качества
 
 **Версия:** 2.0 (июнь 2026)  
 **Целевое железо:** Ryzen 5 5600H, AMD Radeon iGPU, 16 GB RAM, Windows, без CUDA
@@ -15,8 +15,10 @@
 | **B4** | CUGAN + SPAN backend апскейла | ✅ **Закрыт** |
 | **B2** | TPSMM motion transfer | 🟡 **Интегрировано** — нужны тесты на реальных панелях + B3 segment |
 | **B3** | Сегментация + SAM2-tiny | 📋 В планах (зависит от B2) |
+| **R1** | Story Analyzer Stage 2a (bbox + OCR + HITL) | 🟡 **Интерактив ✅** — formal ACCEPTANCE ⏳ |
+| **S** | Split: snap grid / snap to objects | 📋 **Следующий UX-шаг** после polish R1 |
 
----
+Подробнее R1: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md), roadmap: [../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md](../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md).
 
 ## Блок A — пресеты и UI ✅
 
@@ -102,6 +104,55 @@
 
 ---
 
+## Блок R1 — Story Analyzer Stage 2a 🟡
+
+**Текущее состояние (июнь 2026):**
+
+| Компонент | Статус |
+|-----------|--------|
+| Tiled YOLO bubble detection | ✅ |
+| OCR SiliconFlow VLM (default) | ✅ |
+| API `/api/story/stage_2a/*` | ✅ |
+| **Интерактивный HITL** (bbox drag/resize, reading_order, re-OCR) | ✅ |
+| UI: chrome на рамке (№ / ↻ / ×), detached text frame | ✅ |
+| Ручной бабл «+ Добавить» (как Split) | ✅ |
+| Память UI секция `story2a` | ✅ |
+| Split: порядок панелей (reading_order UI) | ✅ |
+| OCR локальный Paddle/EasyOCR | 🟡 fallback only — [LEGACY](../problems_fix/bubbles_detect_problems/LEGACY_LOCAL_OCR.md) |
+| Formal ACCEPTANCE (10 панелей) | ⏳ |
+
+### Что осталось
+
+| # | Задача |
+|---|--------|
+| R1.1 | ⏳ Прогон americ + manga с VLM-OCR, метрики recall + читаемость |
+| R1.2 | 📋 Опционально: ogkalu detector если recall manga <80% |
+| R1.3 | 📋 Formal ACCEPTANCE + закрытие R1 |
+| R1.4 | 📋 Stage 2b (panel captions) — следующий этап Story Analyzer |
+
+**Документация:** [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md)
+
+---
+
+## Блок S — Split: привязка к сетке / объектам 📋
+
+**Следующий UX-шаг** после polish R1 (rect-режим Split на :8000). Идея: radio **Выкл / Сетка / Объекты** — ускорить ручную правку bbox без «плавающих» координат.
+
+| # | Задача | Детали |
+|---|--------|--------|
+| S1 | Radio + persist | Выкл / Сетка / Объекты; сохранение в `ui_state.split.snap_mode` |
+| S2 | Snap to grid | Шаг сетки по умолчанию 8 px (image coords); настройка шага в UI |
+| S3 | Snap to objects | Края соседних панелей + границы страницы; порог ~8 px |
+| S4 | (опц.) Match size | При resize — match width/height с соседом; guide-lines на канвасе |
+| S5 | (опц.) Shift bypass | Удержание Shift — временно без snap |
+| S6 | (опц.) Stage 2a | Переиспользование snap-модуля для bbox баблов |
+
+**MVP:** S1–S3 (rect-режим Split). S4–S6 — после обратной связи по MVP.
+
+**Не начинать** до закрытия R1.3 (formal ACCEPTANCE) или явного приоритета пользователя.
+
+---
+
 ## Матрица паритета UI (целевое состояние)
 
 | Настройка | Gradio | Web :8000 | Пресет |
@@ -119,6 +170,9 @@
 | Выбор путей (Обзор…) | ✅ | ✅ | — |
 | Статус моделей (B0) | ✅ | ✅ | — |
 | TPSMM + driving video | ✅ | ✅ | — |
+| Story 2a (bbox + OCR HITL) | — | ✅ | — |
+| Память UI (paths, story2a) | ✅ | ✅ | — |
+| Split snap grid/objects | S 📋 | S 📋 | — |
 | Сегментация объектов | B3 📋 | B3 📋 | — |
 
 ---
@@ -130,4 +184,4 @@
 | CUDA / SD / AnimateDiff / SVD | Нет NVIDIA GPU |
 | ControlNet inpainting для 16:9 | CPU непрактично |
 | Wails UI / gRPC | Отдельная веха спеки v2.0 |
-| localStorage на :8000 | Опционально — добавить при необходимости |
+| localStorage на :8000 | ✅ Реализовано (`frontend/ui_state.js` + sync на диск) |

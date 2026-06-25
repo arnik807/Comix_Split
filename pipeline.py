@@ -139,9 +139,9 @@ def _parse_yolo_output(
     )
 
 
-def _preprocess_yolo(img: np.ndarray) -> np.ndarray:
+def _preprocess_yolo(img: np.ndarray, input_size: int = 640) -> np.ndarray:
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    resized = cv2.resize(rgb, (640, 640), interpolation=cv2.INTER_LINEAR)
+    resized = cv2.resize(rgb, (input_size, input_size), interpolation=cv2.INTER_LINEAR)
     norm = resized.astype(np.float32) / 255.0
     return np.expand_dims(norm.transpose(2, 0, 1), axis=0)
 
@@ -152,9 +152,12 @@ def _run_yolo(
     quiet: bool = False,
     num_classes: int = 1,
     panel_class_id: int = 0,
+    *,
+    input_size: int = 640,
+    filter_contained: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     t0 = time.perf_counter()
-    raw = session.run(None, {"images": _preprocess_yolo(img)})[0]
+    raw = session.run(None, {"images": _preprocess_yolo(img, input_size)})[0]
     cx, cy, w, h, scores = _parse_yolo_output(
         raw, num_classes=num_classes, panel_class_id=panel_class_id
     )
@@ -179,7 +182,7 @@ def _run_yolo(
     x1, y1, w, h, scores = x1[idxs], y1[idxs], w[idxs], h[idxs], scores[idxs]
     x2, y2 = x1 + w, y1 + h
     oh, ow = img.shape[:2]
-    sx, sy = ow / 640, oh / 640
+    sx, sy = ow / float(input_size), oh / float(input_size)
     bboxes = np.stack(
         [
             np.clip((x1 * sx).astype(int), 0, ow),
@@ -194,8 +197,9 @@ def _run_yolo(
         f"  YOLO: {len(bboxes)} панелей, conf={scores.round(2).tolist()}, {ms:.0f}ms",
         quiet,
     )
-    keep_mask = _filter_contained(bboxes, scores)
-    bboxes, scores = bboxes[keep_mask], scores[keep_mask]
+    if filter_contained:
+        keep_mask = _filter_contained(bboxes, scores)
+        bboxes, scores = bboxes[keep_mask], scores[keep_mask]
     return bboxes, scores, ms
 
 

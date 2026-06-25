@@ -251,22 +251,64 @@
 
         #panel-list { display: flex; flex-direction: column; gap: 5px; max-height: 320px; overflow-y: auto; }
 
-        .pi {
-            display: flex; align-items: center; gap: 8px;
-            padding: 7px 9px; background: var(--surface2);
+        .pi, .s2a-bubble-row {
+            display: flex; align-items: center; gap: 6px;
+            min-height: 34px;
+            padding: 6px 8px; background: var(--surface2);
             border: 1px solid var(--border); border-radius: 6px;
-            cursor: pointer; transition: all .15s; font-size: 11px;
+            font-size: 11px; box-sizing: border-box;
+        }
+        .pi {
+            cursor: pointer; transition: border-color .15s, background .15s;
         }
         .pi:hover { border-color: var(--accent); }
         .pi.sel { border-color: var(--accent); background: rgba(240,192,64,.08); }
         .pi.poly-mode { border-color: rgba(167,139,250,0.4); }
         .pi.poly-mode.sel { border-color: #a78bfa; background: rgba(167,139,250,.08); }
 
+        .pi-order, .s2a-bubble-row-order {
+            width: 26px;
+            flex-shrink: 0;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent, #f0c040);
+            line-height: 1;
+        }
         .pdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-        .pinfo { flex: 1; font-family: var(--mono); }
-        .psub { font-size: 10px; color: var(--muted); margin-top: 1px; }
-        .pact { opacity: 0; transition: opacity .15s; display: flex; gap: 4px; }
-        .pi:hover .pact { opacity: 1; }
+        .pinfo, .s2a-bubble-row-main {
+            flex: 1;
+            min-width: 0;
+            font-family: var(--mono);
+            font-size: 11px;
+            line-height: 1.25;
+        }
+        .pi-title {
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .s2a-bubble-row-main {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .pact, .s2a-bubble-row-actions, .pi-actions {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+        .pi-actions .chrome-btn, .s2a-bubble-row-actions .chrome-btn { width: 20px; height: 18px; }
+        .s2a-bubble-row { cursor: pointer; transition: border-color .15s, background .15s; }
+        .s2a-bubble-row.active { border-color: var(--accent, #f0c040); background: rgba(240,192,64,.08); }
+        .s2a-bubble-list {
+            max-height: 200px; overflow-y: auto; margin: 8px 0;
+            display: flex; flex-direction: column; gap: 5px;
+        }
         .xbtn { background: none; border: none; cursor: pointer; padding: 1px 4px; border-radius: 3px; color: var(--muted); font-size: 13px; }
         .xbtn:hover { color: var(--err); }
         /* Polygon reset button */
@@ -361,6 +403,107 @@
         .tab-panel { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
         .tab-panel.active { display: flex; }
 
+        #view-story2a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 400px; overflow: hidden; }
+        #s2a-bubble-frame {
+            position: absolute;
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            box-sizing: border-box;
+            border: 2px solid var(--accent, #f0c040);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.97);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+            overflow: hidden;
+            min-width: 140px;
+            min-height: 72px;
+        }
+        .s2a-chrome {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            padding: 2px 4px;
+            background: linear-gradient(180deg, #2a2a34 0%, #1e1e28 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            user-select: none;
+            cursor: move;
+            flex-shrink: 0;
+        }
+        .s2a-chrome-order {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent, #f0c040);
+            padding: 0 4px;
+            min-width: 16px;
+        }
+        .s2a-chrome-btns { display: flex; gap: 2px; margin-left: auto; }
+        .chrome-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 20px;
+            padding: 0;
+            border: none;
+            border-radius: 3px;
+            background: transparent;
+            color: #c8c8d4;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .chrome-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+        .chrome-btn-close:hover { background: rgba(239,68,68,0.35); color: #fecaca; }
+        .chrome-btn-text {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .chrome-icon { width: 14px; height: 14px; display: block; }
+        #s2a-inline-edit {
+            flex: 1;
+            padding: 6px 8px;
+            font-size: 13px;
+            line-height: 1.35;
+            color: #111;
+            background: transparent;
+            border: none;
+            outline: none;
+            overflow: auto;
+            min-height: 28px;
+            cursor: text;
+        }
+        .s2a-frame-resize {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 14px;
+            height: 14px;
+            cursor: nwse-resize;
+            background: linear-gradient(135deg, transparent 50%, rgba(240,192,64,0.85) 50%);
+            border-bottom-right-radius: 4px;
+        }
+        .ro-popup {
+            display: none;
+            position: fixed;
+            z-index: 9500;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+        .ro-popup-card {
+            background: var(--surface, #12121a);
+            border: 1px solid var(--border, #333);
+            border-radius: 8px;
+            padding: 12px;
+            width: 200px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        .ro-popup-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+        .ro-popup-input { width: 100%; margin-bottom: 10px; }
+        .ro-popup-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .s2a-footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
         select.inp {
             width: 100%; padding: 8px 10px;
             background: var(--surface2); border: 1px solid var(--border);
@@ -444,6 +587,7 @@
             <button type="button" class="tab-btn active" data-tab="split" onclick="switchTab('split')">Split</button>
             <button type="button" class="tab-btn" data-tab="upscale" onclick="switchTab('upscale')">Upscale</button>
             <button type="button" class="tab-btn" data-tab="video" onclick="switchTab('video')">Video</button>
+            <button type="button" class="tab-btn" data-tab="story2a" onclick="switchTab('story2a')">Story 2a</button>
         </div>
 
         <div id="tab-split" class="tab-panel active">
@@ -597,10 +741,11 @@
                         </select>
                     </div>
                     <label class="lbl" data-tip="up_gpu">GPU (Vulkan)</label>
-                    <select id="up-gpu" class="inp" style="margin-bottom:12px">
+                    <select id="up-gpu" class="inp" style="margin-bottom:6px">
                         <option value="0" selected>0 — видеокарта (Vulkan)</option>
-                        <option value="-1">−1 — только CPU</option>
+                        <option value="-1" id="up-gpu-cpu">−1 — только CPU</option>
                     </select>
+                    <p id="up-gpu-hint" class="field-hint" style="display:none;margin-bottom:12px"></p>
                     <details id="models-setup-details" style="margin-bottom:12px;font-size:11px;color:var(--muted)">
                         <summary style="cursor:pointer;color:var(--accent)">Скачать / проверить модели</summary>
                         <pre id="models-setup-box" style="margin-top:8px;white-space:pre-wrap;word-break:break-word;font-size:10px;line-height:1.45;background:var(--bg2);padding:8px;border-radius:6px;max-height:200px;overflow:auto"></pre>
@@ -672,10 +817,11 @@
                         </select>
                     </div>
                     <label class="lbl" data-tip="vid_gpu">GPU (Vulkan)</label>
-                    <select id="vid-gpu" class="inp" style="margin-bottom:10px">
+                    <select id="vid-gpu" class="inp" style="margin-bottom:6px">
                         <option value="0" selected>0 — видеокарта</option>
                         <option value="-1">−1 — CPU</option>
                     </select>
+                    <p id="vid-gpu-hint" class="field-hint" style="display:none;margin-bottom:10px"></p>
                     <label class="lbl" data-tip="vid_harm_mode">Фон 16:9 (harmonize)</label>
                     <select id="vid-harm-mode" class="inp" style="margin-bottom:10px">
                         <option value="auto">auto</option>
@@ -730,6 +876,59 @@
                 <button class="btn btn-e" id="btn-video" onclick="runVideo()">▶ Создать видео</button>
             </div>
         </div>
+
+        <div id="tab-story2a" class="tab-panel">
+            <div class="tab-reset-row">
+                <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('story2a')">↺ Сброс Story 2a</button>
+            </div>
+            <div class="sec">
+                <div class="sec-title">Stage 2a: OCR баблов</div>
+                <p class="preset-hint" id="s2a-engine-hint">YOLO manga + OCR (ru, en). Настройки: config/story_stage_2a.yaml</p>
+            </div>
+            <div class="sec">
+                <label class="lbl">Имя проекта</label>
+                <input type="text" id="s2a-project" class="inp" placeholder="test_2a" />
+                <label class="lbl" style="margin-top:8px">Папка панелей (PNG)</label>
+                <div class="path-row">
+                    <input type="text" id="s2a-panels-dir" placeholder="exam_img\manga_test_1\manga_test_1_upscaled" />
+                    <button type="button" class="path-browse" onclick="pickPath('s2a-panels-dir','folder','Папка панелей')">Обзор…</button>
+                </div>
+            </div>
+            <div class="sec">
+                <button class="btn btn-p" id="s2a-btn-run">▶ Запустить OCR</button>
+                <button class="btn btn-s" id="s2a-btn-load" style="margin-top:8px">↻ Загрузить проект</button>
+            </div>
+            <div class="sec" id="s2a-stats" style="display:none">
+                <div class="sec-title">Статистика</div>
+                <p class="preset-hint" id="s2a-stats-text"></p>
+            </div>
+            <div class="sec">
+                <div class="sec-title">Навигация</div>
+                <p id="s2a-panel-nav" class="preset-hint">Нет панелей</p>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="btn btn-s" id="s2a-prev">◀ Пред.</button>
+                    <button class="btn btn-s" id="s2a-next">След. ▶</button>
+                </div>
+            </div>
+            <div class="sec">
+                <div class="sec-title">Выбранный бабл</div>
+                <label class="lbl">Тип</label>
+                <select id="s2a-bubble-type" class="inp" style="margin-bottom:8px">
+                    <option value="speech">speech</option>
+                    <option value="thought">thought</option>
+                    <option value="sfx">sfx</option>
+                    <option value="narration">narration</option>
+                </select>
+                <label class="lbl">Текст (corrected_text)</label>
+                <textarea id="s2a-bubble-text" class="inp" rows="3" style="resize:vertical"></textarea>
+                <div class="s2a-bubble-list" id="s2a-bubble-list"></div>
+                <button class="btn btn-s" id="s2a-add-mode" style="margin-top:8px">+ Добавить бабл</button>
+            </div>
+            <div class="sec s2a-footer">
+                <button class="btn btn-e" id="s2a-btn-save">💾 Сохранить и проверить JSON</button>
+                <p class="preset-hint" id="s2a-save-hint"></p>
+            </div>
+        </div>
     </aside>
 
     <main>
@@ -755,6 +954,26 @@
             <div class="vlinks" id="video-links"></div>
             <video id="video-preview" class="preview" controls style="display:none"></video>
         </div>
+
+        <div id="view-story2a" style="display:none">
+            <div class="empty" id="s2a-empty">
+                <div class="empty-icon">💬</div>
+                <div class="empty-txt">Укажите папку панелей и запустите OCR</div>
+            </div>
+            <div id="kv-2a" style="display:none"></div>
+            <div id="s2a-bubble-frame">
+                <div class="s2a-chrome">
+                    <span class="s2a-chrome-order" id="s2a-chrome-order">1</span>
+                    <div class="s2a-chrome-btns">
+                        <button type="button" class="chrome-btn" id="s2a-chrome-order-btn"></button>
+                        <button type="button" class="chrome-btn" id="s2a-chrome-reocr"></button>
+                        <button type="button" class="chrome-btn chrome-btn-close" id="s2a-chrome-delete"></button>
+                    </div>
+                </div>
+                <div id="s2a-inline-edit" contenteditable="true" spellcheck="false"></div>
+                <div class="s2a-frame-resize" id="s2a-frame-resize" title="Изменить размер"></div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -762,6 +981,8 @@
 <div id="toast"></div>
 
 <script src="ui_state.js"></script>
+<script src="reading_order.js"></script>
+<script src="story_2a.js"></script>
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────
 const COLORS = [
@@ -885,11 +1106,34 @@ async function loadUpscaleOptions() {
     return upscaleOptionsCache;
 }
 
+function syncUpscaleGpu(prefix) {
+    const backend = $(`${prefix}-backend`)?.value || 'realesrgan';
+    const sel = $(`${prefix}-gpu`);
+    const cpuOpt = sel?.querySelector('option[value="-1"]');
+    const hint = $(`${prefix}-gpu-hint`);
+    const vulkanOnly = backend === 'realesrgan';
+    if (cpuOpt) cpuOpt.disabled = vulkanOnly;
+    if (vulkanOnly && sel && sel.value === '-1') sel.value = '0';
+    if (hint) {
+        if (vulkanOnly) {
+            hint.textContent = 'Real-ESRGAN: только GPU (Vulkan). CPU недоступен для этого backend.';
+            hint.style.display = 'block';
+        } else {
+            hint.textContent = '';
+            hint.style.display = 'none';
+        }
+    }
+}
+
 function upscalePayloadFields(prefix) {
+    const backend = $(`${prefix}-backend`)?.value || 'realesrgan';
+    let gpu_id = parseInt($(`${prefix}-gpu`)?.value, 10);
+    if (Number.isNaN(gpu_id)) gpu_id = 0;
+    if (backend === 'realesrgan') gpu_id = 0;
     const p = {
-        upscale_backend: $(`${prefix}-backend`)?.value || 'realesrgan',
+        upscale_backend: backend,
         upscale_model: $(`${prefix}-model`)?.value,
-        gpu_id: parseInt($(`${prefix}-gpu`)?.value, 10) || 0,
+        gpu_id,
     };
     if (p.upscale_backend === 'realcugan') {
         p.cugan_noise = parseInt($(`${prefix}-cugan-noise`)?.value, 10);
@@ -958,6 +1202,7 @@ function refreshUpscaleUI(prefix) {
         else modelSel.value = models[0].id;
     }
     syncUpscaleScaleForModel(`${prefix}-model`, `${prefix}-scale-seg`, `${prefix}-scale`);
+    syncUpscaleGpu(prefix);
 }
 
 function initSegScales() {
@@ -1288,6 +1533,7 @@ function fillFormFromPreset(payload) {
     const gpu = String(a.gpu_id ?? 0);
     if ($('up-gpu').querySelector(`option[value="${gpu}"]`)) $('up-gpu').value = gpu;
     else $('up-gpu').value = '0';
+    syncUpscaleGpu('up');
     if ($('vid-backend')) $('vid-backend').value = a.upscale_backend || 'realesrgan';
     $('vid-model').value = a.upscale_model || 'animevideov3';
     if ($('vid-cugan-noise')) setRange('vid-cugan-noise', a.cugan_noise ?? -1);
@@ -1299,6 +1545,7 @@ function fillFormFromPreset(payload) {
     const vgpu = String(a.gpu_id ?? 0);
     if ($('vid-gpu').querySelector(`option[value="${vgpu}"]`)) $('vid-gpu').value = vgpu;
     else $('vid-gpu').value = '0';
+    syncUpscaleGpu('vid');
     $('vid-harm-mode').value = a.harmonize_mode || 'auto';
     setRange('vid-harm-blur', a.harmonize_blur_sigma ?? 60);
     setRange('vid-harm-vig', a.harmonize_vignette ?? 0.7);
@@ -1397,14 +1644,16 @@ function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === name);
     });
-    ['split','upscale','video'].forEach(t => {
+    ['split','upscale','video','story2a'].forEach(t => {
         const p = $('tab-' + t);
         if (p) p.classList.toggle('active', t === name);
     });
     const isSplit = name === 'split';
+    const isStory2a = name === 'story2a';
     $('view-split').style.display = isSplit ? '' : 'none';
-    $('view-batch').classList.toggle('active', !isSplit);
-    document.querySelector('main').classList.toggle('batch-mode', !isSplit);
+    $('view-story2a').style.display = isStory2a ? 'flex' : 'none';
+    $('view-batch').classList.toggle('active', !isSplit && !isStory2a);
+    document.querySelector('main').classList.toggle('batch-mode', !isSplit && !isStory2a);
     if (name === 'upscale') {
         $('batch-title').textContent = 'Апскейл';
         $('batch-desc').textContent = 'Real-ESRGAN / CUGAN / SPAN (Vulkan). Обработка может занять несколько минут.';
@@ -1412,8 +1661,10 @@ function switchTab(name) {
     } else if (name === 'video') {
         $('batch-title').textContent = 'Видео-креатор';
         $('batch-desc').textContent = 'Harmonize 16:9 + анимация + ffmpeg. Для теста используйте режим static или opencv_zoom.';
+    } else if (name === 'story2a' && window.Story2a) {
+        Story2a.onTabShow();
     }
-    setStatus(isSplit ? 'Редактор панелей' : (name === 'upscale' ? 'Апскейл' : 'Видео'), '');
+    setStatus(isSplit ? 'Редактор панелей' : (name === 'upscale' ? 'Апскейл' : (name === 'story2a' ? 'Stage 2a: OCR' : 'Видео')), '');
     if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
 }
 
@@ -1604,6 +1855,10 @@ async function runDetection() {
                 samContour: samOn && !_isRectPoly(polygon, p.bbox),
             };
         });
+        if (window.ReadingOrder) {
+            ReadingOrder.ensureOrders(S.panels, 'reading_order');
+            ReadingOrder.sortItemsByOrder(S.panels, 'reading_order');
+        }
         S.selId = null;
 
         if (data.resolved_path) {
@@ -1634,10 +1889,15 @@ async function exportPanels() {
     btn.disabled=true; btn.innerHTML='<div class="sp"></div> Сохраняю…';
     setStatus('Экспортирую…','busy');
     try {
+        if (window.ReadingOrder) {
+            ReadingOrder.ensureOrders(S.panels, 'reading_order');
+            ReadingOrder.sortItemsByOrder(S.panels, 'reading_order');
+        }
         const panels = S.panels.map(p => ({
             panel_id: p.panel_id,
             bbox:     p.bbox,
             polygon:  _exportPolygon(p),
+            reading_order: p.reading_order,
         }));
         const r = await fetch('/api/export', {
             method:'POST',
@@ -1681,6 +1941,75 @@ function _exportPolygon(panel) {
 
 function _markPolyEdited(panel) {
     panel.polyEdited = true;
+}
+
+function _panelDisplayOrder(panel) {
+    return panel.reading_order ? `#${panel.reading_order}` : '—';
+}
+
+function _panelStorageHint(panel) {
+    return panel.panel_id ? `ID: ${panel.panel_id}` : '';
+}
+
+function _panelLabelText(panel) {
+    return _panelDisplayOrder(panel);
+}
+
+function _panelListTitle(panel) {
+    const shape = _panelShapeLabel(panel);
+    if (shape === 'rect') return 'Панель';
+    return shape;
+}
+
+function _sortSplitPanels() {
+    if (!window.ReadingOrder) return;
+    ReadingOrder.ensureOrders(S.panels, 'reading_order');
+    ReadingOrder.sortItemsByOrder(S.panels, 'reading_order');
+}
+
+function moveSplitPanelOrder(pid, delta) {
+    if (!window.ReadingOrder) return;
+    ReadingOrder.moveItem(S.panels, pid, delta, (p) => p.panel_id, 'reading_order');
+    renderAll();
+    rebuildList();
+}
+
+function openSplitPanelOrderPopup(pid, anchorEl) {
+    const panel = S.panels.find((p) => p.panel_id === pid);
+    if (!panel || !window.ReadingOrder) return;
+    _sortSplitPanels();
+    ReadingOrder.showOrderPopup({
+        current: panel.reading_order || 1,
+        max: S.panels.length,
+        anchorRect: anchorEl.getBoundingClientRect(),
+        onApply: (n) => {
+            ReadingOrder.setItemOrder(S.panels, pid, n, (p) => p.panel_id, 'reading_order');
+            renderAll();
+            rebuildList();
+        },
+    });
+}
+
+function _bindPanelListChrome(row, pid) {
+    if (!window.ReadingOrder) return;
+    const orderBtn = row.querySelector('.pi-ro-order');
+    const upBtn = row.querySelector('.pi-ro-up');
+    const downBtn = row.querySelector('.pi-ro-down');
+    if (orderBtn) {
+        ReadingOrder.mountIconButton(orderBtn, 'order', 'Номер панели');
+        orderBtn.onclick = (e) => {
+            e.stopPropagation();
+            openSplitPanelOrderPopup(pid, orderBtn);
+        };
+    }
+    if (upBtn) {
+        ReadingOrder.mountIconButton(upBtn, 'chevronUp', 'Выше');
+        upBtn.onclick = (e) => { e.stopPropagation(); moveSplitPanelOrder(pid, -1); };
+    }
+    if (downBtn) {
+        ReadingOrder.mountIconButton(downBtn, 'chevronDown', 'Ниже');
+        downBtn.onclick = (e) => { e.stopPropagation(); moveSplitPanelOrder(pid, 1); };
+    }
 }
 
 function _panelShapeLabel(p) {
@@ -1752,7 +2081,7 @@ function renderRectPanel(panel, i) {
 
     const fill = new Konva.Rect({ x:sp.x, y:sp.y, width:pw, height:ph, fill:col, opacity:0.15 });
     const box  = new Konva.Rect({ x:sp.x, y:sp.y, width:pw, height:ph, stroke:col, strokeWidth:2, draggable:true, name:'box' });
-    const lbl  = new Konva.Text({ x:sp.x+6, y:sp.y+5, text:panel.panel_id, fontSize:Math.max(11,13*S.scale), fontFamily:'Space Mono', fill:col, listening:false });
+    const lbl  = new Konva.Text({ x:sp.x+6, y:sp.y+5, text:_panelLabelText(panel), fontSize:Math.max(11,13*S.scale), fontFamily:'Space Mono', fill:col, listening:false });
 
     // 4 угловых маркера
     const corners = [
@@ -1815,6 +2144,7 @@ function _syncRect(panel,fill,box,lbl,handles) {
     fill.position(sp); fill.size({width:pw,height:ph});
     box.position(sp);  box.size({width:pw,height:ph});
     lbl.position({x:sp.x+6,y:sp.y+5});
+    lbl.text(_panelLabelText(panel));
     const corners=[{cx:x1,cy:y1},{cx:x2,cy:y1},{cx:x2,cy:y2},{cx:x1,cy:y2}];
     handles.forEach((h,i)=>{const s2=i2s(corners[i].cx,corners[i].cy);h.position({x:s2.x-6,y:s2.y-6});});
 }
@@ -1844,7 +2174,7 @@ function renderPolygonPanel(panel, i) {
     const lsp = i2s(lcx,lcy);
     const lbl = new Konva.Text({
         x:lsp.x-20, y:lsp.y-8,
-        text:panel.panel_id, fontSize:Math.max(11,13*S.scale),
+        text:_panelLabelText(panel), fontSize:Math.max(11,13*S.scale),
         fontFamily:'Space Mono', fill:col, listening:false,
     });
 
@@ -1858,6 +2188,7 @@ function renderPolygonPanel(panel, i) {
         const [cc,cy2]=_centroid(panel.polygon);
         const ls=i2s(cc,cy2);
         lbl.position({x:ls.x-20,y:ls.y-8});
+        lbl.text(_panelLabelText(panel));
     }
 
     // ── Синхронизация позиций всех вершин-кружков ─────────────────
@@ -2008,52 +2339,53 @@ function select(pid) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────
 function rebuildList() {
+    _sortSplitPanels();
     $('p-count').textContent=`(${S.panels.length})`;
     $('panel-list').innerHTML = S.panels.map((p,i)=>{
         const col=COLORS[i%COLORS.length];
         const sel=p.panel_id===S.selId;
-        const shape = _panelShapeLabel(p);
         const showReset = p.polyEdited || (S.polyMode && p.polygon && !_isRectPoly(p.polygon, p.bbox));
-        const [x1,y1,x2,y2]=p.bbox;
-        const conf = Math.round((p.confidence ?? 1) * 100);
-        return `<div class="pi ${sel?'sel':''} ${S.polyMode?'poly-mode':''}" id="pi-${p.panel_id}" onclick="select('${p.panel_id}')">
+        const hint = _panelStorageHint(p);
+        return `<div class="pi ${sel?'sel':''} ${S.polyMode?'poly-mode':''}" id="pi-${p.panel_id}" title="${hint}" onclick="select('${p.panel_id}')">
+            <span class="pi-order">${p.reading_order || '·'}</span>
             <div class="pdot" style="background:${col}"></div>
-            <div class="pinfo">
-                <div>${p.panel_id} <span style="color:var(--muted);font-size:9px">${shape}</span></div>
-                <div class="psub">${x1},${y1}→${x2},${y2} · ${conf}%</div>
-            </div>
-            <div class="pact">
+            <div class="pinfo"><span class="pi-title">${_panelListTitle(p)}</span></div>
+            <div class="pact pi-actions">
+                <button type="button" class="chrome-btn pi-ro-order"></button>
+                <button type="button" class="chrome-btn pi-ro-up"></button>
+                <button type="button" class="chrome-btn pi-ro-down"></button>
                 ${showReset ? `<button class="rbtn" title="Сброс полигона" onclick="event.stopPropagation();resetPolyToRect('${p.panel_id}')">↺</button>` : ''}
-                <button class="xbtn" onclick="event.stopPropagation();delPanel('${p.panel_id}')">✕</button>
+                <button class="xbtn" title="Удалить" onclick="event.stopPropagation();delPanel('${p.panel_id}')">✕</button>
             </div>
         </div>`;
     }).join('');
+    S.panels.forEach((p) => {
+        const row = document.getElementById(`pi-${p.panel_id}`);
+        if (row) _bindPanelListChrome(row, p.panel_id);
+    });
 }
 
 function updItem(panel) {
     const el=document.getElementById(`pi-${panel.panel_id}`);
     if(!el) return;
-    const sub=el.querySelector('.psub');
-    if(sub){
-        const [x1,y1,x2,y2]=panel.bbox;
-        sub.textContent=`${x1},${y1}→${x2},${y2} · ${Math.round((panel.confidence ?? 1)*100)}%`;
-    }
-    const nameEl=el.querySelector('.pinfo>div:first-child');
-    if(nameEl){
-        const shape=_panelShapeLabel(panel);
-        nameEl.innerHTML=`${panel.panel_id} <span style="color:var(--muted);font-size:9px">${shape}</span>`;
-    }
+    const titleEl=el.querySelector('.pi-title');
+    if(titleEl) titleEl.textContent = _panelListTitle(panel);
+    const ordEl = el.querySelector('.pi-order');
+    if (ordEl) ordEl.textContent = String(panel.reading_order || '·');
+    el.title = _panelStorageHint(panel);
 }
 
 function delPanel(pid) {
     S.panels=S.panels.filter(p=>p.panel_id!==pid);
     if(S.selId===pid) S.selId=null;
+    if (window.ReadingOrder) ReadingOrder.normalizeOrders(S.panels, 'reading_order');
     renderAll(); rebuildList();
     $('st-panels').textContent=S.panels.length;
 }
 
 function addPanel() {
     if(!stage){toast('Сначала запустите детекцию','err');return;}
+    _sortSplitPanels();
     const n=S.panels.length+1;
     const pid=`p${String(n).padStart(3,'0')}_new`;
     const bbox=[Math.round(S.imgW*.1),Math.round(S.imgH*.1),Math.round(S.imgW*.4),Math.round(S.imgH*.4)];
@@ -2064,6 +2396,7 @@ function addPanel() {
     });
     renderAll(); rebuildList(); select(pid);
     $('st-panels').textContent=S.panels.length;
+    toast('Панель добавлена — задайте № в списке при необходимости', 'ok');
 }
 
 // ── Zoom ──────────────────────────────────────────────────────────────────
@@ -2117,12 +2450,23 @@ $('kv').addEventListener('wheel', e=>{
 },{passive:false});
 
 // ── Space + drag = pan ────────────────────────────────────────────────────
+function isTextEditingTarget(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    return !!el.closest('#s2a-bubble-frame, #s2a-inline-edit, #ro-popup');
+}
 document.addEventListener('keydown', e=>{
     if(e.key==='Delete' && S.selId) delPanel(S.selId);
     if(e.key==='+'||e.key==='=') doZoom(0.1);
     if(e.key==='-') doZoom(-0.1);
     if(e.key==='0') resetZoom();
-    if(e.key===' '){ e.preventDefault(); spaceDown=true; $('kv').style.cursor='grab'; }
+    if(e.key===' ' && !isTextEditingTarget(document.activeElement)){
+        e.preventDefault();
+        spaceDown=true;
+        $('kv').style.cursor='grab';
+    }
 });
 document.addEventListener('keyup',e=>{
     if(e.key===' '){ spaceDown=false; isPanning=false; $('kv').style.cursor=''; }
@@ -2164,6 +2508,9 @@ window.__uiStateHooks = {
     setPresetActive: _setPresetActive,
     toast,
     isX4OnlyUpscaleModel,
+    syncStory2aFromUi: () => {
+        if (window.Story2a && Story2a.syncFieldsFromUi) Story2a.syncFieldsFromUi();
+    },
 };
 
 async function initApp() {

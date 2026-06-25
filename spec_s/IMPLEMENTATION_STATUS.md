@@ -1,6 +1,6 @@
-﻿# ComicSplit — статус реализации
+# ComicSplit — статус реализации
 
-**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован в пайплайн)  
+**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован; R1 Stage 2a — интерактивный HITL ✅)  
 **Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)  
 **Технологический стек и архитектура:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -20,7 +20,9 @@
 | CLI anim (`anim_pipeline.py`) | ✅ **Готово** |
 | Anim модули (`anim/`: upscale, harmonize, opencv, depthflow, render) | ✅ **Готово** |
 | Backend апскейла: Real-ESRGAN / Real-CUGAN / SPAN (NCNN) | ✅ **Готово** (`anim/upscale.py`) |
-| Веб-редактор FastAPI + Konva (`:8000`) — Split / Upscale / Video | ✅ **Готово** |
+| Веб-редактор FastAPI + Konva (`:8000`) — Split / Upscale / Video / **Story 2a** | ✅ **Готово** |
+| Память UI (localStorage + `ui_state.user.json`, секции split/upscale/video/story2a) | ✅ **Готово** (`utils/ui_state.py`, `frontend/ui_state.js`) |
+| Split: порядок чтения панелей (№, reorder в sidebar и на канвасе) | ✅ **Готово** (`frontend/reading_order.js`) |
 | Подсказки (tooltips) во всех настройках | ✅ **Готово** (`utils/ui_tooltips.py`) |
 | Выбор путей (диалог + ручной ввод) | ✅ **Готово** (`utils/path_dialog.py`) |
 | Реестр моделей + статус установки в UI | ✅ **Готово** (`config/models_registry.yaml`, `utils/models_registry.py`) |
@@ -32,6 +34,10 @@
 | gRPC Go↔Python | ❌ **Нет** |
 | PyInstaller EXE | 🟡 Spec есть, сборка вручную |
 | Benchmark < 600 ms/стр. | 🟡 Цель не закрыта |
+| **Story Analyzer Stage 2a** (bbox + VLM OCR + интерактивный HITL) | 🟡 **Готово в коде/UI** — SiliconFlow VLM; formal ACCEPTANCE ⏳ |
+| Split: snap grid / snap to objects | 📋 **В roadmap** — см. [ROADMAP.md](ROADMAP.md) блок S |
+
+Подробнее: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
 
 ---
 
@@ -56,11 +62,15 @@
 | `utils/path_dialog.py` | Нативные диалоги Windows (tkinter) |
 | `utils/models_registry.py` | Проверка наличия моделей перед запуском |
 | `utils/panel_detector.py` | Выбор детектора `comic` \| `manga` |
+| `utils/ui_state.py` | Память UI v1: split / upscale / video / story2a / global |
+| `utils/gradio_ui_state.py` | Восстановление полей Gradio из `ui_state.user.json` |
+| `frontend/ui_state.js` | localStorage + sync `PUT /api/ui/state` для :8000 |
+| `frontend/reading_order.js` | Общий модуль порядка чтения (Split панели, Stage 2a баблы) |
 | `utils/io_helpers.py` | CBZ, CBR, ZIP, папка, imdecode (кириллица) |
 | `utils/path_resolve.py` | Пути с кириллицей и mojibake |
 | `main.py` | Gradio 5.x, 3 вкладки |
 | `api/server.py` v1.3.0 | FastAPI REST |
-| `frontend/index.html` | Konva-редактор + Upscale/Video + пресеты + tooltips |
+| `frontend/index.html` | Konva-редактор Split/Upscale/Video/Story 2a + пресеты + tooltips |
 | `ml_worker/main.py` | IPC для Go |
 | `cmd/comicsplit/` + `internal/*` | Go CLI |
 | `scripts/split_models_craft_scripts/` | Скачивание + квантование split моделей |
@@ -69,8 +79,19 @@
 | `scripts/quantize_animate_models.py` | INT8 квантование + verify |
 | `scripts/verify_upscale_backends.py` | Проверка CUGAN/SPAN |
 | `scripts/benchmark_upscale.ps1` | Бенчмарк всех NCNN backend |
-| `tests/` | **41 тест** в 10 файлах |
+| `tests/` | pytest (~67 тестов: split, anim, ui_state, stage 2a OCR/det) |
 | `packaging/comicsplit.spec` | PyInstaller |
+| `story_analyzer/stages/stage_2a_processor.py` | Stage 2a: detect + OCR → JSON |
+| `story_analyzer/stages/bubble_detector.py` | Tiled YOLO manga class 1 |
+| `story_analyzer/stages/ocr_reader.py` | Crop + engine routing |
+| `story_analyzer/stages/ocr_engines.py` | paddle / easyocr / siliconflow / auto |
+| `story_analyzer/providers/siliconflow_ocr.py` | SiliconFlow VLM OCR client |
+| `story_analyzer/env_loader.py` | `.env` для API keys |
+| `config/story_stage_2a.yaml` | Stage 2a конфиг |
+| `api/story_stage_2a.py` | REST Stage 2a |
+| `frontend/story_2a.js` | UI Konva Stage 2a |
+| `scripts/diagnose_stage_2a.py` | Диагностика bbox + OCR |
+| `scripts/test_siliconflow_api.py` | Smoke-test SiliconFlow |
 
 ---
 
@@ -205,3 +226,8 @@ go build -o comicsplit.exe ./cmd/comicsplit
 | `anime_6B` | Только ×4; ×2 через этот backend даёт артефакты |
 | Go CLI | CBR только через Python subprocess |
 | Benchmark | Цель < 600 ms/стр. не достигнута в Accurate+SAM; Fast — зависит от страницы |
+| Stage 2a OCR | Облако SiliconFlow по умолчанию; нужен API key и интернет; ~1–3 с/бабл |
+| Stage 2a det | Manga YOLO class 1 — слабее на western comics; tiled YOLO частично компенсирует |
+| Stage 2a UI | Текстовое окно бабла отделено от bbox; позиции в `S2.frameLayouts` (не в JSON) |
+| PaddleOCR local | Fallback only; на ru-комиксах не годится как primary — см. LEGACY_LOCAL_OCR.md |
+| Split snap | Не реализовано; следующий UX-шаг — блок S в ROADMAP |

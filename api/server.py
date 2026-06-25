@@ -137,7 +137,15 @@ class PathPickRequest(BaseModel):
 # App
 # ══════════════════════════════════════════════════════════════════════════════
 
-app = FastAPI(title="ComicSplit API", version="1.3.0")
+app = FastAPI(title="ComicSplit API", version="1.4.0")
+
+from story_analyzer.env_loader import load_dotenv  # noqa: E402
+
+load_dotenv()
+
+from api.story_stage_2a import router as story_stage_2a_router  # noqa: E402
+
+app.include_router(story_stage_2a_router)
 
 
 def _apply_upscale_request(cfg, req) -> None:
@@ -341,10 +349,11 @@ class UiStatePatchRequest(BaseModel):
     split: Optional[dict] = None
     upscale: Optional[dict] = None
     video: Optional[dict] = None
+    story2a: Optional[dict] = None
 
 
 class UiStateResetRequest(BaseModel):
-    section: str = "all"  # split | upscale | video | global | all
+    section: str = "all"  # split | upscale | video | story2a | global | all
 
 
 @app.get("/api/ui/state")
@@ -361,6 +370,7 @@ def api_ui_state_put(req: UiStatePatchRequest):
         split=req.split,
         upscale=req.upscale,
         video=req.video,
+        story2a=req.story2a,
     )
     return JSONResponse({"ok": True, **state})
 
@@ -369,8 +379,8 @@ def api_ui_state_put(req: UiStatePatchRequest):
 def api_ui_state_reset(req: UiStateResetRequest):
     """Сброс секции split / upscale / video / global / all к заводским значениям."""
     section = req.section.strip().lower()
-    if section not in ("split", "upscale", "video", "global", "all"):
-        raise HTTPException(400, detail="section must be split|upscale|video|global|all")
+    if section not in ("split", "upscale", "video", "story2a", "global", "all"):
+        raise HTTPException(400, detail="section must be split|upscale|video|story2a|global|all")
     state = reset_ui_section(section)  # type: ignore[arg-type]
     return JSONResponse({"ok": True, "section": section, **state})
 

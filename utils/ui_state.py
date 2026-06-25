@@ -20,7 +20,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 UI_STATE_PATH = ROOT_DIR / "config" / "ui_state.user.json"
 UI_STATE_VERSION = 1
 
-SectionName = Literal["split", "upscale", "video", "global", "all"]
+SectionName = Literal["split", "upscale", "video", "story2a", "global", "all"]
 
 
 def default_global() -> dict[str, Any]:
@@ -92,6 +92,13 @@ def default_video() -> dict[str, Any]:
     }
 
 
+def default_story2a() -> dict[str, Any]:
+    return {
+        "project": "test_2a",
+        "panels_dir": "exam_img\\manga_test_1\\manga_test_1_upscaled",
+    }
+
+
 def default_state() -> dict[str, Any]:
     return {
         "version": UI_STATE_VERSION,
@@ -99,6 +106,7 @@ def default_state() -> dict[str, Any]:
         "split": default_split(),
         "upscale": default_upscale(),
         "video": default_video(),
+        "story2a": default_story2a(),
     }
 
 
@@ -109,6 +117,20 @@ def _merge_section(base: dict[str, Any], patch: dict[str, Any] | None) -> dict[s
     for k, v in patch.items():
         if v is not None:
             out[k] = v
+    return out
+
+
+def _merge_story2a(base: dict[str, Any], patch: dict[str, Any] | None) -> dict[str, Any]:
+    """Не затираем сохранённые пути пустыми строками из UI до восстановления полей."""
+    if not patch:
+        return base
+    out = deepcopy(base)
+    for k, v in patch.items():
+        if v is None:
+            continue
+        if isinstance(v, str) and not v.strip():
+            continue
+        out[k] = v
     return out
 
 
@@ -128,6 +150,7 @@ def load_ui_state() -> dict[str, Any]:
         "split": _merge_section(defaults["split"], raw.get("split")),
         "upscale": _merge_section(defaults["upscale"], raw.get("upscale")),
         "video": _merge_section(defaults["video"], raw.get("video")),
+        "story2a": _merge_section(defaults["story2a"], raw.get("story2a")),
     }
 
 
@@ -139,6 +162,7 @@ def save_ui_state(state: dict[str, Any]) -> None:
         "split": state.get("split") or default_split(),
         "upscale": state.get("upscale") or default_upscale(),
         "video": state.get("video") or default_video(),
+        "story2a": state.get("story2a") or default_story2a(),
     }
     UI_STATE_PATH.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
@@ -152,6 +176,7 @@ def patch_ui_state(
     split: dict[str, Any] | None = None,
     upscale: dict[str, Any] | None = None,
     video: dict[str, Any] | None = None,
+    story2a: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     state = load_ui_state()
     if global_:
@@ -162,6 +187,8 @@ def patch_ui_state(
         state["upscale"] = _merge_section(state["upscale"], upscale)
     if video:
         state["video"] = _merge_section(state["video"], video)
+    if story2a:
+        state["story2a"] = _merge_story2a(state["story2a"], story2a)
     save_ui_state(state)
     return state
 
@@ -174,6 +201,8 @@ def reset_ui_section(section: SectionName) -> dict[str, Any]:
         state["upscale"] = default_upscale()
     if section in ("video", "all"):
         state["video"] = default_video()
+    if section in ("story2a", "all"):
+        state["story2a"] = default_story2a()
     if section in ("global", "all"):
         state["global"] = default_global()
     save_ui_state(state)

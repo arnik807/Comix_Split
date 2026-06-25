@@ -1,0 +1,34 @@
+# Stage 2a: Bubble Detection & OCR (Story Analyzer R1)
+# Канон: spec_s/STORY_ANALYZER_STAGE_2A.md
+
+stage_2a:
+  bubble_class_id: 1
+  confidence_threshold: 0.12
+  iou_threshold: 0.45
+  bubble_detect:
+    tiled: true
+    tile_size: 640
+    tile_overlap: 0.2
+    filter_contained: false
+  # easyocr | paddle | siliconflow | auto (local → cloud)
+  ocr_engine: siliconflow
+  siliconflow:
+    base_url: "https://api.siliconflow.com/v1"
+    vlm_model: "Qwen/Qwen3-VL-8B-Instruct"
+    max_tokens: 512
+    temperature: 0.1
+    timeout_sec: 180
+  # Кэш PaddleOCR — относительно корня проекта (только ASCII-путь к репозиторию)
+  paddle_ocr_base_dir: "models/paddleocr"
+  # ru первым — приоритет русских адаптаций; en для латиницы в тех же баблах
+  ocr_languages: ["ru", "en"]
+  composite_alpha_on_white: true
+  crop_padding_px: 12
+  min_bubble_area_px: 32
+  ocr_preprocess:
+    # VLM OCR uses raw bubble crops; preprocess applies to paddle/easyocr/auto local pass
+    enabled: true
+    upscale_factor: 3
+    contrast: clahe
+    invert: auto
+    dark_background_threshold: 128

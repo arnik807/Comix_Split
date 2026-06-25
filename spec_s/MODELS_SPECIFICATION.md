@@ -1,4 +1,4 @@
-﻿# ComicSplit — спецификация моделей
+# ComicSplit — спецификация моделей
 
 **Версия:** 1.2 (июнь 2026)  
 **Связанные документы:** [ARCHITECTURE.md](ARCHITECTURE.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
@@ -42,6 +42,11 @@ PNG панели
   → DepthFlow + Depth Anything V2 Small  ← parallax
     или OpenCV эффекты                   ← быстрая анимация
   → ffmpeg → MP4
+
+Story 2a (опционально после split/upscale)
+  → yolo_manga class 1 (tiled) → crop bubble
+  → SiliconFlow VLM OCR (API)  [fallback: PaddleOCR local]
+  → stage_2a.json
 ```
 
 ---
@@ -69,7 +74,7 @@ PNG панели
 | **Файл** | `models/yolo_manga_int8.onnx` |
 | **Источник** | [leoxs22/manga-panel-detector-yolo26n](https://huggingface.co/leoxs22/manga-panel-detector-yolo26n) → ONNX → INT8 |
 | **Скрипты** | `scripts/export_manga_yolo.ps1`, `scripts/export_manga_yolo.py` |
-| **Классы** | `0 = panel`, `1 = text bubble` (пайплайн берёт только panel) |
+| **Классы** | `0 = panel`, `1 = text bubble` — split: class 0; **Stage 2a:** class 1 (tiled det) |
 | **API поле** | `panel_detector: manga` в `POST /api/process` |
 
 **Под железо: ⭐⭐⭐** — ~2.7 MB TFLite / лёгкий ONNX.
@@ -97,6 +102,21 @@ PNG панели
 **Под железо: ⭐⭐** — encoder раз на страницу + decoder на каждую панель. На 6–12 панелях — секунды. Для пакетной раскройки предпочтителен **fast** (только YOLO).
 
 **Ссылки:** https://huggingface.co/Acly/MobileSAM · https://huggingface.co/spaces/dhkim2810/MobileSAM
+
+---
+
+### 1.4 Story Analyzer Stage 2a — баблы и OCR
+
+| | |
+|---|---|
+| **Детекция bbox** | Тот же `yolo_manga_int8.onnx`, class **1**, tiled 640 / overlap 20% |
+| **OCR (primary)** | **SiliconFlow API** — `Qwen/Qwen3-VL-8B-Instruct` (не файл в `models/`) |
+| **OCR (fallback)** | PaddleOCR в `models/paddleocr/` — только `ocr_engine: paddle \| easyocr \| auto` |
+| **Конфиг** | `config/story_stage_2a.yaml`, ключ `SILICONFLOW_API_KEY` в `.env` |
+
+**Под железо:** детекция ⭐⭐⭐ CPU; VLM OCR — облако (~1–3 с/бабл), интернет обязателен.
+
+**Документация:** [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md) · локальный OCR заморожен: [LEGACY_LOCAL_OCR.md](../problems_fix/bubbles_detect_problems/LEGACY_LOCAL_OCR.md)
 
 ---
 
@@ -293,6 +313,8 @@ PNG панели
 | DepthFlow + DA-V2 Small | OpenGL + CPU | 4–8 GB пик | Медленно | **Лучший parallax** |
 | OpenCV анимация | CPU | минимум | Мгновенно | Базовое движение |
 | TPSMM INT8 | ONNX CPU | средняя | Медленно | Driving MP4 обязателен |
+| Qwen3-VL-8B (Stage 2a OCR) | SiliconFlow API | — | ~1–3 с/бабл | **Primary OCR** ru/en bubbles |
+| PaddleOCR PP-OCRv3 (fallback) | Paddle CPU | +500 MB | ~0.5 с/бабл | Низкое на ru-комиксах — не primary |
 
 ---
 

@@ -75,6 +75,18 @@ def upscale_options_payload() -> dict[str, Any]:
     return {"backends": backends}
 
 
+def cpu_gpu_allowed(backend: str) -> bool:
+    """NCNN CPU fallback is unreliable/slow; Real-ESRGAN uses Vulkan only."""
+    return normalize_upscale_backend(backend) != "realesrgan"
+
+
+def normalize_upscale_gpu(backend: str, gpu_id: int | None) -> int:
+    gid = int(0 if gpu_id is None else gpu_id)
+    if not cpu_gpu_allowed(backend):
+        return 0
+    return gid
+
+
 def apply_upscale_fields(
     cfg_upscale,
     *,
@@ -106,3 +118,4 @@ def apply_upscale_fields(
     cfg_upscale.scale = resolve_upscale_scale(
         cfg_upscale.backend, cfg_upscale.model, cfg_upscale.scale
     )
+    cfg_upscale.gpu_id = normalize_upscale_gpu(cfg_upscale.backend, cfg_upscale.gpu_id)

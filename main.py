@@ -44,7 +44,11 @@ from pipeline import process_page, process_source
 from utils.config import get_config, load_config
 from utils.anim_config import load_anim_config
 from utils.anim_config import normalize_upscale_backend
-from utils.gradio_upscale_ui import UPSCALE_BACKEND_CHOICES, upscale_controls_update
+from utils.gradio_upscale_ui import (
+    UPSCALE_BACKEND_CHOICES,
+    upscale_controls_update,
+    upscale_gpu_control,
+)
 from utils.upscale_options import apply_upscale_fields
 from utils.presets import apply_preset, preset_ui_payload
 from utils.ui_tooltips import FIELD_TIPS as TIP
@@ -412,7 +416,10 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         a["upscale_scale"],
         a.get("cugan_noise", -1),
         a.get("cugan_syncgap", 3),
+        a.get("gpu_id", 0),
     )
+    gpu_up = upscale_gpu_control(backend, a.get("gpu_id", 0))
+    up_model_u, up_scale_u, up_cn_u, up_cs_u, up_inst_u, _up_gpu_u = up_ui
     mode_choices = (
         ANIM_MODES
         if is_quality
@@ -431,11 +438,19 @@ def _apply_preset_to_gradio(name: str, persist: bool):
         gr.update(value=s["confidence_threshold"]),
         gr.update(value=s["iou_threshold"]),
         gr.update(value=backend, visible=is_quality),
-        *up_ui,
+        up_model_u,
+        up_scale_u,
+        up_cn_u,
+        up_cs_u,
+        up_inst_u,
         gr.update(visible=is_quality),
         gr.update(value=backend, visible=is_quality),
-        *up_ui,
-        gr.update(value=a["gpu_id"], visible=is_quality),
+        up_model_u,
+        up_scale_u,
+        up_cn_u,
+        up_cs_u,
+        up_inst_u,
+        gpu_up,
         gr.update(value=a["harmonize_mode"], visible=is_quality),
         gr.update(value=a["harmonize_blur_sigma"], visible=is_quality),
         gr.update(value=a["harmonize_vignette"], visible=is_quality),
@@ -480,12 +495,12 @@ with gr.Blocks(title="ComicSplit") as demo:
             gr.Markdown(
                 "Страница (JPG/PNG), CBZ/ZIP или папка со страницами → PNG-панели."
             )
-            with gr.Row():
-                with gr.Column(scale=1):
-                    source = gr.File(
+    with gr.Row():
+        with gr.Column(scale=1):
+            source = gr.File(
                         label="Источник (JPG/PNG, CBZ, ZIP)",
-                        type="filepath",
-                    )
+                type="filepath",
+            )
                     gr.Markdown(f"<sub>ⓘ {TIP['split_source']}</sub>")
                     source_path_box = gr.Textbox(
                         label="Или путь к файлу/архиву",
@@ -499,8 +514,8 @@ with gr.Blocks(title="ComicSplit") as demo:
                     )
                     folder_browse_btn = gr.Button("Обзор папки страниц", size="sm")
                     split_output = gr.Textbox(
-                        label="Папка вывода",
-                        value="output",
+                label="Папка вывода",
+                value="output",
                         info=TIP["split_output"],
                     )
                     split_out_browse_btn = gr.Button("Обзор папки вывода", size="sm")
@@ -511,7 +526,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                         info=TIP["panel_detector"],
                     )
                     panel_detector_hint = gr.Markdown("")
-                    use_sam = gr.Checkbox(
+            use_sam = gr.Checkbox(
                         label="Точные контуры (SAM)",
                         value=use_sam_def,
                         info=TIP["use_sam"],
@@ -521,14 +536,14 @@ with gr.Blocks(title="ComicSplit") as demo:
                         "<sub>На `exam_imgs` без SAM ~10–15 с; с SAM часто 1–3 мин. "
                         "Контуры на холсте — только в веб-редакторе (:8000), режим «Полигон».</sub>",
                         visible=False,
-                    )
-                    reading_order = gr.Checkbox(
-                        label="Сортировать по порядку чтения",
+            )
+            reading_order = gr.Checkbox(
+                label="Сортировать по порядку чтения",
                         value=order_def,
                         info=TIP["reading_order"],
-                    )
-                    rtl = gr.Checkbox(
-                        label="Порядок справа-налево (манга)",
+            )
+            rtl = gr.Checkbox(
+                label="Порядок справа-налево (манга)",
                         value=rtl_def,
                         info=TIP["rtl"],
                     )
@@ -703,6 +718,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                 up_scale,
                 up_cugan_noise,
                 up_cugan_syncgap,
+                up_gpu,
             ]
             _upscale_ui_outputs = [
                 up_model,
@@ -710,6 +726,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                 up_cugan_noise,
                 up_cugan_syncgap,
                 up_install_md,
+                up_gpu,
             ]
             up_backend.change(
                 fn=upscale_controls_update,
@@ -883,7 +900,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                     vid_reset_btn = gr.Button("↺ Сброс настроек Video", size="sm")
                     vid_btn = gr.Button("Создать видео", variant="primary")
 
-                with gr.Column(scale=2):
+        with gr.Column(scale=2):
                     vid_status = gr.Textbox(
                         label="Результат",
                         interactive=False,
@@ -958,6 +975,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                 vid_scale,
                 vid_cugan_noise,
                 vid_cugan_syncgap,
+                vid_gpu,
             ]
             _vid_upscale_ui_outputs = [
                 vid_model,
@@ -965,6 +983,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                 vid_cugan_noise,
                 vid_cugan_syncgap,
                 vid_install_md,
+                vid_gpu,
             ]
             vid_backend.change(
                 fn=upscale_controls_update,

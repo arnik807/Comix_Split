@@ -1,8 +1,8 @@
-﻿# ComicSplit
+# ComicSplit
 
 Автоматическая нарезка панелей комиксов (YOLO + MobileSAM) и **оживление** панелей (апскейл, 16:9, MP4). Windows, Python 3.11.
 
-**Пресеты качества:** «Стандарт» (YOLO + videov3 ×2) и «Качество» (SAM + x4plus-anime ×4 + DepthFlow dolly) — Gradio :7860 и веб :8000.
+**Пресеты качества:** «Стандарт» (YOLO + videov3 ×2) и «Качество» (SAM + x4plus-anime ×4 + DepthFlow dolly) — Gradio :7860 и веб :8000 (Split / Upscale / Video / **Story 2a**).
 
 **Детекторы split:** западный комикс (`comic`) или манга (`manga`). **Апскейл:** Real-ESRGAN / Real-CUGAN / SPAN (NCNN Vulkan). **Видео:** OpenCV, DepthFlow, TPSMM (нужен driving MP4).
 
@@ -23,6 +23,9 @@ python scripts\split_models_craft_scripts\quantize_models.py
 # 3. Модели anim (для апскейла и видео)
 powershell -ExecutionPolicy Bypass -File scripts\download_animate_models.ps1
 python scripts\quantize_animate_models.py --verify
+
+# 4. PaddleOCR для Story 2a (если models/paddleocr ещё пуста)
+powershell -ExecutionPolicy Bypass -File scripts\install_paddle_ocr.ps1
 ```
 
 ### Gradio (Split + Upscale + Video)
@@ -43,7 +46,7 @@ python pipeline.py exam_imgs output --order
 
 → PNG в `output\<имя_источника>\`
 
-### Веб-редактор (Split / Upscale / Video)
+### Веб-редактор (Split / Upscale / Video / Story 2a)
 
 ```powershell
 uvicorn api.server:app --reload --port 8000
@@ -70,7 +73,9 @@ python anim_pipeline.py output\exam_imgs story_out --mode tpsmm --tpsmm-driving-
 | **[spec_s/ARCHITECTURE.md](spec_s/ARCHITECTURE.md)** | Технический стек, архитектура, API, структура проекта |
 | **[spec_s/IMPLEMENTATION_STATUS.md](spec_s/IMPLEMENTATION_STATUS.md)** | Статус модулей, файловая карта, известные ограничения |
 | **[spec_s/MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md)** | Все модели: ссылки, параметры, оценка под Ryzen 5600H + AMD iGPU |
-| **[spec_s/ROADMAP.md](spec_s/ROADMAP.md)** | Roadmap качества: блоки A ✅ B0/B1/B4 ✅ B2 🟡 B3 📋 |
+| **[spec_s/ROADMAP.md](spec_s/ROADMAP.md)** | Roadmap: A/B блоки + **R1 Stage 2a** 🟡 + **S snap** 📋 |
+| **[spec_s/STORY_ANALYZER_STAGE_2A.md](spec_s/STORY_ANALYZER_STAGE_2A.md)** | Story Analyzer Stage 2a: bbox + SiliconFlow VLM OCR |
+| [problems_fix/bubbles_detect_problems/](problems_fix/bubbles_detect_problems/) | Roadmap Stage 2a, LEGACY локального OCR |
 | [CHANGELOG.md](CHANGELOG.md) | История изменений |
 | [config.yaml](config.yaml) | Конфиг split |
 | [config_animate.yaml](config_animate.yaml) | Конфиг anim |
@@ -93,5 +98,8 @@ python anim_pipeline.py output\exam_imgs story_out --mode tpsmm --tpsmm-driving-
 | `utils/` | config, presets, io, paths, tooltips, path_dialog, models_registry, panel_detector |
 | `config/presets.yaml` | Пресеты Стандарт / Качество |
 | `models/` | Split ONNX (не в git) |
+| `models/paddleocr/` | PaddleOCR whl (не в git) |
 | `models/anim/` | NCNN, MiDaS, TPSMM, ffmpeg (не в git) |
-| `spec_s/` | Документация (5 файлов + archive/) |
+| `spec_s/` | Документация (7 активных + archive/) |
+| `story_analyzer/` | Stage 2a+ Story Analyzer |
+| `frontend/story_2a.js`, `reading_order.js`, `ui_state.js` | Веб :8000 Story 2a + persist |
