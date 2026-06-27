@@ -86,6 +86,7 @@ INCLUDE_SUFFIXES = frozenset(
 
 
 def git_head() -> str:
+    """Полный SHA-1 (40 символов) — Sourcecraft Raw не принимает короткий hash."""
     try:
         out = subprocess.check_output(
             ["git", "rev-parse", "HEAD"],
@@ -93,9 +94,9 @@ def git_head() -> str:
             text=True,
             stderr=subprocess.DEVNULL,
         )
-        return out.strip()[:12]
+        return out.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return "main"
+        return ""
 
 
 def git_branch() -> str:
@@ -143,6 +144,9 @@ def github_raw(relpath: str, branch: str) -> str:
 
 def sourcecraft_raw(relpath: str, commit: str) -> str:
     # https://sourcecraft.dev/portal/docs/en/sourcecraft/operations/raw-content
+    # Требуется полный commit hash (40 hex), не короткий.
+    if not commit:
+        return ""
     return (
         f"https://raw.sourcecraft.tech/raw/{SOURCECRAFT_ORG}/{SOURCECRAFT_REPO}/{commit}/{relpath}"
     )
@@ -166,7 +170,7 @@ def write_map(output: Path, files: list[str], branch: str, commit: str) -> None:
         "# Карта репозитория Comix_Split",
         "",
         f"**Обновлено:** {now}  ",
-        f"**Ветка:** `{branch}` · **Commit:** `{commit}` · **Файлов:** {len(files)}",
+        f"**Ветка:** `{branch}` · **Commit:** `{commit[:12]}` (`{commit}`) · **Файлов:** {len(files)}",
         "",
         "Слепок для **web-LLM** без доступа к локальному диску: прикрепите этот файл в чат.",
         "LLM читает исходники по **GitHub Raw** (актуально после `push` на `main`).",
@@ -188,7 +192,8 @@ def write_map(output: Path, files: list[str], branch: str, commit: str) -> None:
             name = Path(relpath).name
             lines.append(f"- **{relpath}**")
             lines.append(f"  - GitHub: [{name}]({gh})")
-            lines.append(f"  - Sourcecraft: [{name}]({sc})")
+            if sc:
+                lines.append(f"  - Sourcecraft: [{name}]({sc})")
         lines.append("")
 
     output.write_text("\n".join(lines), encoding="utf-8")

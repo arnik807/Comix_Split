@@ -55,8 +55,8 @@ git branch -vv
 
 | | GitHub | Sourcecraft |
 |---|--------|-------------|
-| **Raw-файлы для LLM** | `https://raw.githubusercontent.com/arnik807/Comix_Split/main/<path>` | `https://raw.sourcecraft.tech/raw/sparky/comixsplitter/<commit>/<path>` |
-| **Стабильность ссылки** | Ветка `main` — всегда последний push | Нужен **commit hash** (в `REPO_MAP.md` подставляется автоматически) |
+| **Raw-файлы для LLM** | `https://raw.githubusercontent.com/arnik807/Comix_Split/main/<path>` | `https://raw.sourcecraft.tech/raw/sparky/comixsplitter/<full_commit_sha>/<path>` |
+| **Стабильность ссылки** | Ветка `main` — всегда последний push | **Полный** commit hash (40 символов); короткий (`bf9b6e7`) → Not Found |
 | **Клонирование HTTPS** | `https://github.com/arnik807/Comix_Split.git` | `https://git@git.sourcecraft.dev/sparky/comixsplitter.git` |
 | **UI** | github.com | git.sourcecraft.dev |
 | **Для web-LLM** | **Предпочтительно** (проще, ветка в URL) | Запасной канал, тот же код после push |
@@ -204,10 +204,10 @@ git push origin main
 https://raw.githubusercontent.com/arnik807/Comix_Split/main/frontend/story_2a.js
 ```
 
-**Sourcecraft** (commit из `REPO_MAP.md`):
+**Sourcecraft** (полный commit из `REPO_MAP.md`, 40 hex):
 
 ```
-https://raw.sourcecraft.tech/raw/sparky/comixsplitter/<commit>/frontend/story_2a.js
+https://raw.sourcecraft.tech/raw/sparky/comixsplitter/6a44eae084590d42044c087fbfd76618d8e6b0ba/frontend/story_2a.js
 ```
 
 Web-LLM с доступом в интернет открывает URL и получает текст файла.
