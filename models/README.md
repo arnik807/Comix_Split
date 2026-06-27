@@ -25,7 +25,7 @@ powershell -ExecutionPolicy Bypass -File scripts\export_manga_yolo.ps1
 
 Когда какой детектор: [spec_s/MODELS_SPECIFICATION.md](../spec_s/MODELS_SPECIFICATION.md) §1.2
 
-## Story 2a (OCR баблов)
+## ExText (OCR баблов)
 
 **Основной OCR (июнь 2026):** SiliconFlow VLM `Qwen/Qwen3-VL-8B-Instruct` — ключ в `.env`, без файлов в `models/`.  
 Документация: [spec_s/STORY_ANALYZER_STAGE_2A.md](../spec_s/STORY_ANALYZER_STAGE_2A.md)
@@ -55,8 +55,8 @@ Smoke-test облака: `python scripts/test_siliconflow_api.py`
 |------|------------|
 | `upscale/realesrgan-ncnn-vulkan.exe` | Апскейл NCNN/Vulkan (AMD iGPU) — **в пайплайне** |
 | `upscale/models/*.bin`, `*.param` | Real-ESRGAN: videov3, x4plus-anime (`anime_6B`, только ×4) |
-| `upscale/realcugan/realcugan-ncnn-vulkan.exe` | Real-CUGAN — **скачано, verify OK; UI — в разработке** |
-| `upscale/span/span-ncnn-vulkan.exe` | SPAN — **скачано, verify OK; UI — в разработке** |
+| `upscale/realcugan/realcugan-ncnn-vulkan.exe` | Real-CUGAN — **в UI/API** (`backend: realcugan`) |
+| `upscale/span/span-ncnn-vulkan.exe` | SPAN — **в UI/API** (`backend: span`) |
 | `depth/midas_v21_small_256.onnx` | MiDaS исходная |
 | `depth/midas_v21_small_256_int8.onnx` | MiDaS INT8 (для CPU inference) |
 | `tpsmm/kp_detector.onnx` | TPSMM keypoints |
@@ -75,7 +75,7 @@ python scripts\quantize_animate_models.py --verify
 python scripts\verify_upscale_backends.py
 ```
 
-Подробнее: `scripts/MODELS_SETUP_GUIDE.md`
+Подробнее: [spec_s/MODELS_SETUP_GUIDE.md](../spec_s/MODELS_SETUP_GUIDE.md)
 
 ### Проверка апскейла
 

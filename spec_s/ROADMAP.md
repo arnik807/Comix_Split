@@ -15,7 +15,7 @@
 | **B4** | CUGAN + SPAN backend апскейла | ✅ **Закрыт** |
 | **B2** | TPSMM motion transfer | 🟡 **Интегрировано** — нужны тесты на реальных панелях + B3 segment |
 | **B3** | Сегментация + SAM2-tiny | 📋 В планах (зависит от B2) |
-| **R1** | Story Analyzer Stage 2a (bbox + OCR + HITL) | 🟡 **Интерактив ✅** — formal ACCEPTANCE ⏳ |
+| **R1** | Story Analyzer ExText (Stage 2a: bbox + OCR + HITL) | 🟡 **Интерактив ✅** — formal ACCEPTANCE ⏳ |
 | **S** | Split: snap grid / snap to objects | 📋 **Следующий UX-шаг** после polish R1 |
 
 Подробнее R1: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md), roadmap: [../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md](../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md).
@@ -104,7 +104,7 @@
 
 ---
 
-## Блок R1 — Story Analyzer Stage 2a 🟡
+## Блок R1 — ExText (Story Analyzer Stage 2a) 🟡
 
 **Текущее состояние (июнь 2026):**
 
@@ -112,11 +112,13 @@
 |-----------|--------|
 | Tiled YOLO bubble detection | ✅ |
 | OCR SiliconFlow VLM (default) | ✅ |
-| API `/api/story/stage_2a/*` | ✅ |
+| API `/api/story/stage_2a/*` (init, sync, ocr/detect panel) | ✅ |
+| **workflow_mode** manual \| auto | ✅ |
 | **Интерактивный HITL** (bbox drag/resize, reading_order, re-OCR) | ✅ |
 | UI: chrome на рамке (№ / ↻ / ×), detached text frame | ✅ |
-| Ручной бабл «+ Добавить» (как Split) | ✅ |
-| Память UI секция `story2a` | ✅ |
+| Ручной бабл «+ Добавить» / draw rect | ✅ |
+| Память UI секция `story2a`; fix путей / сброс ExText | ✅ |
+| Пути PNG: `panels_dir`, `source_only`, `sync_panels` | ✅ |
 | Split: порядок панелей (reading_order UI) | ✅ |
 | OCR локальный Paddle/EasyOCR | 🟡 fallback only — [LEGACY](../problems_fix/bubbles_detect_problems/LEGACY_LOCAL_OCR.md) |
 | Formal ACCEPTANCE (10 панелей) | ⏳ |
@@ -130,7 +132,7 @@
 | R1.3 | 📋 Formal ACCEPTANCE + закрытие R1 |
 | R1.4 | 📋 Stage 2b (panel captions) — следующий этап Story Analyzer |
 
-**Документация:** [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md)
+**Документация:** [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md), [STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md)
 
 ---
 
@@ -170,7 +172,7 @@
 | Выбор путей (Обзор…) | ✅ | ✅ | — |
 | Статус моделей (B0) | ✅ | ✅ | — |
 | TPSMM + driving video | ✅ | ✅ | — |
-| Story 2a (bbox + OCR HITL) | — | ✅ | — |
+| ExText / Stage 2a (bbox + OCR HITL) | — | ✅ | — |
 | Память UI (paths, story2a) | ✅ | ✅ | — |
 | Split snap grid/objects | S 📋 | S 📋 | — |
 | Сегментация объектов | B3 📋 | B3 📋 | — |

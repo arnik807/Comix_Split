@@ -1,9 +1,11 @@
 # ComicSplit — документация (актуальная)
 
-**Версия документа:** 1.6 (июнь 2026) — блоки A, B0, B1, B4; TPSMM (B2); **Story 2a HITL**; Split reading_order  
-**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.3**, вкладки Split / Upscale / Video / **Story 2a**); опционально Go CLI.
+**Версия документа:** 1.7 (июнь 2026) — блоки A, B0, B1, B4; TPSMM (B2); **ExText HITL** (Stage 2a); manual/auto workflow; fix путей панелей; Split reading_order  
+**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.3**, вкладки Split / Upscale / Video / **ExText**); опционально Go CLI.
 
-Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video / Story 2a), **Go CLI**.
+Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video / ExText), **Go CLI**.
+
+> **ExText** — UI-название вкладки извлечения текста (Story Analyzer Stage 2a). В API и конфигах: `story2a`, `stage_2a`.
 
 Статус реализации по модулям: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).  
 Исторические материалы: [archive/](archive/) (`ComicSplit_Specification_v2.0.md`, `implementation_plan_mvp.md` и др.).
@@ -68,7 +70,7 @@ SPLIT_PANELS_DEV/
 ├── anim/                   # upscale, harmonize, render, animate_*
 ├── utils/                  # config, anim_config, presets, io_helpers, path_resolve, ui_tooltips, path_dialog
 ├── api/server.py           # FastAPI v1.3 (:8000)
-├── frontend/index.html     # Konva + вкладки Split/Upscale/Video/Story 2a
+├── frontend/index.html     # Konva + вкладки Split/Upscale/Video/ExText
 ├── scripts/                # модели split + anim
 ├── cmd/comicsplit/         # Go CLI
 ├── ml_worker/main.py
@@ -115,7 +117,7 @@ powershell -ExecutionPolicy Bypass -File scripts\download_animate_models.ps1
 python scripts\quantize_animate_models.py --verify
 ```
 
-См. `scripts/MODELS_SETUP_GUIDE.md` и [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md). DepthFlow: `pip install depthflow` (делает скрипт загрузки).
+См. [MODELS_SETUP_GUIDE.md](MODELS_SETUP_GUIDE.md) и [MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md). DepthFlow: `pip install depthflow` (делает скрипт загрузки).
 
 ### 4.4. Прокси (если Gradio не открывается)
 
@@ -324,7 +326,7 @@ PNG с альфа-каналом: фон прозрачный, панель вы
 
 ## 9. Способ 3 — веб-редактор (порт 8000)
 
-Split с ручной правкой + апскейл, видео и **Story 2a** без Gradio. FastAPI **v1.3** + `frontend/index.html`. Функционал **согласован с Gradio** (пресеты, tooltips, детектор comic/manga, backend апскейла, TPSMM + driving MP4).
+Split с ручной правкой + апскейл, видео и **ExText** без Gradio. FastAPI **v1.3** + `frontend/index.html`. Функционал **согласован с Gradio** (пресеты, tooltips, детектор comic/manga, backend апскейла, TPSMM + driving MP4).
 
 ### 9.1. Запуск
 
@@ -345,7 +347,7 @@ uvicorn api.server:app --reload --port 8000
 | **Обзор…** | `POST /api/path/pick` — нативный диалог на машине, где запущен uvicorn |
 | **Пути** | Ручной ввод в текстовое поле (относительные пути предпочтительны при кириллице) |
 | **Память UI** | Пути, настройки и активная вкладка сохраняются (`localStorage` + `config/ui_state.user.json`) |
-| **↺ Сброс** | Кнопки сброса Split / Upscale / Video / Story 2a — заводские значения из config |
+| **↺ Сброс** | Кнопки сброса Split / Upscale / Video / **ExText** — заводские значения; ExText также очищает открытый проект в редакторе |
 
 ### 9.3. Вкладка Split
 
@@ -369,19 +371,23 @@ uvicorn api.server:app --reload --port 8000
 | Upscale | `POST /api/upscale` | PNG (backend, CUGAN/SPAN поля); `GET /api/upscale/options` |
 | Video | `POST /api/animate` | MP4 + `storyboard.mp4`; режимы incl. `tpsmm` + driving video |
 
-### 9.5. Вкладка Story 2a
+### 9.5. Вкладка ExText (Stage 2a)
 
-Story Analyzer Stage 2a: детекция speech bubbles + OCR + ручная правка. Подробнее: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
+Извлечение текста из speech bubbles: детекция + OCR + ручная правка. Подробнее: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md), режимы: [STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md).
 
 | Элемент | Поведение |
 |---------|-----------|
-| **Обработка** | `POST /api/story/stage_2a/process` — папка upscaled PNG → `stage_2a.json` |
+| **Режим** | **Ручной** (default): рамки → OCR по панели; **Авто**: batch YOLO + OCR по папке |
+| **Создать из папки** | `POST /api/story/stage_2a/init` — проект с пустыми баблами |
+| **Авто-обработка** | `POST /api/story/stage_2a/process` — upscaled PNG → `stage_2a.json` |
+| **Загрузить проект** | sync PNG + `GET …?panels_dir=` — только файлы из указанной папки |
 | **Редактор** | Drag/resize bbox; chrome на рамке: **№ / ↻ re-OCR / ×** |
 | **Текст** | Отдельное окно `#s2a-bubble-frame` (не привязано к bbox) |
 | **Порядок** | `reading_order` баблов — как у панелей Split |
-| **Ручной бабл** | «+ Добавить бабл» — рамка без рисования rect |
+| **Ручной бабл** | «+ Добавить бабл» / рисование rect |
 | **OCR** | SiliconFlow VLM по умолчанию; нужен `.env` с `SILICONFLOW_API_KEY` |
-| **Persist** | Проект и пути — секция `story2a` в ui_state |
+| **Persist** | `project`, `panels_dir`, `workflow_mode`, `output_json_path` — секция `story2a` в ui_state |
+| **Смена папки** | При открытом проекте — сброс сессии; создайте или загрузите проект заново |
 
 ### 9.6. Пути к файлам
 
@@ -409,14 +415,19 @@ Story Analyzer Stage 2a: детекция speech bubbles + OCR + ручная п
 | POST | `/api/presets/apply` | Применить пресет к конфигам |
 | GET | `/api/tooltips` | Тексты подсказок для полей |
 | POST | `/api/path/pick` | Нативный выбор файла/папки (`kind`: `file` \| `folder`) |
-| GET | `/api/image?path=` | Исходник для Konva |
+| GET | `/api/image?path=` | Исходник для Konva (`Cache-Control: no-store`) |
 | GET | `/api/video?path=` | MP4 для `<video>` |
 | GET/PUT | `/api/ui/state` | Память UI (split, upscale, video, story2a) |
 | POST | `/api/ui/state/reset` | Сброс секции UI |
 | GET | `/api/story/stage_2a/options` | OCR-движки, языки, VLM-модель |
-| POST | `/api/story/stage_2a/process` | Batch: панели → JSON |
-| GET/PUT | `/api/story/stage_2a/{project}` | Чтение / сохранение правок |
+| POST | `/api/story/stage_2a/init` | Создать проект из папки (пустые баблы) |
+| POST | `/api/story/stage_2a/process` | Batch: YOLO + OCR по папке |
+| POST | `/api/story/stage_2a/sync_panels` | Sync PNG → `project/panels/` (replace) |
+| GET | `/api/story/stage_2a/{project}?panels_dir=` | JSON + пути PNG из папки UI |
+| PUT | `/api/story/stage_2a/{project}` | Сохранение правок |
 | POST | `/api/story/stage_2a/{project}/reocr` | Re-OCR одного бабла |
+| POST | `/api/story/stage_2a/{project}/ocr_panel` | OCR всех баблов текущей панели |
+| POST | `/api/story/stage_2a/{project}/detect_panel` | YOLO текущей панели (без OCR) |
 
 ---
 

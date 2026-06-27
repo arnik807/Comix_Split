@@ -46,7 +46,7 @@ from utils.presets import (  # noqa: E402
     snapshot_from_configs,
 )
 from utils.ui_tooltips import FIELD_TIPS  # noqa: E402
-from utils.path_dialog import pick_file, pick_folder  # noqa: E402
+from utils.path_dialog import pick_file, pick_folder, pick_save_file  # noqa: E402
 from utils.ui_state import (  # noqa: E402
     default_state,
     load_ui_state,
@@ -301,8 +301,18 @@ def api_path_pick(req: PathPickRequest):
             )
         elif kind == "folder":
             picked = pick_folder(req.initial, title=req.title or "Выберите папку")
+        elif kind == "save_file":
+            picked = pick_save_file(
+                req.initial,
+                title=req.title or "Сохранить файл",
+                filetypes=[
+                    ("JSON", "*.json"),
+                    ("All files", "*.*"),
+                ],
+                defaultextension=".json",
+            )
         else:
-            raise HTTPException(400, detail="kind must be 'file', 'video', or 'folder'")
+            raise HTTPException(400, detail="kind must be 'file', 'video', 'folder', or 'save_file'")
     except HTTPException:
         raise
     except Exception as exc:
@@ -467,7 +477,9 @@ def api_image(path: str):
         ".bmp": "image/bmp",
     }
     return FileResponse(
-        str(p), media_type=media_map.get(suffix, "application/octet-stream")
+        str(p),
+        media_type=media_map.get(suffix, "application/octet-stream"),
+        headers={"Cache-Control": "no-store"},
     )
 
 

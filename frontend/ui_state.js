@@ -7,6 +7,7 @@
     const VERSION = 1;
     let saveTimer = null;
     let restoring = false;
+    let persistGeneration = 0;
 
     const $ = (id) => document.getElementById(id);
 
@@ -71,27 +72,57 @@
     }
 
     function collectStory2a() {
+        const manual = $('s2a-mode-manual');
+        const mode = (manual && manual.checked) ? 'manual' : 'auto';
         return {
             project: $('s2a-project')?.value?.trim() || '',
             panels_dir: $('s2a-panels-dir')?.value?.trim() || '',
+            workflow_mode: mode,
+            output_json_path: $('s2a-json-path')?.value?.trim() || '',
         };
     }
 
     function collectStory2aForPersist() {
-        const s = collectStory2a();
-        const out = {};
-        if (s.project) out.project = s.project;
-        if (s.panels_dir) out.panels_dir = s.panels_dir;
-        return Object.keys(out).length ? out : null;
+        return collectStory2a();
+    }
+
+    const SECTION_PATH_KEYS = {
+        split: ['source_path', 'folder_path', 'output_dir'],
+        upscale: ['panels_dir', 'output_dir'],
+        video: ['panels_dir', 'output_dir', 'tpsmm_driving_video'],
+        story2a: ['project', 'panels_dir', 'output_json_path'],
+    };
+
+    const SECTION_ENUM_FIELDS = {
+        story2a: { workflow_mode: ['manual', 'auto'] },
+    };
+
+    function mergePathSection(server, local, pathKeys, enumFields) {
+        const s = server || {};
+        const l = local || {};
+        if (local == null) return { ...s };
+        const out = { ...s, ...l };
+        (pathKeys || []).forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(l, key)) {
+                out[key] = l[key] != null ? String(l[key]).trim() : '';
+            }
+        });
+        Object.entries(enumFields || {}).forEach(([key, allowed]) => {
+            if (!Object.prototype.hasOwnProperty.call(l, key)) return;
+            out[key] = allowed.includes(l[key])
+                ? l[key]
+                : (allowed.includes(s[key]) ? s[key] : allowed[0]);
+        });
+        return out;
     }
 
     function mergeStory2aSection(server, local) {
-        const s = server || {};
-        const l = local || {};
-        return {
-            project: (l.project && String(l.project).trim()) || s.project || '',
-            panels_dir: (l.panels_dir && String(l.panels_dir).trim()) || s.panels_dir || '',
-        };
+        return mergePathSection(
+            server,
+            local,
+            SECTION_PATH_KEYS.story2a,
+            SECTION_ENUM_FIELDS.story2a,
+        );
     }
 
     function mergeUiState(server, local) {
@@ -109,9 +140,9 @@
         return {
             version: VERSION,
             global: { ...(base.global || {}), ...(local.global || {}) },
-            split: { ...(base.split || {}), ...(local.split || {}) },
-            upscale: { ...(base.upscale || {}), ...(local.upscale || {}) },
-            video: { ...(base.video || {}), ...(local.video || {}) },
+            split: mergePathSection(base.split, local.split, SECTION_PATH_KEYS.split),
+            upscale: mergePathSection(base.upscale, local.upscale, SECTION_PATH_KEYS.upscale),
+            video: mergePathSection(base.video, local.video, SECTION_PATH_KEYS.video),
             story2a: mergeStory2aSection(base.story2a, local.story2a),
         };
     }
@@ -141,8 +172,13 @@
 
     function applyUpscaleSection(u, prefix) {
         const p = prefix || 'up';
-        if ($( `${p}-panels`)) $(`${p}-panels`).value = u.panels_dir || '';
-        if ($( `${p}-output`)) $(`${p}-output`).value = u.output_dir || (p === 'up' ? 'output_upscaled' : 'story_out');
+        const outDefault = p === 'up' ? 'output_upscaled' : 'story_out';
+        if ($(`${p}-panels`)) {
+            $(`${p}-panels`).value = u.panels_dir != null ? u.panels_dir : '';
+        }
+        if ($(`${p}-output`)) {
+            $(`${p}-output`).value = u.output_dir != null ? u.output_dir : outDefault;
+        }
         if ($( `${p}-backend`)) $(`${p}-backend`).value = u.backend || 'realesrgan';
         if ($( `${p}-model`)) $(`${p}-model`).value = u.model || 'animevideov3';
         if ($( `${p}-cugan-noise`)) setRange(`${p}-cugan-noise`, u.cugan_noise ?? -1);
@@ -170,8 +206,8 @@
         if (g.active_preset && hooks().setPresetActive) hooks().setPresetActive(g.active_preset);
         if ($('preset-persist')) $('preset-persist').checked = !!g.preset_persist;
 
-        if ($('img-path')) $('img-path').value = s.source_path || '';
-        if ($('out-dir')) $('out-dir').value = s.output_dir || '';
+        if ($('img-path')) $('img-path').value = s.source_path != null ? s.source_path : '';
+        if ($('out-dir')) $('out-dir').value = s.output_dir != null ? s.output_dir : '';
         if ($('panel-detector')) $('panel-detector').value = s.panel_detector || 'comic';
         if ($('use-sam')) $('use-sam').checked = !!s.use_sam;
         if ($('reading-order')) $('reading-order').checked = s.reading_order !== false;
@@ -181,8 +217,6 @@
         if ($('poly-mode')) {
             $('poly-mode').checked = !!s.poly_mode;
             if (typeof window.S !== 'undefined') window.S.polyMode = !!s.poly_mode;
-            const ph = $('poly-hint');
-            if (ph) ph.className = 'poly-hint' + (s.poly_mode ? ' show' : '');
         }
 
         applyUpscaleSection(u, 'up');
@@ -200,8 +234,14 @@
         setRange('vid-fps', v.fps ?? 24);
         if ($('vid-concat')) $('vid-concat').checked = v.do_concat !== false;
 
-        if ($('s2a-project')) $('s2a-project').value = s2.project || '';
-        if ($('s2a-panels-dir')) $('s2a-panels-dir').value = s2.panels_dir || '';
+        if ($('s2a-project')) $('s2a-project').value = s2.project != null ? s2.project : '';
+        if ($('s2a-panels-dir')) $('s2a-panels-dir').value = s2.panels_dir != null ? s2.panels_dir : '';
+        if ($('s2a-json-path')) $('s2a-json-path').value = s2.output_json_path != null ? s2.output_json_path : '';
+        const mode = s2.workflow_mode === 'auto' ? 'auto' : 'manual';
+        const rm = $('s2a-mode-manual');
+        const ra = $('s2a-mode-auto');
+        if (rm) rm.checked = mode === 'manual';
+        if (ra) ra.checked = mode === 'auto';
         if (hooks().syncStory2aFromUi) hooks().syncStory2aFromUi();
 
         if (g.active_tab && hooks().switchTab) hooks().switchTab(g.active_tab);
@@ -218,6 +258,7 @@
 
     async function persist() {
         if (restoring) return;
+        const gen = ++persistGeneration;
         const body = collectAll();
         try {
             localStorage.setItem(LS_KEY, JSON.stringify(body));
@@ -230,12 +271,14 @@
                 video: body.video,
             };
             const s2a = collectStory2aForPersist();
-            if (s2a) patch.story2a = s2a;
-            await fetch('/api/ui/state', {
+            patch.story2a = s2a;
+            const r = await fetch('/api/ui/state', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
                 body: JSON.stringify(patch),
             });
+            if (gen !== persistGeneration) return;
+            if (!r.ok) return;
         } catch (_) { /* offline */ }
     }
 
@@ -270,6 +313,11 @@
     }
 
     async function resetSection(section) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        persistGeneration += 1;
+        restoring = true;
+        window.__uiRestoring = true;
         try {
             const r = await fetch('/api/ui/state/reset', {
                 method: 'POST',
@@ -280,11 +328,15 @@
             const st = await r.json();
             localStorage.setItem(LS_KEY, JSON.stringify(st));
             applyState(st);
+            if (hooks().onUiResetSection) hooks().onUiResetSection(section);
             if (hooks().toast) hooks().toast(`Сброс настроек: ${section}`);
             return st;
         } catch (e) {
             if (hooks().toast) hooks().toast(e.message || 'Сброс не удался', 'err');
             return null;
+        } finally {
+            restoring = false;
+            window.__uiRestoring = false;
         }
     }
 

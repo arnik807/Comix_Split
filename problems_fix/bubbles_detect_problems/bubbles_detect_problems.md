@@ -4,6 +4,7 @@
 > **⚠️ Июнь 2026 — статус:** OCR **переведён на SiliconFlow VLM** (`Qwen/Qwen3-VL-8B-Instruct`).  
 > Актуальный стек и пайплайн: [../../spec_s/STORY_ANALYZER_STAGE_2A.md](../../spec_s/STORY_ANALYZER_STAGE_2A.md)  
 > Roadmap: [ROADMAP_STAGE_2A.md](ROADMAP_STAGE_2A.md) · Консервация локального OCR: [LEGACY_LOCAL_OCR.md](LEGACY_LOCAL_OCR.md)  
+> **UI:** вкладка **ExText** на `:8000`; режимы **Ручной / Авто** — [STORY_ANALYZER_STAGE_2A_WORKFLOW.md](../../spec_s/STORY_ANALYZER_STAGE_2A_WORKFLOW.md)  
 > **Ниже — исходная постановка проблемы** (локальный Paddle/EasyOCR), сохранена для контекста.
 
 **Проект:** ComicSplit / Story Analyzer R1  

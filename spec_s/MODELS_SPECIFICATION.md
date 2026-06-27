@@ -1,7 +1,7 @@
 # ComicSplit — спецификация моделей
 
 **Версия:** 1.2 (июнь 2026)  
-**Связанные документы:** [ARCHITECTURE.md](ARCHITECTURE.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
+**Связанные документы:** [ARCHITECTURE.md](ARCHITECTURE.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), [MODELS_SETUP_GUIDE.md](MODELS_SETUP_GUIDE.md) (установка)
 
 Документ описывает все ML-модели и inference-инструменты проекта: ссылки на источники, оценку под целевое железо, параметры запуска и рекомендации по качеству.
 
@@ -43,7 +43,7 @@ PNG панели
     или OpenCV эффекты                   ← быстрая анимация
   → ffmpeg → MP4
 
-Story 2a (опционально после split/upscale)
+Story 2a / ExText (опционально после split/upscale)
   → yolo_manga class 1 (tiled) → crop bubble
   → SiliconFlow VLM OCR (API)  [fallback: PaddleOCR local]
   → stage_2a.json

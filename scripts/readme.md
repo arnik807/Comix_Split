@@ -1,6 +1,6 @@
 ## Что за файлы в этой папке:
 
-**`MODELS_SETUP_GUIDE.md`** — полный справочник: откуда что берётся, куда кладётся, зачем, с таблицами и пояснениями.
+**`MODELS_SETUP_GUIDE.md`** перенесён в **`spec_s/MODELS_SETUP_GUIDE.md`** — полный справочник: split, anim, ExText, квантование, verify.
 
 **`download_animate_models.ps1`** — кладёшь в `scripts/`, запускаешь один раз:
 ```powershell

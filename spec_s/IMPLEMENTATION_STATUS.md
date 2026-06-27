@@ -1,6 +1,6 @@
 # ComicSplit — статус реализации
 
-**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован; R1 Stage 2a — интерактивный HITL ✅)  
+**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован; R1 ExText — HITL + manual/auto + fix путей ✅)  
 **Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)  
 **Технологический стек и архитектура:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -20,8 +20,8 @@
 | CLI anim (`anim_pipeline.py`) | ✅ **Готово** |
 | Anim модули (`anim/`: upscale, harmonize, opencv, depthflow, render) | ✅ **Готово** |
 | Backend апскейла: Real-ESRGAN / Real-CUGAN / SPAN (NCNN) | ✅ **Готово** (`anim/upscale.py`) |
-| Веб-редактор FastAPI + Konva (`:8000`) — Split / Upscale / Video / **Story 2a** | ✅ **Готово** |
-| Память UI (localStorage + `ui_state.user.json`, секции split/upscale/video/story2a) | ✅ **Готово** (`utils/ui_state.py`, `frontend/ui_state.js`) |
+| Веб-редактор FastAPI + Konva (`:8000`) — Split / Upscale / Video / **ExText** | ✅ **Готово** |
+| Память UI (localStorage + `ui_state.user.json`, секции split/upscale/video/story2a) | ✅ **Готово** — сброс секций, явная очистка путей |
 | Split: порядок чтения панелей (№, reorder в sidebar и на канвасе) | ✅ **Готово** (`frontend/reading_order.js`) |
 | Подсказки (tooltips) во всех настройках | ✅ **Готово** (`utils/ui_tooltips.py`) |
 | Выбор путей (диалог + ручной ввод) | ✅ **Готово** (`utils/path_dialog.py`) |
@@ -34,7 +34,7 @@
 | gRPC Go↔Python | ❌ **Нет** |
 | PyInstaller EXE | 🟡 Spec есть, сборка вручную |
 | Benchmark < 600 ms/стр. | 🟡 Цель не закрыта |
-| **Story Analyzer Stage 2a** (bbox + VLM OCR + интерактивный HITL) | 🟡 **Готово в коде/UI** — SiliconFlow VLM; formal ACCEPTANCE ⏳ |
+| **Story Analyzer ExText (Stage 2a)** (bbox + VLM OCR + HITL + manual/auto) | 🟡 **Готово в коде/UI** — SiliconFlow VLM; formal ACCEPTANCE ⏳ |
 | Split: snap grid / snap to objects | 📋 **В roadmap** — см. [ROADMAP.md](ROADMAP.md) блок S |
 
 Подробнее: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
@@ -70,7 +70,7 @@
 | `utils/path_resolve.py` | Пути с кириллицей и mojibake |
 | `main.py` | Gradio 5.x, 3 вкладки |
 | `api/server.py` v1.3.0 | FastAPI REST |
-| `frontend/index.html` | Konva-редактор Split/Upscale/Video/Story 2a + пресеты + tooltips |
+| `frontend/index.html` | Konva-редактор Split/Upscale/Video/ExText + пресеты + tooltips |
 | `ml_worker/main.py` | IPC для Go |
 | `cmd/comicsplit/` + `internal/*` | Go CLI |
 | `scripts/split_models_craft_scripts/` | Скачивание + квантование split моделей |
@@ -89,7 +89,8 @@
 | `story_analyzer/env_loader.py` | `.env` для API keys |
 | `config/story_stage_2a.yaml` | Stage 2a конфиг |
 | `api/story_stage_2a.py` | REST Stage 2a |
-| `frontend/story_2a.js` | UI Konva Stage 2a |
+| `frontend/story_2a.js` | UI Konva ExText (Stage 2a): boundPanelsDir, panel_paths, workflow_mode |
+| `tests/test_stage_2a_sync.py` | sync_panels, panel_paths source_only, reocr |
 | `scripts/diagnose_stage_2a.py` | Диагностика bbox + OCR |
 | `scripts/test_siliconflow_api.py` | Smoke-test SiliconFlow |
 
@@ -226,8 +227,9 @@ go build -o comicsplit.exe ./cmd/comicsplit
 | `anime_6B` | Только ×4; ×2 через этот backend даёт артефакты |
 | Go CLI | CBR только через Python subprocess |
 | Benchmark | Цель < 600 ms/стр. не достигнута в Accurate+SAM; Fast — зависит от страницы |
-| Stage 2a OCR | Облако SiliconFlow по умолчанию; нужен API key и интернет; ~1–3 с/бабл |
-| Stage 2a det | Manga YOLO class 1 — слабее на western comics; tiled YOLO частично компенсирует |
-| Stage 2a UI | Текстовое окно бабла отделено от bbox; позиции в `S2.frameLayouts` (не в JSON) |
+| Stage 2a / ExText OCR | Облако SiliconFlow по умолчанию; нужен API key; ~1–3 с/бабл |
+| Stage 2a / ExText det | Manga YOLO class 1 — слабее на western comics |
+| ExText UI | Detached text frame; `frameLayouts` только в памяти браузера |
+| ExText paths | Смена `panels_dir` сбрасывает сессию; load + sync обязателен для новой папки |
 | PaddleOCR local | Fallback only; на ru-комиксах не годится как primary — см. LEGACY_LOCAL_OCR.md |
 | Split snap | Не реализовано; следующий UX-шаг — блок S в ROADMAP |

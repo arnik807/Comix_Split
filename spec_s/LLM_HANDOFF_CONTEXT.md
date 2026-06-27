@@ -41,7 +41,7 @@ CBZ / PNG страницы → PNG панели (split) → апскейл → 1
 | # | Интерфейс | Порт / команда | Возможности |
 |---|-----------|----------------|-------------|
 | 1 | **Gradio** | `:7860`, `python main.py` | Split / Upscale / Video, пресеты, tooltips, диалоги путей |
-| 2 | **Веб-редактор** | `:8000`, `uvicorn api.server:app --port 8000` | Split + **ручная правка** масок (Konva), Upscale, Video, **Story 2a** |
+| 2 | **Веб-редактор** | `:8000`, `uvicorn api.server:app --port 8000` | Split + **ручная правка** масок (Konva), Upscale, Video, **ExText** |
 | 3 | **CLI split** | `python pipeline.py` | Пакетная нарезка |
 | 4 | **CLI anim** | `python anim_pipeline.py` | Апскейл + видео без UI |
 | 5 | **Go CLI** | `comicsplit.exe` | Batch split через `ml_worker` (CBR только в Python) |
@@ -79,12 +79,12 @@ CBZ / PNG страницы → PNG панели (split) → апскейл → 1
 | **B4** | Backend апскейла Real-CUGAN + SPAN (NCNN Vulkan) | ✅ Закрыт |
 | **B2** | TPSMM motion transfer | 🟡 Код + UI + `anim_pipeline` — нужны тесты на реальных панелях |
 | **B3** | Сегментация персонажа для TPSMM, SAM2-tiny | 📋 В планах |
-| **R1** | Story Analyzer Stage 2a (bbox + VLM OCR + HITL) | 🟡 Интерактив ✅; formal ACCEPTANCE ⏳ |
+| **R1** | Story Analyzer ExText (Stage 2a: bbox + VLM OCR + HITL) | 🟡 Интерактив ✅; formal ACCEPTANCE ⏳ |
 | **S** | Split snap grid / snap to objects | 📋 Следующий UX-шаг — см. ROADMAP блок S |
 
 **Не сделано / отложено:** OpenCV fast-path split, Wails, gRPC, benchmark <600 ms/стр., PyInstaller сборка «из коробки», `tests/test_tpsmm.py`, B1.4 benchmark детекторов (опционально).
 
-**Stage 2a OCR:** основной путь — **SiliconFlow VLM**, не EasyOCR/Paddle primary. См. `spec_s/STORY_ANALYZER_STAGE_2A.md`.
+**ExText OCR:** основной путь — **SiliconFlow VLM**, не EasyOCR/Paddle primary. UI-имя вкладки **ExText**; API/id: `story2a`. См. `spec_s/STORY_ANALYZER_STAGE_2A.md`, `STORY_ANALYZER_STAGE_2A_WORKFLOW.md`.
 
 **API:** FastAPI **v1.3.0** (`api/server.py`).  
 **Тесты:** ~**67** pytest.
@@ -101,7 +101,7 @@ CBZ / PNG страницы → PNG панели (split) → апскейл → 1
 Split ML:     ONNX CPU — yolo_comic_int8 | yolo_manga_int8 + mobilesam_*_int8
 Anim:         NCNN Vulkan (Real-ESRGAN / CUGAN / SPAN)
               OpenCV эффекты | DepthFlow | TPSMM ONNX | ffmpeg
-Story 2a:     YOLO manga tiled (bbox) + SiliconFlow VLM OCR (default)
+Story 2a:     YOLO manga tiled (bbox) + SiliconFlow VLM OCR (default)  # UI: ExText
               Paddle/EasyOCR — offline fallback only
               HITL: bbox drag/resize, reading_order, detached text frame
 Split UI:     reading_order панелей; snap grid/objects — блок S (не реализовано)
@@ -133,29 +133,31 @@ Split UI:     reading_order панелей; snap grid/objects — блок S (н
 
 - **:8000:** localStorage `comicsplit.ui.v1` + файл `config/ui_state.user.json`; автосохранение с debounce; кнопки **↺ Сброс** по секциям.
 - **Gradio:** чтение/запись `ui_state.user.json`; `demo.load` восстанавливает поля; активная вкладка сохраняется.
-- **story2a:** project, paths, `frameLayouts`; merge **не затирает** пути пустыми строками после reload.
+- **story2a:** `project`, `panels_dir`, `workflow_mode`, `output_json_path`; сброс ExText → `clearSession()`; пустая строка пути = явная очистка; merge `_merge_section_paths` для всех секций с путями.
 - Общий файл связывает оба UI на одной машине (разные порты → разный localStorage, один файл через API/Gradio).
 
 ---
 
 ## 8. Документация (после консолидации)
 
-Активные файлы в `spec_s/`:
+Активные файлы в `spec_s/` (9 + handoff):
 
 | Файл | Роль |
 |------|------|
-| `ComicSplit_Documentation.md` | Руководство пользователя (v1.6+) |
+| `ComicSplit_Documentation.md` | Руководство пользователя (v1.7+) |
 | `ARCHITECTURE.md` | Стек, API, структура |
 | `IMPLEMENTATION_STATUS.md` | Статус модулей |
 | `MODELS_SPECIFICATION.md` | Все модели, параметры, железо |
+| `MODELS_SETUP_GUIDE.md` | Установка моделей (split, anim, ExText) |
 | `ROADMAP.md` | План блоков A/B/R1/**S** |
-| `STORY_ANALYZER_STAGE_2A.md` | Stage 2a фактический стек + HITL UI |
+| `STORY_ANALYZER_STAGE_2A.md` | ExText (Stage 2a): стек + HITL + API + пути PNG |
+| `STORY_ANALYZER_STAGE_2A_WORKFLOW.md` | Режимы Ручной / Авто |
 | `README.md` | Индекс spec_s/ |
 | `LLM_HANDOFF_CONTEXT.md` | Этот handoff |
 | `archive/` | Устаревшие спеки (v2.0, SPLIT_DETECTORS, ROADMAP_QUALITY_BOOST и др.) |
 
 Корень: `README.md`, `CHANGELOG.md`.  
-Вне spec_s: `scripts/MODELS_SETUP_GUIDE.md`, `models/README.md`.
+Вне spec_s: `models/README.md`, `scripts/readme.md`.
 
 Папка `spec_s/Claude_track_anliz/` — черновики слияния доков; канон — файлы в корне `spec_s/`.
 
@@ -197,11 +199,16 @@ Split UI:     reading_order панелей; snap grid/objects — блок S (н
 | POST | `/api/ui/state/reset` | Сброс секции UI |
 | POST | `/api/path/pick` | Нативный диалог (`kind`: file/folder/video) |
 | GET | `/api/tooltips` | Подсказки |
-| POST | `/api/story/stage_2a/process` | Stage 2a batch OCR |
-| GET/PUT | `/api/story/stage_2a/{project}` | Stage 2a JSON |
+| POST | `/api/story/stage_2a/init` | Создать проект из папки |
+| POST | `/api/story/stage_2a/process` | Batch YOLO + OCR |
+| POST | `/api/story/stage_2a/sync_panels` | Sync PNG в project/panels |
+| GET | `/api/story/stage_2a/{project}?panels_dir=` | JSON + panel_paths |
+| PUT | `/api/story/stage_2a/{project}` | Сохранение |
 | POST | `/api/story/stage_2a/{project}/reocr` | Re-OCR одного бабла |
+| POST | `/api/story/stage_2a/{project}/ocr_panel` | OCR текущей панели |
+| POST | `/api/story/stage_2a/{project}/detect_panel` | YOLO текущей панели |
 
-Stage 2a подробно: `spec_s/STORY_ANALYZER_STAGE_2A.md`.
+ExText подробно: `spec_s/STORY_ANALYZER_STAGE_2A.md`.
 
 ---
 
@@ -211,12 +218,13 @@ Stage 2a подробно: `spec_s/STORY_ANALYZER_STAGE_2A.md`.
 2. **B4/P1** — Real-CUGAN + SPAN, `models_registry`, verify-скрипты, API v1.3 upscale options.
 3. **B1** — manga YOLO, `panel_detector`, export script, UI dropdown, пресеты не трогают детектор.
 4. **B2** — `animate_tpsmm.py`, режим `tpsmm` в `anim_pipeline`, driving MP4 в UI/API; не глобальный default.
-5. **Документация** — консолидация 14+ файлов → 7 активных + `archive/`; исправлены ошибки (TPSMM в пайплайне, API 1.3, 41 тест).
+5. **Документация** — консолидация 14+ файлов → 9 активных в `spec_s/` + `archive/`; MODELS_SETUP_GUIDE v2.0 (июнь 2026).
 6. **Память UI** — localStorage + файл, сброс по вкладкам, Gradio tab persistence.
 7. **`.gitignore`** — `exam_img/`, `models/**`, benchmark CSV, `ui_state.user.json`, и т.д.
 8. **Stage 2a** — tiled YOLO + локальный Paddle (низкое качество OCR) → pivot на **SiliconFlow VLM**; см. `LEGACY_LOCAL_OCR.md`.
-9. **Stage 2a HITL** — интерактивный редактор: bbox, reading_order, detached text frame, ui_state story2a; Split reading_order UI.
-10. **Snap grid/objects** — обсуждено, разложено в ROADMAP блок S (не реализовано).
+9. **ExText (Stage 2a) HITL** — интерактивный редактор: bbox, reading_order, detached text frame; manual/auto workflow.
+10. **ExText paths fix** — `panels_dir` + `source_only`, `sync_panels`, сброс сессии при смене папки; ui_state reset/persist путей.
+11. **Snap grid/objects** — обсуждено, разложено в ROADMAP блок S (не реализовано).
 
 ---
 
@@ -231,6 +239,7 @@ Stage 2a подробно: `spec_s/STORY_ANALYZER_STAGE_2A.md`.
 | :8000 «Обзор…» | Диалог на машине, где запущен uvicorn |
 | `localhost` vs `127.0.0.1` | Разный localStorage на :8000 |
 | Пресет vs UI state | Пресет — эталонные значения anim/split flags; UI state — последние пути и ручные правки |
+| ExText paths | При указанном `panels_dir` PNG только из этой папки; несовпадение имён в JSON → «Создать из папки» |
 
 ---
 
@@ -276,9 +285,9 @@ pytest -q
 ```
 main.py                 # Gradio UI
 api/server.py           # FastAPI v1.3
-frontend/index.html     # Konva + вкладки Split/Upscale/Video/Story 2a
+frontend/index.html     # Konva + вкладки Split/Upscale/Video/ExText
 frontend/ui_state.js    # Память :8000
-frontend/story_2a.js    # Story 2a HITL
+frontend/story_2a.js    # ExText (Stage 2a) HITL
 frontend/reading_order.js  # Порядок чтения Split + Stage 2a
 pipeline.py             # Split ML
 anim_pipeline.py        # Anim orchestration

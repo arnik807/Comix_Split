@@ -75,7 +75,7 @@ python scripts\test_siliconflow_api.py --vision debug\stage_2a\americ_v2\003_p00
   --panels "exam_img\americ_comix_1\americ_comix__upscaled" `
   --label americ_vlm --limit 5
 
-# 3. UI: uvicorn → Story 2a, новый project test_vlm
+# 3. UI: uvicorn → ExText, новый project test_vlm
 ```
 
 Напишите в чат:
@@ -102,6 +102,9 @@ python scripts\test_siliconflow_api.py --vision debug\stage_2a\americ_v2\003_p00
 | 4.0.6 | Persist `story2a` в ui_state; fix reload paths | ✅ |
 | 4.0.7 | Split: порядок панелей № в sidebar и на канвасе | ✅ |
 | 4.0.8 | UX cleanup: скрыть `panel_id`/bbox/% в sidebar | ✅ |
+| 4.0.9 | Режимы **Ручной / Авто** (`workflow_mode`, init, ocr/detect panel) | ✅ |
+| 4.0.10 | UI-имя **ExText**; compact tooltips/toggles | ✅ |
+| 4.0.11 | Fix путей PNG: `source_only`, `sync_panels`, сброс при смене папки | ✅ |
 
 ### 4.1 — Валидация ⏳
 

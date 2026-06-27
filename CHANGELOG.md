@@ -5,6 +5,21 @@
 
 ## [Unreleased]
 
+### Добавлено
+
+- **ExText** — UI-название вкладки Stage 2a (внутренние id: `story2a`, `stage_2a`, `story_2a.js`)
+- Режимы **Ручной / Авто** (`workflow_mode`): init, OCR/detect по панели, batch process; см. `spec_s/STORY_ANALYZER_STAGE_2A_WORKFLOW.md`
+- API Stage 2a: `POST /init`, `POST /sync_panels`, `POST /{project}/ocr_panel`, `POST /{project}/detect_panel`
+- `GET /{project}?panels_dir=` — пути PNG с учётом папки UI (`source_only`, без stale fallback)
+- Привязка папки панелей: `boundPanelsDir`, сброс сессии при смене папки, sync при «Загрузить проект»
+- `/api/image`: `Cache-Control: no-store`, cache-bust `&v=` в ExText
+
+### Исправлено
+
+- Смешение PNG из разных папок после смены `panels_dir` / сброса ExText
+- Сброс и persist путей: пустая строка явно очищает `panels_dir` / `project` (секции split, upscale, video, story2a)
+- `sync_panels` с `replace=True` удаляет все файлы в `project/panels/` перед копированием
+
 ### Добавлено (R1 — Story Analyzer Stage 2a, интерактив)
 
 - Stage 2a HITL: drag/resize bbox, chrome №/↻/×, detached text frame, ручной бабл «+ Добавить»
@@ -22,7 +37,7 @@
 
 ### Изменено (документация)
 
-- Консолидация `spec_s/`: 7 активных документов (`ARCHITECTURE`, `IMPLEMENTATION_STATUS`, `MODELS_SPECIFICATION`, `ROADMAP`, …) + `spec_s/archive/`
+- **`spec_s/MODELS_SETUP_GUIDE.md`** v2.0 — полная актуализация (split, anim B4, ExText, verify); перенос из `scripts/`
 - Устаревшие файлы перенесены в архив (`SPLIT_DETECTORS.md`, `UPSCALE_UI_PARAMS.md`, `ROADMAP_QUALITY_BOOST.md` и др.)
 - Исправлены статусы TPSMM (интегрирован в `anim_pipeline`), API v1.3, ~41 pytest
 

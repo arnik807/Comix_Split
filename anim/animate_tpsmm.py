@@ -28,7 +28,7 @@ def resolve_tpsmm_paths() -> tuple[Path, Path]:
         names = ", ".join(p.name for p in missing)
         raise FileNotFoundError(
             f"TPSMM ONNX не найдены ({names}). "
-            "См. scripts/MODELS_SETUP_GUIDE.md и scripts/download_animate_models.ps1"
+            "См. spec_s/MODELS_SETUP_GUIDE.md и scripts/download_animate_models.ps1"
         )
     return kp, rel
 

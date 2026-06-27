@@ -134,9 +134,9 @@ def save_split_ui(
 ) -> None:
     patch_ui_state(
         split={
-            "source_path": source_path or "",
-            "folder_path": folder_path or "",
-            "output_dir": output_dir or "output",
+            "source_path": source_path if source_path is not None else "",
+            "folder_path": folder_path if folder_path is not None else "",
+            "output_dir": output_dir if output_dir is not None else "",
             "panel_detector": panel_detector,
             "use_sam": use_sam,
             "reading_order": reading_order,
@@ -159,8 +159,8 @@ def save_upscale_ui(
 ) -> None:
     patch_ui_state(
         upscale={
-            "panels_dir": panels_dir or "",
-            "output_dir": output_dir or "output_upscaled",
+            "panels_dir": panels_dir if panels_dir is not None else "",
+            "output_dir": output_dir if output_dir is not None else "",
             "scale": int(scale),
             "backend": normalize_upscale_backend(backend),
             "model": model,
@@ -194,8 +194,8 @@ def save_video_ui(
 ) -> None:
     patch_ui_state(
         video={
-            "panels_dir": panels_dir or "",
-            "output_dir": output_dir or "story_out",
+            "panels_dir": panels_dir if panels_dir is not None else "",
+            "output_dir": output_dir if output_dir is not None else "",
             "mode": mode,
             "upscale_enabled": upscale_enabled,
             "scale": int(scale),
@@ -212,7 +212,7 @@ def save_video_ui(
             "harmonize_vignette": float(harm_vig),
             "intensity": float(intensity),
             "depthflow_animation": df_anim,
-            "tpsmm_driving_video": tpsmm_driving or "",
+            "tpsmm_driving_video": tpsmm_driving if tpsmm_driving is not None else "",
         }
     )
 

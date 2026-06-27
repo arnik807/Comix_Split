@@ -34,8 +34,13 @@
             --muted: #6b6b7a;
             --ok: #4ade80;
             --err: #f87171;
-            --fw: 320px;
+            --fw: 300px;
             --fh: 56px;
+            --ctl-h: 28px;
+            --tip-sz: 12px;
+            --tog-w: 24px;
+            --tog-h: 14px;
+            --tog-pad: 2px;
             --mono: 'Space Mono', monospace;
             --sans: 'Syne', sans-serif;
         }
@@ -71,12 +76,13 @@
         }
         .mode-pill.std { border-color: rgba(240,192,64,.35); color: var(--accent); }
         .mode-pill.q   { border-color: rgba(167,139,250,.45); color: #a78bfa; }
-        .preset-row { display: flex; gap: 6px; margin-bottom: 8px; }
+        .preset-row { display: flex; gap: 6px; margin-bottom: 6px; width: 100%; }
         .preset-cell { position: relative; flex: 1; min-width: 0; }
         .preset-btn {
-            width: 100%; padding: 7px 30px 7px 10px; font-size: 12px; font-weight: 600;
+            width: 100%; padding: 5px 22px 5px 8px; font-size: 10px; font-weight: 600;
             border-radius: 6px; border: 1px solid var(--border); background: var(--surface2);
             color: var(--text); cursor: pointer; font-family: var(--sans);
+            min-height: var(--ctl-h); line-height: 1.2;
         }
         .preset-btn:hover { border-color: var(--accent); }
         .preset-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
@@ -85,38 +91,48 @@
             z-index: 3; line-height: 0; pointer-events: auto;
         }
         .preset-cell .tip-host .tip-wrap { margin-left: 0; }
-        .preset-hint { font-size: 10px; color: var(--muted); line-height: 1.45; font-family: var(--mono); }
-        .path-row { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
-        .path-row input[type=text] { margin-bottom: 0; flex: 1; min-width: 0; }
+        .preset-hint { font-size: 9px; color: var(--muted); line-height: 1.4; font-family: var(--mono); margin-bottom: 6px; }
+        .path-row {
+            display: flex; gap: 4px; align-items: stretch;
+            margin-bottom: 6px; width: 100%; min-width: 0;
+        }
+        .path-row input[type=text] {
+            margin-bottom: 0; flex: 1; min-width: 0;
+            min-height: var(--ctl-h); line-height: 1.25;
+        }
         .path-browse {
-            padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);
+            flex: 0 0 auto; align-self: stretch;
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
             background: var(--surface2); color: var(--muted); font-family: var(--mono);
-            font-size: 11px; cursor: pointer; white-space: nowrap;
+            font-size: 10px; cursor: pointer; white-space: nowrap;
+            min-height: var(--ctl-h); line-height: 1;
         }
         .path-browse:hover { border-color: var(--accent); color: var(--text); }
         .path-browse:disabled { opacity: .45; cursor: not-allowed; }
         select.inp, input.inp-num {
-            width: 100%; padding: 8px 10px; margin-bottom: 10px;
+            width: 100%; padding: 6px 8px; margin-bottom: 6px;
             background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 11px;
+            border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 10px;
+            min-height: var(--ctl-h); line-height: 1.25;
         }
         select.inp { cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%); background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
         select.inp:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 1px rgba(240,192,64,.25); }
         select.inp option { background: #1a1a1f; color: var(--text); }
-        .field-hint { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
-        .range-row { margin-bottom: 12px; }
+        .field-hint { font-size: 9px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
+        .range-row { margin-bottom: 8px; }
         .range-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-        .range-head .rlbl { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-        .range-head .rval { font-size: 11px; color: var(--accent); font-family: var(--mono); font-weight: 700; min-width: 2.5em; text-align: right; }
+        .range-head .rlbl { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+        .range-head .rval { font-size: 10px; color: var(--accent); font-family: var(--mono); font-weight: 700; min-width: 2.5em; text-align: right; }
         input[type=range] {
             width: 100%; height: 6px; border-radius: 4px; cursor: pointer;
             accent-color: var(--accent); background: var(--border);
         }
-        .seg { display: flex; gap: 6px; margin-bottom: 10px; }
+        .seg { display: flex; gap: 6px; margin-bottom: 6px; width: 100%; }
         .seg-btn {
-            flex: 1; padding: 8px 6px; border-radius: 6px; border: 1px solid var(--border);
-            background: var(--surface2); color: var(--muted); font-family: var(--mono); font-size: 11px;
-            cursor: pointer; transition: all .15s;
+            flex: 1; padding: 6px 4px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--muted); font-family: var(--mono); font-size: 10px;
+            cursor: pointer; transition: all .15s; min-height: var(--ctl-h); line-height: 1.2;
         }
         .seg-btn:hover { border-color: var(--text); color: var(--text); }
         .seg-btn.active { background: var(--accent); color: #0e0e0f; border-color: var(--accent); font-weight: 700; }
@@ -134,14 +150,16 @@
         }
         .tip-wrap {
             position: relative; display: inline-flex; align-items: center; justify-content: center;
-            vertical-align: middle; margin-left: 5px; flex: 0 0 auto; width: 16px; height: 16px;
+            vertical-align: middle; margin-left: 4px; flex: 0 0 auto;
+            width: var(--tip-sz); height: var(--tip-sz);
         }
         .tip-icon {
-            flex: 0 0 16px; width: 16px; height: 16px; min-width: 16px; min-height: 16px;
-            max-width: 16px; max-height: 16px; aspect-ratio: 1;
+            flex: 0 0 var(--tip-sz); width: var(--tip-sz); height: var(--tip-sz);
+            min-width: var(--tip-sz); min-height: var(--tip-sz);
+            max-width: var(--tip-sz); max-height: var(--tip-sz); aspect-ratio: 1;
             border-radius: 50%; padding: 0; margin: 0; border: 1px solid var(--muted);
             background: var(--surface2); color: var(--muted);
-            font-size: 11px; font-weight: 800; font-family: var(--sans);
+            font-size: 9px; font-weight: 800; font-family: var(--sans);
             cursor: help; user-select: none;
             display: inline-flex; align-items: center; justify-content: center;
             line-height: 1; box-sizing: border-box;
@@ -152,31 +170,37 @@
         .tip-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
         .tip-bubble {
             display: none; position: fixed; left: 0; top: 0;
-            width: min(260px, 72vw); max-width: min(260px, 72vw);
-            padding: 10px 11px; border-radius: 8px; background: #1e1e24; color: var(--text);
+            width: min(240px, 72vw); max-width: min(240px, 72vw);
+            padding: 8px 9px; border-radius: 6px; background: #1e1e24; color: var(--text);
             border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,.65);
-            font-size: 11px; line-height: 1.5; font-family: var(--sans); font-weight: 400;
+            font-size: 10px; line-height: 1.45; font-family: var(--sans); font-weight: 400;
             z-index: 200001;
             pointer-events: auto;
             text-transform: none; letter-spacing: 0;
         }
         .tip-bubble.tip-show { display: block; }
         .tip-close {
-            position: absolute; top: 6px; right: 7px;
-            width: 18px; height: 18px; border-radius: 6px;
+            position: absolute; top: 4px; right: 5px;
+            width: 14px; height: 14px; border-radius: 4px;
             border: 1px solid rgba(255,255,255,.12);
             background: rgba(255,255,255,.06);
             color: var(--muted);
             cursor: pointer;
             display: inline-flex; align-items: center; justify-content: center;
-            font-size: 12px; line-height: 1;
+            font-size: 10px; line-height: 1;
         }
         .tip-close:hover { border-color: var(--accent); color: var(--accent); background: rgba(240,192,64,.10); }
-        .tip-bubble .tip-text { display: block; padding-right: 22px; }
-        label.lbl[data-tip] { display: flex; align-items: center; }
-        .tlbl[data-tip], .rlbl[data-tip] { display: inline-flex; align-items: center; }
-        details.adv { margin-top: 6px; }
-        details.adv summary { font-size: 11px; color: var(--muted); cursor: pointer; font-family: var(--mono); margin-bottom: 8px; }
+        .tip-bubble .tip-text { display: block; padding-right: 18px; }
+        label.lbl[data-tip] { display: flex; align-items: center; gap: 2px; }
+        .tlbl[data-tip], .rlbl[data-tip] { display: inline-flex; align-items: center; gap: 2px; }
+        .sec-title-row {
+            display: inline-flex; align-items: center; gap: 2px; flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+        .sec-title-row .tip-host { line-height: 0; }
+        .sec-title-row .sec-title { margin-bottom: 0; }
+        details.adv { margin-top: 4px; }
+        details.adv summary { font-size: 10px; color: var(--muted); cursor: pointer; font-family: var(--mono); margin-bottom: 6px; }
         .sep { flex: 1; }
         #status { font-family: var(--mono); font-size: 11px; color: var(--muted); }
         #status.ok   { color: var(--ok); }
@@ -189,74 +213,115 @@
             background: var(--surface);
             border-right: 1px solid var(--border);
             overflow-y: auto; overflow-x: hidden;
+            min-width: 0;
         }
-        .sec { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-        .sec-title { font-size: 10px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+        .sec { padding: 10px 12px; border-bottom: 1px solid var(--border); width: 100%; min-width: 0; box-sizing: border-box; }
+        .sec-title {
+            display: flex; align-items: baseline; gap: 0;
+            font-size: 9px; font-weight: 600; letter-spacing: 1.1px;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+        }
+        .sec-num {
+            color: var(--accent); font-weight: 800; font-size: 12px;
+            line-height: 1; margin-right: 5px; font-family: var(--sans);
+            letter-spacing: 0; text-transform: none; flex-shrink: 0;
+        }
 
-        label.lbl { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 5px; }
+        input[type=radio], input[type=checkbox] {
+            width: 12px; height: 12px; margin: 0; flex-shrink: 0;
+            accent-color: var(--accent); vertical-align: middle;
+        }
+
+        .trow {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; width: 100%; min-width: 0;
+            min-height: var(--ctl-h); margin-bottom: 0;
+        }
+        .trow-stack {
+            display: flex; flex-direction: column; gap: 2px;
+            margin-bottom: 6px; width: 100%;
+        }
+        .trow-stack .trow { margin-bottom: 0; }
+        .sec > .trow { margin-bottom: 6px; }
+        .tlbl { font-size: 10px; line-height: 1.25; flex: 1; min-width: 0; display: inline-flex; align-items: center; }
+
+        .tog {
+            position: relative; flex-shrink: 0;
+            width: var(--tog-w); height: var(--tog-h);
+            display: inline-flex; align-items: center; justify-content: center;
+            margin: 0; cursor: pointer;
+        }
+        .tog input {
+            position: absolute; opacity: 0; width: 0; height: 0;
+            margin: 0; pointer-events: none;
+        }
+        .sl {
+            position: absolute; inset: 0; background: var(--border);
+            border-radius: var(--tog-h); cursor: pointer; transition: background .2s;
+        }
+        .sl::before {
+            content: ''; position: absolute;
+            width: calc(var(--tog-h) - var(--tog-pad) * 2);
+            height: calc(var(--tog-h) - var(--tog-pad) * 2);
+            left: var(--tog-pad); top: var(--tog-pad);
+            background: white; border-radius: 50%; transition: transform .2s;
+        }
+        .tog input:checked + .sl { background: var(--accent); }
+        .tog input:checked + .sl::before {
+            transform: translateX(calc(var(--tog-w) - var(--tog-h)));
+        }
+        .tog.poly input:checked + .sl { background: #a78bfa; }
+
+        .action-stack { display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: stretch; }
+        .action-stack .btn { margin-top: 0 !important; width: 100%; }
+        .action-stack-row { display: flex; gap: 6px; width: 100%; align-items: stretch; }
+        .action-stack-row .btn { flex: 1; min-width: 0; }
+
+        label.lbl { display: block; font-size: 10px; color: var(--muted); font-family: var(--mono); margin-bottom: 3px; }
 
         input[type=text] {
-            width: 100%; padding: 8px 10px;
+            width: 100%; padding: 6px 8px; margin-bottom: 6px;
             background: var(--surface2); border: 1px solid var(--border);
             border-radius: 6px; color: var(--text);
-            font-family: var(--mono); font-size: 11px; outline: none;
+            font-family: var(--mono); font-size: 10px; outline: none;
             transition: border-color .15s;
+            min-height: var(--ctl-h); line-height: 1.25; box-sizing: border-box;
+        }
+        textarea.inp {
+            width: 100%; padding: 6px 8px; margin-bottom: 6px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text);
+            font-family: var(--mono); font-size: 10px; line-height: 1.35;
+            box-sizing: border-box;
         }
         input[type=text]:focus { border-color: var(--accent); }
 
-        .trow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        .trow:last-child { margin-bottom: 0; }
-        .tlbl { font-size: 12px; }
-
-        .tog { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
-        .tog input { opacity: 0; width: 0; height: 0; }
-        .sl { position: absolute; inset: 0; background: var(--border); border-radius: 18px; cursor: pointer; transition: background .2s; }
-        .sl::before { content: ''; position: absolute; width: 12px; height: 12px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform .2s; }
-        .tog input:checked + .sl { background: var(--accent); }
-        .tog input:checked + .sl::before { transform: translateX(16px); }
-
-        /* Polygon mode toggle — акцентный цвет другой */
-        .tog.poly input:checked + .sl { background: #a78bfa; }
-
         .btn {
-            display: flex; align-items: center; justify-content: center; gap: 7px;
-            width: 100%; padding: 9px 14px; border-radius: 7px;
-            font-family: var(--sans); font-size: 13px; font-weight: 600;
-            cursor: pointer; border: none; outline: none; transition: all .15s;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            width: 100%; padding: 0 10px; border-radius: 6px;
+            font-family: var(--sans); font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 1px solid transparent; outline: none; transition: background .15s, border-color .15s, color .15s;
+            min-height: var(--ctl-h); line-height: 1.2; box-sizing: border-box;
         }
         .btn:disabled { opacity: .38; cursor: not-allowed; }
-        .btn-p { background: var(--accent); color: #0e0e0f; }
-        .btn-p:hover:not(:disabled) { background: #f5d060; transform: translateY(-1px); }
-        .btn-s { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .btn-p { background: var(--accent); color: #0e0e0f; border-color: var(--accent); }
+        .btn-p:hover:not(:disabled) { background: #f5d060; }
+        .btn-s { background: transparent; color: var(--text); border-color: var(--border); }
         .btn-s:hover:not(:disabled) { border-color: var(--text); background: var(--surface2); }
-        .btn-e { background: var(--accent2); color: #fff; }
-        .btn-e:hover:not(:disabled) { background: #e86a3d; transform: translateY(-1px); }
+        .btn-e { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+        .btn-e:hover:not(:disabled) { background: #e86a3d; }
 
-        .stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+        .stats { display: flex; gap: 10px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
         .sv { color: var(--text); font-weight: 700; }
 
-        /* Polygon mode hint */
-        .poly-hint {
-            font-family: var(--mono); font-size: 10px; color: #a78bfa;
-            background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.25);
-            border-radius: 5px; padding: 7px 9px; line-height: 1.5;
-            display: none;
-        }
-        .poly-hint.show { display: block; }
-        .det-hint {
-            font-size: 10px; color: var(--muted); line-height: 1.45;
-            margin-top: 8px; padding: 8px; background: var(--surface2);
-            border-radius: 6px; border: 1px solid var(--border);
-        }
-
-        #panel-list { display: flex; flex-direction: column; gap: 5px; max-height: 320px; overflow-y: auto; }
+        #panel-list { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto; }
 
         .pi, .s2a-bubble-row {
             display: flex; align-items: center; gap: 6px;
-            min-height: 34px;
-            padding: 6px 8px; background: var(--surface2);
+            min-height: var(--ctl-h);
+            padding: 5px 7px; background: var(--surface2);
             border: 1px solid var(--border); border-radius: 6px;
-            font-size: 11px; box-sizing: border-box;
+            font-size: 10px; box-sizing: border-box;
         }
         .pi {
             cursor: pointer; transition: border-color .15s, background .15s;
@@ -267,11 +332,11 @@
         .pi.poly-mode.sel { border-color: #a78bfa; background: rgba(167,139,250,.08); }
 
         .pi-order, .s2a-bubble-row-order {
-            width: 26px;
+            width: 22px;
             flex-shrink: 0;
             text-align: center;
             font-family: var(--mono);
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             color: var(--accent, #f0c040);
             line-height: 1;
@@ -281,7 +346,7 @@
             flex: 1;
             min-width: 0;
             font-family: var(--mono);
-            font-size: 11px;
+            font-size: 10px;
             line-height: 1.25;
         }
         .pi-title {
@@ -306,8 +371,8 @@
         .s2a-bubble-row { cursor: pointer; transition: border-color .15s, background .15s; }
         .s2a-bubble-row.active { border-color: var(--accent, #f0c040); background: rgba(240,192,64,.08); }
         .s2a-bubble-list {
-            max-height: 200px; overflow-y: auto; margin: 8px 0;
-            display: flex; flex-direction: column; gap: 5px;
+            max-height: 120px; overflow-y: auto; margin: 6px 0;
+            display: flex; flex-direction: column; gap: 5px; width: 100%;
         }
         .xbtn { background: none; border: none; cursor: pointer; padding: 1px 4px; border-radius: 3px; color: var(--muted); font-size: 13px; }
         .xbtn:hover { color: var(--err); }
@@ -383,16 +448,17 @@
         }
         .tab-btn {
             flex: 1;
-            padding: 10px 6px;
+            padding: 7px 4px;
             border: none;
             background: transparent;
             color: var(--muted);
             font-family: var(--sans);
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             cursor: pointer;
             border-bottom: 2px solid transparent;
             transition: color .15s, border-color .15s;
+            min-width: 0;
         }
         .tab-btn:hover { color: var(--text); }
         .tab-btn.active {
@@ -400,7 +466,7 @@
             border-bottom-color: var(--accent);
             background: var(--surface);
         }
-        .tab-panel { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+        .tab-panel { display: none; flex: 1; overflow-y: auto; flex-direction: column; width: 100%; min-width: 0; }
         .tab-panel.active { display: flex; }
 
         #view-story2a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 400px; overflow: hidden; }
@@ -503,13 +569,17 @@
         .ro-popup-input { width: 100%; margin-bottom: 10px; }
         .ro-popup-actions { display: flex; gap: 8px; justify-content: flex-end; }
         .s2a-footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-
-        select.inp {
-            width: 100%; padding: 8px 10px;
-            background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 6px; color: var(--text);
-            font-family: var(--mono); font-size: 11px;
+        .s2a-mode-radio label { cursor: pointer; font-size: 10px; line-height: 1; }
+        .s2a-mode-radio { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+        .s2a-mode-radio-inline {
+            flex-direction: row; flex-wrap: wrap; gap: 10px 14px; align-items: center;
         }
+        .s2a-mode-radio-inline label {
+            display: inline-flex; align-items: center; gap: 4px; margin: 0;
+        }
+        .s2a-mode-radio input { margin: 0; flex-shrink: 0; }
+        #s2a-add-mode.s2a-draw-active { border-color: var(--accent, #f0c040); color: var(--accent, #f0c040); }
+        #view-story2a.s2a-draw-cursor { cursor: crosshair; }
 
         #view-batch {
             display: none;
@@ -541,7 +611,7 @@
         }
         .vlinks a:hover { text-decoration: underline; }
         video.preview { max-width: 100%; margin-top: 12px; border-radius: 8px; border: 1px solid var(--border); }
-        .tab-reset-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+        .tab-reset-row { display: flex; justify-content: flex-end; margin-bottom: 4px; width: 100%; }
         .btn-reset {
             font-size: 10px; font-family: var(--mono); letter-spacing: 0.02em;
             padding: 4px 10px; border-radius: 6px; cursor: pointer;
@@ -575,8 +645,8 @@
                     <span class="tip-host" data-tip="preset_quality"></span>
                 </div>
             </div>
-            <div class="trow" style="margin-bottom:6px">
-                <span class="tlbl" style="font-size:11px" data-tip="preset_persist">Сохранить в YAML</span>
+            <div class="trow">
+                <span class="tlbl" data-tip="preset_persist">Сохранить в YAML</span>
                 <label class="tog"><input type="checkbox" id="preset-persist"><span class="sl"></span></label>
             </div>
             <p class="preset-hint" id="preset-desc">Быстро: YOLO без SAM, animevideov3, OpenCV zoom</p>
@@ -587,7 +657,7 @@
             <button type="button" class="tab-btn active" data-tab="split" onclick="switchTab('split')">Split</button>
             <button type="button" class="tab-btn" data-tab="upscale" onclick="switchTab('upscale')">Upscale</button>
             <button type="button" class="tab-btn" data-tab="video" onclick="switchTab('video')">Video</button>
-            <button type="button" class="tab-btn" data-tab="story2a" onclick="switchTab('story2a')">Story 2a</button>
+            <button type="button" class="tab-btn" data-tab="story2a" onclick="switchTab('story2a')">ExText</button>
         </div>
 
         <div id="tab-split" class="tab-panel active">
@@ -595,37 +665,37 @@
             <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('split')">↺ Сброс Split</button>
         </div>
         <div class="sec">
-            <div class="sec-title">Источник</div>
+            <div class="sec-title"><span class="sec-num">①</span><span>Источник</span></div>
             <label class="lbl" data-tip="img_path">Путь к изображению</label>
             <div class="path-row">
                 <input type="text" id="img-path" value="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
                 <button type="button" class="path-browse" onclick="pickPath('img-path','file','Выберите страницу')">Обзор…</button>
             </div>
-            <p class="preset-hint" style="margin-top:6px">Относительный путь от корня проекта — надёжнее при кириллице в каталогах.</p>
         </div>
 
         <div class="sec">
-            <div class="sec-title">Параметры детекции</div>
+            <div class="sec-title"><span class="sec-num">②</span><span>Параметры детекции</span></div>
             <label class="lbl" data-tip="panel_detector">Детектор панелей</label>
-            <select id="panel-detector" class="inp" style="margin-bottom:6px">
+            <select id="panel-detector" class="inp" style="margin-bottom:4px">
                 <option value="comic" selected>Западный комикс</option>
                 <option value="manga">Манга (Manga109)</option>
             </select>
-            <p id="panel-detector-hint" class="field-hint" style="margin-bottom:10px"></p>
-            <div id="split-quality-block">
-                <div class="trow">
-                    <span class="tlbl" data-tip="use_sam">Точные контуры (SAM)</span>
-                    <label class="tog"><input type="checkbox" id="use-sam" onchange="updateSamHint()"><span class="sl"></span></label>
+            <p id="panel-detector-hint" class="field-hint" style="margin-bottom:6px"></p>
+            <div class="trow-stack">
+                <div id="split-quality-block">
+                    <div class="trow">
+                        <span class="tlbl" data-tip="use_sam">Точные контуры (SAM)</span>
+                        <label class="tog"><input type="checkbox" id="use-sam"><span class="sl"></span></label>
+                    </div>
                 </div>
-                <p class="det-hint" id="sam-hint">SAM замедляет детекцию (на exam_imgs часто 1–3 мин). Контуры на холсте — в режиме «Полигон»; экспорт по маске — при полигоне или после правки.</p>
-            </div>
-            <div class="trow">
-                <span class="tlbl" data-tip="reading_order">Порядок чтения</span>
-                <label class="tog"><input type="checkbox" id="reading-order" checked><span class="sl"></span></label>
-            </div>
-            <div class="trow">
-                <span class="tlbl" data-tip="rtl">RTL (манга)</span>
-                <label class="tog"><input type="checkbox" id="rtl"><span class="sl"></span></label>
+                <div class="trow">
+                    <span class="tlbl" data-tip="reading_order">Порядок чтения</span>
+                    <label class="tog"><input type="checkbox" id="reading-order" checked><span class="sl"></span></label>
+                </div>
+                <div class="trow">
+                    <span class="tlbl" data-tip="rtl">RTL (манга)</span>
+                    <label class="tog"><input type="checkbox" id="rtl"><span class="sl"></span></label>
+                </div>
             </div>
             <details class="adv" id="split-thresholds">
                 <summary>Пороги YOLO (расширенные)</summary>
@@ -644,7 +714,7 @@
 
         <!-- Режим редактирования -->
         <div class="sec">
-            <div class="sec-title">Режим редактирования</div>
+            <div class="sec-title"><span class="sec-num">③</span><span>Режим редактирования</span></div>
             <div class="trow">
                 <span class="tlbl" data-tip="poly_mode">Полигон (ломаная форма)</span>
                 <label class="tog poly">
@@ -652,15 +722,13 @@
                     <span class="sl"></span>
                 </label>
             </div>
-            <div class="poly-hint" id="poly-hint">
-                Экспорт по маске (PNG с прозрачностью) — только при включённом режиме или после правки формы.<br><br>
-                Drag вершины — переместить · 2× клик на ребро — добавить точку<br>
-                2× клик на вершину — удалить · «↺» — прямоугольник по bbox
-            </div>
         </div>
 
         <div class="sec">
-            <button class="btn btn-p" id="btn-run" onclick="runDetection()">▶ Запустить детекцию</button>
+            <div class="sec-title"><span class="sec-num">④</span><span>Запуск</span></div>
+            <div class="action-stack">
+                <button class="btn btn-p" id="btn-run" onclick="runDetection()">▶ Запустить детекцию</button>
+            </div>
         </div>
 
         <div class="sec" id="sec-stats" style="display:none">
@@ -680,13 +748,15 @@
         </div>
 
         <div class="sec" id="sec-export" style="display:none">
-            <div class="sec-title">Экспорт</div>
+            <div class="sec-title"><span class="sec-num">⑤</span><span>Экспорт</span></div>
             <label class="lbl" data-tip="out_dir">Папка вывода</label>
             <div class="path-row">
                 <input type="text" id="out-dir" placeholder="C:\output\panels" />
                 <button type="button" class="path-browse" onclick="pickPath('out-dir','folder','Папка экспорта')">Обзор…</button>
             </div>
-            <button class="btn btn-e" id="btn-exp" onclick="exportPanels()">↓ Экспортировать PNG</button>
+            <div class="action-stack">
+                <button class="btn btn-e" id="btn-exp" onclick="exportPanels()">↓ Экспортировать PNG</button>
+            </div>
         </div>
         </div><!-- /tab-split -->
 
@@ -695,10 +765,10 @@
                 <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('upscale')">↺ Сброс Upscale</button>
             </div>
             <div class="sec">
-                <div class="sec-title">Апскейл панелей</div>
-                <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">
-                    Папка с PNG после Split (например <code style="color:var(--accent)">output\mycomic\page_name</code>).
-                </p>
+                <div class="sec-title-row">
+                    <span class="sec-title"><span class="sec-num">①</span><span>Пути</span></span>
+                    <span class="tip-host" data-tip="up_sec_paths"></span>
+                </div>
                 <label class="lbl" data-tip="up_panels">Папка с панелями</label>
                 <div class="path-row">
                     <input type="text" id="up-panels" placeholder="output\mycomic" />
@@ -709,6 +779,9 @@
                     <input type="text" id="up-output" value="output_upscaled" />
                     <button type="button" class="path-browse" onclick="pickPath('up-output','folder','Папка вывода апскейла')">Обзор…</button>
                 </div>
+            </div>
+            <div class="sec">
+                <div class="sec-title"><span class="sec-num">②</span><span>Параметры</span></div>
                 <label class="lbl" data-tip="up_scale">Масштаб</label>
                 <div class="seg" id="up-scale-seg" data-target="up-scale">
                     <button type="button" class="seg-btn active" data-v="2">×2</button>
@@ -752,7 +825,12 @@
                         <button type="button" class="btn btn-e" style="margin-top:6px;font-size:11px" onclick="loadModelsSetup(true)">Обновить статус</button>
                     </details>
                 </div>
-                <button class="btn btn-p" id="btn-upscale" onclick="runUpscale()">▶ Запустить апскейл</button>
+            </div>
+            <div class="sec">
+                <div class="sec-title"><span class="sec-num">③</span><span>Запуск</span></div>
+                <div class="action-stack">
+                    <button class="btn btn-p" id="btn-upscale" onclick="runUpscale()">▶ Запустить апскейл</button>
+                </div>
             </div>
         </div>
 
@@ -761,8 +839,10 @@
                 <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('video')">↺ Сброс Video</button>
             </div>
             <div class="sec">
-                <div class="sec-title">Video — оживление</div>
-                <p class="field-hint">Папка с панелями → 16:9, анимация, MP4 на панель + <code style="color:var(--accent)">storyboard.mp4</code>. На CPU долго.</p>
+                <div class="sec-title-row">
+                    <span class="sec-title"><span class="sec-num">①</span><span>Пути</span></span>
+                    <span class="tip-host" data-tip="vid_sec_paths"></span>
+                </div>
                 <label class="lbl" data-tip="vid_panels">Папка с панелями</label>
                 <div class="path-row">
                     <input type="text" id="vid-panels" placeholder="output\mycomic" />
@@ -773,6 +853,9 @@
                     <input type="text" id="vid-output" value="story_out" />
                     <button type="button" class="path-browse" onclick="pickPath('vid-output','folder','Папка вывода видео')">Обзор…</button>
                 </div>
+            </div>
+            <div class="sec">
+                <div class="sec-title"><span class="sec-num">②</span><span>Настройки</span></div>
                 <label class="lbl" data-tip="vid_mode">Режим анимации</label>
                 <select id="vid-mode" class="inp" style="margin-bottom:10px" onchange="syncVideoAdvancedVisibility()">
                     <option value="opencv_zoom">Zoom (OpenCV)</option>
@@ -781,9 +864,11 @@
                     <option value="depthflow" id="opt-depthflow">Parallax (DepthFlow)</option>
                     <option value="tpsmm" id="opt-tpsmm">TPSMM (медленно)</option>
                 </select>
-                <div class="trow">
-                    <span class="tlbl" data-tip="vid_upscale">Апскейл перед видео</span>
-                    <label class="tog"><input type="checkbox" id="vid-upscale" checked><span class="sl"></span></label>
+                <div class="trow-stack">
+                    <div class="trow">
+                        <span class="tlbl" data-tip="vid_upscale">Апскейл перед видео</span>
+                        <label class="tog"><input type="checkbox" id="vid-upscale" checked><span class="sl"></span></label>
+                    </div>
                 </div>
                 <label class="lbl" data-tip="vid_scale">Масштаб апскейла</label>
                 <div class="seg" id="vid-scale-seg" data-target="vid-scale">
@@ -849,15 +934,11 @@
                         <option value="zoom">Zoom</option>
                         <option value="dolly">Dolly</option>
                     </select>
-                    <p class="field-hint" id="vid-df-hint" style="display:none">DepthFlow: выберите режим «Parallax» выше.</p>
                     <label class="lbl" data-tip="vid_tpsmm_driving" id="lbl-vid-tpsmm-driving" style="display:none">TPSMM driving video (MP4)</label>
                     <div class="path-row" id="row-vid-tpsmm-driving" style="display:none;margin-bottom:10px">
                         <input type="text" id="vid-tpsmm-driving" placeholder="driving.mp4" />
                         <button type="button" class="path-browse" onclick="pickPath('vid-tpsmm-driving','video','Driving video MP4')">Обзор…</button>
                     </div>
-                    <p class="field-hint" id="vid-tpsmm-hint" style="display:none;color:var(--warn,#c90)">
-                        TPSMM на CPU: ~1.5 с/кадр. Нужны модели в models/anim/tpsmm/
-                    </p>
                 </div>
                 <div class="range-row">
                     <div class="range-head"><span class="rlbl" data-tip="vid_duration">Длина клипа (сек)</span><span class="rval" id="vid-duration-val">3.0</span></div>
@@ -869,49 +950,76 @@
                     <input type="range" id="vid-fps" min="12" max="30" step="1" value="24"
                         data-display="vid-fps-val" data-format="int" />
                 </div>
-                <div class="trow" style="margin-bottom:12px">
+                <div class="trow">
                     <span class="tlbl" data-tip="vid_concat">Собрать storyboard.mp4</span>
                     <label class="tog"><input type="checkbox" id="vid-concat" checked><span class="sl"></span></label>
                 </div>
-                <button class="btn btn-e" id="btn-video" onclick="runVideo()">▶ Создать видео</button>
+            </div>
+            <div class="sec">
+                <div class="sec-title"><span class="sec-num">③</span><span>Запуск</span></div>
+                <div class="action-stack">
+                    <button class="btn btn-e" id="btn-video" onclick="runVideo()">▶ Создать видео</button>
+                </div>
             </div>
         </div>
 
         <div id="tab-story2a" class="tab-panel">
             <div class="tab-reset-row">
-                <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('story2a')">↺ Сброс Story 2a</button>
+                <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('story2a')">↺ Сброс ExText</button>
             </div>
             <div class="sec">
-                <div class="sec-title">Stage 2a: OCR баблов</div>
-                <p class="preset-hint" id="s2a-engine-hint">YOLO manga + OCR (ru, en). Настройки: config/story_stage_2a.yaml</p>
+                <div class="sec-title-row">
+                    <span class="sec-title">ExText</span>
+                    <span class="tip-host" id="extext-tip-host" data-tip="extext_overview"></span>
+                </div>
             </div>
             <div class="sec">
-                <label class="lbl">Имя проекта</label>
+                <div class="sec-title-row">
+                    <span class="sec-title"><span class="sec-num">①</span><span>Режим</span></span>
+                    <span class="tip-host" data-tip="s2a_workflow_mode"></span>
+                </div>
+                <div class="s2a-mode-radio s2a-mode-radio-inline">
+                    <label><input type="radio" name="s2a-workflow-mode" id="s2a-mode-manual" value="manual" checked> Ручной</label>
+                    <label><input type="radio" name="s2a-workflow-mode" id="s2a-mode-auto" value="auto"> Авто</label>
+                </div>
+            </div>
+            <div class="sec">
+                <div class="sec-title"><span class="sec-num">②</span><span>Проект</span></div>
+                <label class="lbl" data-tip="s2a_project">Имя проекта</label>
                 <input type="text" id="s2a-project" class="inp" placeholder="test_2a" />
-                <label class="lbl" style="margin-top:8px">Папка панелей (PNG)</label>
+                <label class="lbl" data-tip="s2a_panels_dir">Папка панелей (PNG)</label>
                 <div class="path-row">
                     <input type="text" id="s2a-panels-dir" placeholder="exam_img\manga_test_1\manga_test_1_upscaled" />
                     <button type="button" class="path-browse" onclick="pickPath('s2a-panels-dir','folder','Папка панелей')">Обзор…</button>
                 </div>
             </div>
             <div class="sec">
-                <button class="btn btn-p" id="s2a-btn-run">▶ Запустить OCR</button>
-                <button class="btn btn-s" id="s2a-btn-load" style="margin-top:8px">↻ Загрузить проект</button>
+                <div class="sec-title"><span class="sec-num">③</span><span>Подготовка</span></div>
+                <div class="action-stack">
+                    <button class="btn btn-p s2a-manual-only" type="button" id="s2a-btn-init">📁 Создать из папки</button>
+                    <button class="btn btn-p s2a-auto-only" type="button" id="s2a-btn-run" style="display:none">▶ Запустить детекцию + OCR</button>
+                    <button class="btn btn-s" type="button" id="s2a-btn-load">↻ Загрузить проект</button>
+                </div>
             </div>
             <div class="sec" id="s2a-stats" style="display:none">
                 <div class="sec-title">Статистика</div>
                 <p class="preset-hint" id="s2a-stats-text"></p>
             </div>
             <div class="sec">
-                <div class="sec-title">Навигация</div>
+                <div class="sec-title"><span class="sec-num">④</span><span>Панель</span></div>
                 <p id="s2a-panel-nav" class="preset-hint">Нет панелей</p>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                    <button class="btn btn-s" id="s2a-prev">◀ Пред.</button>
-                    <button class="btn btn-s" id="s2a-next">След. ▶</button>
+                <div class="action-stack" style="margin-top:8px">
+                    <div class="action-stack-row">
+                        <button class="btn btn-s" id="s2a-prev">◀ Пред.</button>
+                        <button class="btn btn-s" id="s2a-next">След. ▶</button>
+                    </div>
+                    <button class="btn btn-s" type="button" id="s2a-add-mode">+ Нарисовать бабл</button>
+                    <button class="btn btn-p" type="button" id="s2a-btn-ocr-panel">▶ Распознать текст на панели</button>
+                    <button class="btn btn-s s2a-auto-only" type="button" id="s2a-btn-detect-panel" style="display:none">🔍 Предложить баблы на панели</button>
                 </div>
             </div>
             <div class="sec">
-                <div class="sec-title">Выбранный бабл</div>
+                <div class="sec-title"><span class="sec-num">⑤</span><span>Правка бабла</span></div>
                 <label class="lbl">Тип</label>
                 <select id="s2a-bubble-type" class="inp" style="margin-bottom:8px">
                     <option value="speech">speech</option>
@@ -920,13 +1028,19 @@
                     <option value="narration">narration</option>
                 </select>
                 <label class="lbl">Текст (corrected_text)</label>
-                <textarea id="s2a-bubble-text" class="inp" rows="3" style="resize:vertical"></textarea>
+                <textarea id="s2a-bubble-text" class="inp" rows="2" style="resize:vertical"></textarea>
                 <div class="s2a-bubble-list" id="s2a-bubble-list"></div>
-                <button class="btn btn-s" id="s2a-add-mode" style="margin-top:8px">+ Добавить бабл</button>
             </div>
-            <div class="sec s2a-footer">
-                <button class="btn btn-e" id="s2a-btn-save">💾 Сохранить и проверить JSON</button>
-                <p class="preset-hint" id="s2a-save-hint"></p>
+            <div class="sec">
+                <div class="sec-title"><span class="sec-num">⑥</span><span>Сохранение</span></div>
+                <label class="lbl" data-tip="s2a_json_path">Путь JSON</label>
+                <div class="path-row">
+                    <input type="text" id="s2a-json-path" placeholder="story_out\projects\test_2a\stage_2a.json" />
+                    <button type="button" class="path-browse" onclick="pickPath('s2a-json-path','save_file','Сохранить stage_2a.json')">Обзор…</button>
+                </div>
+                <div class="action-stack">
+                    <button class="btn btn-e" id="s2a-btn-save">💾 Сохранить и проверить JSON</button>
+                </div>
             </div>
         </div>
     </aside>
@@ -1401,6 +1515,7 @@ function initFloatingTips() {
 }
 
 function attachFieldTips(tips) {
+    window.__fieldTipsCache = tips || {};
     document.querySelectorAll('[data-tip]').forEach(el => {
         const key = el.getAttribute('data-tip');
         const text = tips && tips[key];
@@ -1413,6 +1528,13 @@ function attachFieldTips(tips) {
     });
     initFloatingTips();
 }
+
+function refreshTipHost(el, text) {
+    if (!el || !text) return;
+    el.innerHTML = tipMarkup(text);
+    initFloatingTips();
+}
+window.refreshTipHost = refreshTipHost;
 
 async function loadFieldTips() {
     try {
@@ -1437,7 +1559,6 @@ function setBusy(busy) {
 
 function togglePolyMode() {
     S.polyMode = $('poly-mode').checked;
-    $('poly-hint').className = 'poly-hint' + (S.polyMode ? ' show' : '');
     _updateModeIndicator();
     if (stage) renderAll();
 }
@@ -1572,26 +1693,21 @@ const PRESET_TIMING_HINT = {
 };
 
 function updateSamHint() {
-    const on = $('use-sam').checked;
-    $('sam-hint').style.color = on ? 'var(--accent)' : '';
+    /* подсказка SAM — в data-tip use_sam */
 }
 
 function syncVideoAdvancedVisibility() {
     const mode = $('vid-mode').value;
     const df = mode === 'depthflow';
     const tps = mode === 'tpsmm';
-    const dfHint = $('vid-df-hint');
     const dfSel = $('vid-df-anim');
     const isQ = currentPreset === 'quality';
-    if (dfHint) dfHint.style.display = (isQ && !df) ? 'block' : 'none';
     if (dfSel) dfSel.style.opacity = (df ? '1' : '0.55');
     const tpsLbl = $('lbl-vid-tpsmm-driving');
     const tpsRow = $('row-vid-tpsmm-driving');
-    const tpsHint = $('vid-tpsmm-hint');
     const showTps = isQ && tps;
     if (tpsLbl) tpsLbl.style.display = showTps ? '' : 'none';
     if (tpsRow) tpsRow.style.display = showTps ? '' : 'none';
-    if (tpsHint) tpsHint.style.display = showTps ? 'block' : 'none';
     const timing = $('preset-timing');
     if (timing) {
         timing.textContent = PRESET_TIMING_HINT[currentPreset] || '';
@@ -1664,7 +1780,7 @@ function switchTab(name) {
     } else if (name === 'story2a' && window.Story2a) {
         Story2a.onTabShow();
     }
-    setStatus(isSplit ? 'Редактор панелей' : (name === 'upscale' ? 'Апскейл' : (name === 'story2a' ? 'Stage 2a: OCR' : 'Видео')), '');
+    setStatus(isSplit ? 'Редактор панелей' : (name === 'upscale' ? 'Апскейл' : (name === 'story2a' ? 'ExText: извлечение текста' : 'Видео')), '');
     if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
 }
 
@@ -1749,6 +1865,7 @@ async function runUpscale() {
         setStatus(`✓ Апскейл: ${data.count} файлов`, 'ok');
         toast(`Апскейл: ${data.count} файлов`);
         if ($('vid-panels').value.trim() === '') $('vid-panels').value = panels_dir;
+        if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
     } catch (e) {
         setBatchLog(`Ошибка:\n${e.message}`);
         setStatus(`Ошибка: ${e.message}`, 'err');
@@ -1916,6 +2033,7 @@ async function exportPanels() {
         if (outRoot) {
             $('up-panels').value = outRoot;
             $('vid-panels').value = outRoot;
+            if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
         }
     } catch(e) {
         setStatus(`Ошибка: ${e.message}`,'err');
@@ -2510,8 +2628,43 @@ window.__uiStateHooks = {
     isX4OnlyUpscaleModel,
     syncStory2aFromUi: () => {
         if (window.Story2a && Story2a.syncFieldsFromUi) Story2a.syncFieldsFromUi();
+        if (window.Story2a && Story2a.applyWorkflowModeFromUi) Story2a.applyWorkflowModeFromUi();
+    },
+    onUiResetSection: (section) => {
+        if (section === 'split' || section === 'all') clearSplitEditorState();
+        if (window.Story2a && Story2a.clearSession) Story2a.clearSession(section);
     },
 };
+
+function clearSplitEditorState() {
+    if (typeof S === 'undefined') return;
+    S.panels = [];
+    S.selId = null;
+    S.imgPath = '';
+    S.polyMode = false;
+    if ($('poly-mode')) $('poly-mode').checked = false;
+    if (typeof stage !== 'undefined' && stage) {
+        stage.destroy();
+        stage = null;
+        kImg = null;
+    }
+    ['sec-stats', 'sec-panels', 'sec-export'].forEach((id) => {
+        const el = $(id);
+        if (el) el.style.display = 'none';
+    });
+    const empty = $('empty');
+    const kv = $('kv');
+    const zc = $('zc');
+    const modeInd = $('mode-indicator');
+    if (empty) empty.style.display = '';
+    if (kv) kv.style.display = 'none';
+    if (zc) zc.style.display = 'none';
+    if (modeInd) modeInd.style.display = 'none';
+    if ($('st-panels')) $('st-panels').textContent = '0';
+    if ($('st-time')) $('st-time').textContent = '—';
+    if ($('panel-list')) $('panel-list').innerHTML = '';
+    if ($('p-count')) $('p-count').textContent = '';
+}
 
 async function initApp() {
     initRangeDisplays();

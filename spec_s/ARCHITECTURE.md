@@ -178,10 +178,10 @@ SPLIT_PANELS_DEV/
 │   └── config.py
 ├── config/story_stage_2a.yaml
 ├── frontend/
-│   ├── index.html            # Konva + вкладки Split/Upscale/Video/Story 2a
+│   ├── index.html            # Konva + вкладки Split/Upscale/Video/ExText
 │   ├── ui_state.js           # localStorage + sync /api/ui/state
 │   ├── reading_order.js      # Порядок чтения (Split панели + Stage 2a баблы)
-│   └── story_2a.js           # UI Story Analyzer Stage 2a
+│   └── story_2a.js           # UI ExText (Stage 2a)
 │
 ├── models/                   # Split ONNX (не в git)
 │   └── anim/                 # NCNN, MiDaS, TPSMM, ffmpeg (не в git)
@@ -234,15 +234,16 @@ SPLIT_PANELS_DEV/
 | `/api/models/setup` | GET | Статус установки всех моделей |
 | `/api/ui/state` | GET/PUT | Память UI (split, upscale, video, story2a, global) |
 | `/api/ui/state/reset` | POST | Сброс секции UI |
-| `/api/story/stage_2a/*` | GET/POST/PUT | Story Analyzer Stage 2a: bbox + OCR → `stage_2a.json` |
+| `/api/story/stage_2a/*` | GET/POST/PUT | ExText (Stage 2a): init, process, sync_panels, ocr/detect panel, JSON |
 
 Подробнее Stage 2a: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
 
 ---
 
-## 9. Story Analyzer — Stage 2a (июнь 2026)
+## 9. Story Analyzer — ExText / Stage 2a (июнь 2026)
 
-Расширение веб-редактора `:8000`: вкладка **Story 2a** — детекция speech bubbles, VLM OCR и **интерактивный HITL**.
+Расширение веб-редактора `:8000`: вкладка **ExText** — детекция speech bubbles, VLM OCR и **интерактивный HITL**.  
+Режимы **Ручной / Авто**: [STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md).
 
 ```
 panels/ (upscaled PNG)
@@ -258,8 +259,9 @@ panels/ (upscaled PNG)
 | OCR primary | SiliconFlow API, `story_analyzer/providers/siliconflow_ocr.py` |
 | OCR fallback | PaddleOCR / EasyOCR (`ocr_engine: paddle \| easyocr \| auto`) |
 | reading_order | `Bubble.reading_order`, `assign_bubble_reading_orders()`, `reading_order.js` |
-| UI HITL | drag/resize bbox, chrome №/↻/×, detached text frame, ручной бабл |
-| Persist | `utils/ui_state.py` секция `story2a`; `config/ui_state.user.json` |
+| UI HITL | drag/resize bbox, chrome №/↻/×, detached text frame, ручной бабл; `workflow_mode` |
+| Пути PNG | `panel_paths` + `panels_dir` query (`source_only`); `sync_panels` replace |
+| Persist | `utils/ui_state.py` секция `story2a`; явная очистка путей при reset/persist |
 | Конфиг | `config/story_stage_2a.yaml`, секреты `.env` |
 | Модули | `story_analyzer/`, `api/story_stage_2a.py`, `frontend/story_2a.js` |
 

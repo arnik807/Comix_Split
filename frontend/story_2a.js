@@ -10,6 +10,13 @@
         narration: '#4ade80',
     };
 
+    const BOUND_PROJECT = '__project__';
+
+    function effectivePanelsDir(raw) {
+        const s = (raw != null ? raw : readUiFields().panelsDir) || '';
+        return s.trim() || BOUND_PROJECT;
+    }
+
     const S2 = {
         project: '',
         panelsDir: '',
@@ -22,6 +29,9 @@
         imgH: 0,
         frameLayouts: {},
         reocrBusy: false,
+        workflowMode: 'manual',
+        imageCacheBust: 0,
+        boundPanelsDir: '',
     };
 
     let stage2a, imgLayer2a, bubbleLayer2a, kImg2a;
@@ -30,6 +40,10 @@
     let panOrigin2a = { x: 0, y: 0 };
     let frameDrag2a = null;
     let frameResize2a = null;
+    let drawMode2a = false;
+    let drawActive2a = false;
+    let drawStart2a = null;
+    let drawPreview2a = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -42,6 +56,76 @@
             project: ($('s2a-project') || {}).value?.trim() || '',
             panelsDir: ($('s2a-panels-dir') || {}).value?.trim() || '',
         };
+    }
+
+    function defaultJsonPath(project) {
+        const name = (project || 'project').trim();
+        return `story_out\\projects\\${name}\\stage_2a.json`;
+    }
+
+    function resolveJsonPath() {
+        const custom = ($('s2a-json-path') || {}).value?.trim();
+        if (custom) return custom;
+        const f = readUiFields();
+        const project = f.project || S2.project || S2.document?.project;
+        return project ? defaultJsonPath(project) : '';
+    }
+
+    function readWorkflowMode() {
+        const manual = $('s2a-mode-manual');
+        return (manual && manual.checked) ? 'manual' : 'auto';
+    }
+
+    function applyWorkflowModeUI(mode) {
+        const m = mode || readWorkflowMode();
+        S2.workflowMode = m;
+        document.querySelectorAll('.s2a-manual-only').forEach((el) => {
+            el.style.display = m === 'manual' ? '' : 'none';
+        });
+        document.querySelectorAll('.s2a-auto-only').forEach((el) => {
+            el.style.display = m === 'auto' ? '' : 'none';
+        });
+        if (window.ComicSplitUiState && !window.__uiRestoring) {
+            ComicSplitUiState.scheduleSave();
+        }
+    }
+
+    function minBubbleAreaPx() {
+        return (stage2aOptions && stage2aOptions.min_bubble_area_px) || 32;
+    }
+
+    function bumpImageCache() {
+        S2.imageCacheBust = Date.now();
+    }
+
+    function applyPanelPaths(rows) {
+        S2.panelPaths = {};
+        (rows || []).forEach((row) => {
+            if (row.abs_path) S2.panelPaths[row.panel_id] = row.abs_path;
+        });
+    }
+
+    function applyServerDocument(data, opts) {
+        const o = opts || {};
+        if (data.document) {
+            S2.document = data.document;
+            normalizeDocument(S2.document);
+            S2.panelPaths = {};
+            bumpImageCache();
+        }
+        if (data.document && data.document.project) {
+            S2.project = data.document.project;
+            if ($('s2a-project')) $('s2a-project').value = S2.project;
+        }
+        if (data.panel_paths) {
+            applyPanelPaths(data.panel_paths);
+        }
+        if (o.panelIndex != null) S2.panelIndex = o.panelIndex;
+        else if (o.resetPanelIndex) S2.panelIndex = 0;
+        if (data.stats && $('s2a-stats')) {
+            $('s2a-stats').style.display = 'block';
+            $('s2a-stats-text').textContent = formatStats(data);
+        }
     }
 
     function syncFieldsFromUi() {
@@ -373,6 +457,29 @@
         stage2a.add(bubbleLayer2a);
 
         stage2a.on('mousedown touchstart', (e) => {
+            if (drawMode2a && e.target === stage2a) {
+                const pos = stage2a.getPointerPosition();
+                if (!pos) return;
+                drawActive2a = true;
+                isPanning2a = false;
+                drawStart2a = invPoint(pos);
+                if (drawPreview2a) drawPreview2a.destroy();
+                const ip = drawStart2a;
+                drawPreview2a = new Konva.Rect({
+                    x: ip.x * S2.scale,
+                    y: ip.y * S2.scale,
+                    width: 0,
+                    height: 0,
+                    stroke: '#60a5fa',
+                    strokeWidth: 2,
+                    dash: [6, 4],
+                    listening: false,
+                    name: 'draw-preview',
+                });
+                bubbleLayer2a.add(drawPreview2a);
+                bubbleLayer2a.batchDraw();
+                return;
+            }
             if (e.target === stage2a) {
                 isPanning2a = true;
                 panStart2a = { x: e.evt.clientX, y: e.evt.clientY };
@@ -380,9 +487,46 @@
             }
         });
         stage2a.on('mouseup touchend', () => {
+            if (drawActive2a && drawStart2a) {
+                const pos = stage2a.getPointerPosition();
+                drawActive2a = false;
+                if (drawPreview2a) {
+                    drawPreview2a.destroy();
+                    drawPreview2a = null;
+                }
+                if (pos) {
+                    const end = invPoint(pos);
+                    const x1 = Math.round(Math.min(drawStart2a.x, end.x));
+                    const y1 = Math.round(Math.min(drawStart2a.y, end.y));
+                    const x2 = Math.round(Math.max(drawStart2a.x, end.x));
+                    const y2 = Math.round(Math.max(drawStart2a.y, end.y));
+                    const area = (x2 - x1) * (y2 - y1);
+                    if (area >= minBubbleAreaPx()) {
+                        addManualBubble([x1, y1, x2, y2]);
+                    } else if (area > 0) {
+                        toast('Рамка слишком мала', 'err');
+                    }
+                }
+                drawStart2a = null;
+                bubbleLayer2a.batchDraw();
+                return;
+            }
             isPanning2a = false;
         });
-        stage2a.on('mousemove', (e) => {
+        stage2a.on('mousemove touchmove', (e) => {
+            if (drawActive2a && drawStart2a && drawPreview2a) {
+                const pos = stage2a.getPointerPosition();
+                if (!pos) return;
+                const end = invPoint(pos);
+                const x1 = Math.min(drawStart2a.x, end.x);
+                const y1 = Math.min(drawStart2a.y, end.y);
+                const x2 = Math.max(drawStart2a.x, end.x);
+                const y2 = Math.max(drawStart2a.y, end.y);
+                drawPreview2a.position({ x: x1 * S2.scale, y: y1 * S2.scale });
+                drawPreview2a.size({ width: (x2 - x1) * S2.scale, height: (y2 - y1) * S2.scale });
+                bubbleLayer2a.batchDraw();
+                return;
+            }
             if (!isPanning2a) return;
             const dx = e.evt.clientX - panStart2a.x;
             const dy = e.evt.clientY - panStart2a.y;
@@ -402,7 +546,8 @@
     }
 
     function loadPanelImage(absPath) {
-        const url = `/api/image?path=${encodeURIComponent(absPath)}`;
+        const v = S2.imageCacheBust || 0;
+        const url = `/api/image?path=${encodeURIComponent(absPath)}&v=${v}`;
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => resolve(img);
@@ -415,7 +560,11 @@
         const panel = currentPanel();
         if (!panel) return;
         sortPanelBubbles(panel);
-        const abs = S2.panelPaths[panel.panel_id];
+        let abs = S2.panelPaths[panel.panel_id];
+        if (!abs) {
+            await refreshPanelPathsFromUi();
+            abs = S2.panelPaths[panel.panel_id];
+        }
         if (!abs) {
             toast('Нет файла панели: ' + panel.image_path, 'err');
             return;
@@ -573,12 +722,25 @@
         ]);
     }
 
-    function addManualBubbleFromButton() {
-        if (!stage2a || !S2.document) {
-            toast('Сначала загрузите панель (OCR или проект)', 'err');
+    function toggleDrawMode2a() {
+        if (!S2.document) {
+            toast('Сначала создайте или загрузите проект', 'err');
             return;
         }
-        addManualBubble(defaultManualBubbleBbox());
+        if (!stage2a) {
+            toast('Откройте панель (создайте проект из папки)', 'err');
+            return;
+        }
+        drawMode2a = !drawMode2a;
+        const btn = $('s2a-add-mode');
+        const view = $('view-story2a');
+        if (btn) btn.classList.toggle('s2a-draw-active', drawMode2a);
+        if (view) view.classList.toggle('s2a-draw-cursor', drawMode2a);
+        toast(drawMode2a ? 'Нарисуйте рамку на панели' : 'Режим рисования выключен', 'ok');
+    }
+
+    function addManualBubbleFromButton() {
+        toggleDrawMode2a();
     }
 
     function addManualBubble(bbox) {
@@ -597,7 +759,7 @@
         });
         delete S2.frameLayouts[bid];
         selectBubble(bid, { forceFrameLayout: true });
-        toast('Подгоните рамку бабла на панели, затем «Распознать»', 'ok');
+        toast('Подгоните рамку; затем «Распознать текст на панели»', 'ok');
     }
 
     function deleteBubble() {
@@ -659,8 +821,9 @@
         }
     }
 
-    async function fetchPanelPaths(project) {
-        const r = await fetch(`/api/story/stage_2a/${encodeURIComponent(project)}`);
+    async function fetchPanelPaths(project, panelsDir) {
+        const q = panelsDir ? `?panels_dir=${encodeURIComponent(panelsDir)}` : '';
+        const r = await fetch(`/api/story/stage_2a/${encodeURIComponent(project)}${q}`);
         const data = await r.json();
         if (!r.ok) throw new Error(data.detail || r.statusText);
         const map = {};
@@ -670,24 +833,48 @@
         return map;
     }
 
+    async function refreshPanelPathsFromUi() {
+        const { project, panelsDir } = readUiFields();
+        const proj = project || S2.project || S2.document?.project;
+        if (!proj || !S2.document) return;
+        try {
+            S2.panelPaths = await fetchPanelPaths(proj, panelsDir);
+            bumpImageCache();
+        } catch (e) {
+            toast(e.message, 'err');
+        }
+    }
+
     let stage2aOptions = null;
 
+    function buildExTextTipText(options) {
+        const base = (window.__fieldTipsCache && window.__fieldTipsCache.extext_overview) || '';
+        if (!options || !Object.keys(options).length) return base;
+        const pp = options.ocr_preprocess || {};
+        const sf = options.siliconflow_model ? ` · ${options.siliconflow_model}` : '';
+        const dynamic =
+            `OCR: ${options.ocr_engine || 'siliconflow'}${sf} · ` +
+            `preprocess ×${pp.upscale_factor || 3} ${pp.contrast || 'clahe'} · ` +
+            `langs: ${(options.ocr_languages || []).join(', ')}`;
+        return base ? `${base}\n\n${dynamic}` : dynamic;
+    }
+
+    function refreshExTextTip(options) {
+        const host = $('extext-tip-host');
+        if (host && window.refreshTipHost) {
+            window.refreshTipHost(host, buildExTextTipText(options || stage2aOptions || {}));
+        }
+    }
+
     async function loadStage2aOptions() {
-        if (stage2aOptions) return stage2aOptions;
+        if (stage2aOptions) {
+            refreshExTextTip(stage2aOptions);
+            return stage2aOptions;
+        }
         try {
             const r = await fetch('/api/story/stage_2a/options');
             stage2aOptions = await r.json();
-            const hint = $('s2a-engine-hint');
-            if (hint && stage2aOptions) {
-                const pp = stage2aOptions.ocr_preprocess || {};
-                const sf = stage2aOptions.siliconflow_model
-                    ? ` · ${stage2aOptions.siliconflow_model}`
-                    : '';
-                hint.textContent =
-                    `OCR: ${stage2aOptions.ocr_engine || 'siliconflow'}${sf} · ` +
-                    `preprocess ×${pp.upscale_factor || 3} ${pp.contrast || 'clahe'} · ` +
-                    `langs: ${(stage2aOptions.ocr_languages || []).join(', ')}`;
-            }
+            refreshExTextTip(stage2aOptions);
         } catch (_) {
             stage2aOptions = {};
         }
@@ -699,6 +886,144 @@
         const s = data.stats;
         const eng = s.ocr_engine ? `, OCR: ${s.ocr_engine}` : '';
         return `Панелей: ${s.panels}, баблов: ${s.bubbles}, YOLO: ${s.yolo_ms}ms, OCR: ${s.ocr_ms}ms${eng}`;
+    }
+
+    async function initProject2a() {
+        syncFieldsFromUi();
+        const { project, panelsDir } = readUiFields();
+        if (!project || !panelsDir) {
+            toast('Укажите проект и папку панелей', 'err');
+            return;
+        }
+        const btn = $('s2a-btn-init');
+        if (btn) btn.disabled = true;
+        setStatus2a('Создание проекта…');
+        try {
+            const r = await fetch('/api/story/stage_2a/init', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({ project, panels_dir: panelsDir }),
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(formatApiError(data, r.statusText));
+            S2.panelsDir = panelsDir;
+            S2.boundPanelsDir = effectivePanelsDir(panelsDir);
+            applyServerDocument(data, { resetPanelIndex: true });
+            updatePanelNav();
+            await showCurrentPanel();
+            if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
+            toast(`Проект создан: ${data.stats.panels} панелей`, 'ok');
+        } catch (e) {
+            toast(e.message, 'err');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function ocrPanel2a() {
+        if (S2.reocrBusy) return;
+        syncSelectedFromSidebar();
+        const panel = currentPanel();
+        syncFieldsFromUi();
+        const project = S2.document?.project || S2.project || readUiFields().project;
+        if (!panel || !project) {
+            toast('Нет открытой панели или проекта', 'err');
+            return;
+        }
+        if (!panel.bubbles.length) {
+            toast('Нет рамок для распознавания', 'err');
+            return;
+        }
+        sortPanelBubbles(panel);
+        const btn = $('s2a-btn-ocr-panel');
+        S2.reocrBusy = true;
+        if (btn) btn.disabled = true;
+        setStatus2a('OCR…');
+        try {
+            const panelAbs = S2.panelPaths[panel.panel_id] || null;
+            const r = await fetch(
+                `/api/story/stage_2a/${encodeURIComponent(project)}/ocr_panel`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify({
+                        panel_id: panel.panel_id,
+                        panel_abs_path: panelAbs,
+                        bubbles: panel.bubbles,
+                    }),
+                },
+            );
+            const data = await r.json();
+            if (!r.ok) throw new Error(formatApiError(data, r.statusText));
+            if (data.document) {
+                S2.document = data.document;
+                normalizeDocument(S2.document);
+            } else if (data.panel && S2.document) {
+                S2.document.panels = S2.document.panels.map((p) =>
+                    (p.panel_id === panel.panel_id ? data.panel : p),
+                );
+                normalizeDocument(S2.document);
+            }
+            const cur = currentPanel();
+            S2.selBubbleId = cur && cur.bubbles.length ? cur.bubbles[0].bubble_id : null;
+            selectBubble(S2.selBubbleId);
+            toast(
+                `Распознано: ${data.bubbles_updated} бабл(ов) (${data.ocr_engine}, ${data.ocr_ms}ms)`,
+                'ok',
+            );
+        } catch (e) {
+            toast(e.message, 'err');
+        } finally {
+            S2.reocrBusy = false;
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function detectPanel2a() {
+        syncSelectedFromSidebar();
+        const panel = currentPanel();
+        syncFieldsFromUi();
+        const project = S2.document?.project || S2.project || readUiFields().project;
+        if (!panel || !project) {
+            toast('Нет открытой панели или проекта', 'err');
+            return;
+        }
+        if (S2.document) {
+            try {
+                await saveProject2a();
+            } catch (_) { /* saveProject2a shows toast */ }
+        }
+        const btn = $('s2a-btn-detect-panel');
+        if (btn) btn.disabled = true;
+        setStatus2a('YOLO…');
+        try {
+            const panelAbs = S2.panelPaths[panel.panel_id] || null;
+            const r = await fetch(
+                `/api/story/stage_2a/${encodeURIComponent(project)}/detect_panel`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify({
+                        panel_id: panel.panel_id,
+                        panel_abs_path: panelAbs,
+                        merge_mode: 'append',
+                    }),
+                },
+            );
+            const data = await r.json();
+            if (!r.ok) throw new Error(formatApiError(data, r.statusText));
+            if (data.document) {
+                S2.document = data.document;
+                normalizeDocument(S2.document);
+            }
+            updatePanelNav();
+            await showCurrentPanel();
+            toast(`Добавлено рамок: ${data.boxes_added}`, 'ok');
+        } catch (e) {
+            toast(e.message, 'err');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
     }
 
     async function runProcess2a() {
@@ -720,16 +1045,11 @@
             });
             const data = await r.json();
             if (!r.ok) throw new Error(formatApiError(data, r.statusText));
-            S2.project = data.document?.project || project;
             S2.panelsDir = panelsDir;
-            if ($('s2a-project') && S2.project) $('s2a-project').value = S2.project;
-            S2.document = data.document;
-            normalizeDocument(S2.document);
-            S2.panelPaths = await fetchPanelPaths(S2.project);
-            S2.panelIndex = 0;
-            if (data.stats && $('s2a-stats')) {
-                $('s2a-stats').style.display = 'block';
-                $('s2a-stats-text').textContent = formatStats(data);
+            S2.boundPanelsDir = effectivePanelsDir(panelsDir);
+            applyServerDocument(data, { resetPanelIndex: true });
+            if (!data.panel_paths) {
+                S2.panelPaths = await fetchPanelPaths(S2.project, panelsDir);
             }
             updatePanelNav();
             await showCurrentPanel();
@@ -744,21 +1064,25 @@
 
     async function loadProject2a() {
         syncFieldsFromUi();
-        const project = readUiFields().project;
+        const { project, panelsDir } = readUiFields();
         if (!project) return;
         try {
-            const r = await fetch(`/api/story/stage_2a/${encodeURIComponent(project)}`);
+            if (panelsDir) {
+                const sr = await fetch('/api/story/stage_2a/sync_panels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify({ project, panels_dir: panelsDir }),
+                });
+                const syncData = await sr.json();
+                if (!sr.ok) throw new Error(formatApiError(syncData, sr.statusText));
+            }
+            const q = panelsDir ? `?panels_dir=${encodeURIComponent(panelsDir)}` : '';
+            const r = await fetch(`/api/story/stage_2a/${encodeURIComponent(project)}${q}`);
             const data = await r.json();
             if (!r.ok) throw new Error(data.detail || r.statusText);
-            S2.project = data.document?.project || project;
-            S2.document = data.document;
-            normalizeDocument(S2.document);
-            S2.panelPaths = {};
-            (data.panel_paths || []).forEach((row) => {
-                if (row.abs_path) S2.panelPaths[row.panel_id] = row.abs_path;
-            });
-            if ($('s2a-project') && S2.project) $('s2a-project').value = S2.project;
-            S2.panelIndex = 0;
+            S2.panelsDir = panelsDir;
+            S2.boundPanelsDir = effectivePanelsDir(panelsDir);
+            applyServerDocument(data, { resetPanelIndex: true });
             updatePanelNav();
             await showCurrentPanel();
             if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
@@ -776,19 +1100,26 @@
         syncSelectedFromSidebar();
         (S2.document.panels || []).forEach((p) => sortPanelBubbles(p));
         const project = S2.project || S2.document.project;
+        const outputPath = resolveJsonPath();
         try {
             const r = await fetch(`/api/story/stage_2a/${encodeURIComponent(project)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({ document: S2.document }),
+                body: JSON.stringify({
+                    document: S2.document,
+                    output_path: outputPath || undefined,
+                }),
             });
             const data = await r.json();
             if (!r.ok) {
                 const msg = data.errors ? JSON.stringify(data.errors) : (data.detail || r.statusText);
                 throw new Error(msg);
             }
-            toast('JSON сохранён и проверен', 'ok');
-            if ($('s2a-save-hint')) $('s2a-save-hint').textContent = data.path || '';
+            toast('JSON сохранён: ' + (data.path || outputPath), 'ok');
+            const saved = data.path || outputPath;
+            if ($('s2a-json-path') && saved && !$('s2a-json-path').value.trim()) {
+                $('s2a-json-path').value = saved;
+            }
         } catch (e) {
             toast('Ошибка: ' + e.message, 'err');
         }
@@ -894,9 +1225,24 @@
     function bindUi() {
         setupChromeButtons();
         setupFrameInteractions();
+        applyWorkflowModeUI('manual');
+        if ($('s2a-mode-manual')) {
+            $('s2a-mode-manual').addEventListener('change', () => applyWorkflowModeUI('manual'));
+        }
+        if ($('s2a-mode-auto')) {
+            $('s2a-mode-auto').addEventListener('change', () => applyWorkflowModeUI('auto'));
+        }
+        if ($('s2a-btn-init')) $('s2a-btn-init').onclick = initProject2a;
+        if ($('s2a-btn-ocr-panel')) $('s2a-btn-ocr-panel').onclick = ocrPanel2a;
+        if ($('s2a-btn-detect-panel')) $('s2a-btn-detect-panel').onclick = detectPanel2a;
         if ($('s2a-btn-run')) $('s2a-btn-run').onclick = runProcess2a;
         if ($('s2a-btn-load')) $('s2a-btn-load').onclick = loadProject2a;
         if ($('s2a-btn-save')) $('s2a-btn-save').onclick = saveProject2a;
+        const panelsDirEl = $('s2a-panels-dir');
+        if (panelsDirEl) {
+            panelsDirEl.addEventListener('change', onPanelsDirChanged);
+            panelsDirEl.addEventListener('input', () => { S2.panelsDir = readUiFields().panelsDir; });
+        }
         if ($('s2a-prev')) $('s2a-prev').onclick = () => {
             syncSelectedFromSidebar();
             if (S2.panelIndex > 0) {
@@ -939,13 +1285,59 @@
         });
     }
 
+    function onPanelsDirChanged() {
+        const dir = readUiFields().panelsDir;
+        const effective = effectivePanelsDir(dir);
+        if (S2.document && effective !== S2.boundPanelsDir) {
+            clearSession('story2a');
+            toast('Папка изменена — создайте проект из папки или загрузите проект', 'ok');
+        }
+        S2.panelsDir = dir;
+        bumpImageCache();
+    }
+
+    function clearSession(section) {
+        if (section && section !== 'story2a' && section !== 'all') return;
+        S2.document = null;
+        S2.panelPaths = {};
+        S2.panelIndex = 0;
+        S2.selBubbleId = null;
+        S2.frameLayouts = {};
+        S2.boundPanelsDir = '';
+        drawMode2a = false;
+        bumpImageCache();
+        if ($('s2a-add-mode')) $('s2a-add-mode').classList.remove('s2a-draw-active');
+        if ($('view-story2a')) $('view-story2a').classList.remove('s2a-draw-cursor');
+        if (stage2a) {
+            stage2a.destroy();
+            stage2a = null;
+        }
+        const kv = $('kv-2a');
+        const empty = $('s2a-empty');
+        if (kv) kv.style.display = 'none';
+        if (empty) empty.style.display = '';
+        const frame = $('s2a-bubble-frame');
+        if (frame) frame.style.display = 'none';
+        if ($('s2a-stats')) $('s2a-stats').style.display = 'none';
+        if ($('s2a-bubble-list')) $('s2a-bubble-list').innerHTML = '';
+        if ($('s2a-bubble-text')) $('s2a-bubble-text').value = '';
+        if ($('s2a-stats-text')) $('s2a-stats-text').textContent = '';
+        syncFieldsFromUi();
+        updatePanelNav();
+        positionBubbleFrame(false);
+    }
+
     window.Story2a = {
         syncFieldsFromUi,
+        clearSession,
+        applyWorkflowModeFromUi: () => applyWorkflowModeUI(readWorkflowMode()),
         onTabShow: () => {
             syncFieldsFromUi();
-            setStatus2a('Stage 2a: OCR баблов');
+            applyWorkflowModeUI(readWorkflowMode());
+            setStatus2a('ExText: извлечение текста');
             loadStage2aOptions();
             positionBubbleFrame(false);
+            if (S2.document) refreshPanelPathsFromUi();
         },
     };
     document.addEventListener('DOMContentLoaded', bindUi);

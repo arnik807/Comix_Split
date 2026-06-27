@@ -1,4 +1,4 @@
-﻿"""Native Windows path picker helpers (file/folder) via tkinter."""
+"""Native Windows path picker helpers (file/folder) via tkinter."""
 
 from __future__ import annotations
 
@@ -49,6 +49,37 @@ def pick_folder(initial: Optional[str] = None, title: str = "Выберите п
     try:
         init_dir = initial if initial else str(Path.cwd())
         path = fd.askdirectory(title=title, initialdir=init_dir, mustexist=False)
+        return path or None
+    finally:
+        root.destroy()
+
+
+def pick_save_file(
+    initial: Optional[str] = None,
+    *,
+    title: str = "Сохранить файл",
+    filetypes: Optional[list[tuple[str, str]]] = None,
+    defaultextension: str = "",
+) -> Optional[str]:
+    import tkinter.filedialog as fd
+
+    if filetypes is None:
+        filetypes = [
+            ("JSON", "*.json"),
+            ("All files", "*.*"),
+        ]
+
+    root = _tk_root()
+    try:
+        init_dir = str(Path(initial).parent) if initial else str(Path.cwd())
+        initialfile = Path(initial).name if initial else ""
+        path = fd.asksaveasfilename(
+            title=title,
+            initialdir=init_dir,
+            initialfile=initialfile,
+            filetypes=filetypes,
+            defaultextension=defaultextension,
+        )
         return path or None
     finally:
         root.destroy()

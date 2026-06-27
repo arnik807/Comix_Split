@@ -22,6 +22,11 @@ UI_STATE_VERSION = 1
 
 SectionName = Literal["split", "upscale", "video", "story2a", "global", "all"]
 
+_SPLIT_PATH_KEYS = frozenset({"source_path", "folder_path", "output_dir"})
+_UPSCALE_PATH_KEYS = frozenset({"panels_dir", "output_dir"})
+_VIDEO_PATH_KEYS = frozenset({"panels_dir", "output_dir", "tpsmm_driving_video"})
+_STORY2A_PATH_KEYS = frozenset({"project", "panels_dir", "output_json_path"})
+
 
 def default_global() -> dict[str, Any]:
     return {
@@ -96,6 +101,8 @@ def default_story2a() -> dict[str, Any]:
     return {
         "project": "test_2a",
         "panels_dir": "exam_img\\manga_test_1\\manga_test_1_upscaled",
+        "workflow_mode": "manual",
+        "output_json_path": "",
     }
 
 
@@ -120,18 +127,39 @@ def _merge_section(base: dict[str, Any], patch: dict[str, Any] | None) -> dict[s
     return out
 
 
-def _merge_story2a(base: dict[str, Any], patch: dict[str, Any] | None) -> dict[str, Any]:
-    """Не затираем сохранённые пути пустыми строками из UI до восстановления полей."""
+def _merge_section_paths(
+    base: dict[str, Any],
+    patch: dict[str, Any] | None,
+    path_keys: frozenset[str],
+    *,
+    enum_fields: dict[str, frozenset[str]] | None = None,
+) -> dict[str, Any]:
+    """Patch секции: пустые строки для path_keys — явная очистка; enum_fields — только допустимые значения."""
     if not patch:
         return base
     out = deepcopy(base)
+    enums = enum_fields or {}
     for k, v in patch.items():
         if v is None:
             continue
-        if isinstance(v, str) and not v.strip():
+        if k in enums:
+            if v in enums[k]:
+                out[k] = v
+            continue
+        if k in path_keys:
+            out[k] = v if isinstance(v, str) else str(v)
             continue
         out[k] = v
     return out
+
+
+def _merge_story2a(base: dict[str, Any], patch: dict[str, Any] | None) -> dict[str, Any]:
+    return _merge_section_paths(
+        base,
+        patch,
+        _STORY2A_PATH_KEYS,
+        enum_fields={"workflow_mode": frozenset({"manual", "auto"})},
+    )
 
 
 def load_ui_state() -> dict[str, Any]:
@@ -182,11 +210,11 @@ def patch_ui_state(
     if global_:
         state["global"] = _merge_section(state["global"], global_)
     if split:
-        state["split"] = _merge_section(state["split"], split)
+        state["split"] = _merge_section_paths(state["split"], split, _SPLIT_PATH_KEYS)
     if upscale:
-        state["upscale"] = _merge_section(state["upscale"], upscale)
+        state["upscale"] = _merge_section_paths(state["upscale"], upscale, _UPSCALE_PATH_KEYS)
     if video:
-        state["video"] = _merge_section(state["video"], video)
+        state["video"] = _merge_section_paths(state["video"], video, _VIDEO_PATH_KEYS)
     if story2a:
         state["story2a"] = _merge_story2a(state["story2a"], story2a)
     save_ui_state(state)

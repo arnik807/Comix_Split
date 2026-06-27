@@ -2,7 +2,9 @@
 
 **Обновлено:** июнь 2026  
 **Проект:** `D:\DEVELOP\COMICS\SPLIT_PANELS_DEV`  
+**UI-название вкладки:** **ExText** (внутренние id: `story2a`, `stage_2a`, `story_2a.js`)  
 **Roadmap этапа:** [../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md](../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md)  
+**Режимы Ручной/Авто:** [STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md)  
 **Консервация локального OCR:** [../problems_fix/bubbles_detect_problems/LEGACY_LOCAL_OCR.md](../problems_fix/bubbles_detect_problems/LEGACY_LOCAL_OCR.md)
 
 ---
@@ -27,7 +29,8 @@ Stage 2a — первый контентный этап Story Analyzer (R1):
 | **OCR (офлайн)** | PaddleOCR / EasyOCR | Локально, CPU | 🟡 fallback, см. LEGACY |
 | **Режим auto** | Paddle → SiliconFlow при пустом тексте | `ocr_engine: auto` | ✅ |
 | **Preprocess** | ×3, CLAHE, auto-invert | Только для локальных движков | ✅ |
-| **UI / API** | FastAPI + Konva | `:8000`, вкладка **Story 2a** | ✅ интерактивный HITL |
+| **UI / API** | FastAPI + Konva | `:8000`, вкладка **ExText** | ✅ интерактивный HITL |
+| **workflow_mode** | `manual` (default) \| `auto` | Ручной: рамки → OCR по панели; Авто: batch YOLO+OCR | ✅ |
 | **reading_order** | Поле `Bubble.reading_order` + авто-сортировка | `schemas.py`, `stage_2a_processor.py` | ✅ |
 
 **Ключевое решение:** классический локальный OCR (Paddle det+rec на кропе бабла) **не дал приемлемого качества** на ru-комиксах после итераций preprocess и tiled YOLO. Основной путь — **VLM OCR по кропу** (аналог «Google Lens / Android»).
@@ -104,9 +107,26 @@ python scripts\test_siliconflow_api.py --vision debug\stage_2a\...\crop_00_raw.j
 | Метод | Путь | Назначение |
 |-------|------|------------|
 | GET | `/options` | движки OCR, языки, preprocess, модель VLM |
-| POST | `/process` | batch: папка панелей → JSON |
-| GET/PUT | `/{project}` | чтение / сохранение правок |
-| POST | `/{project}/reocr` | перераспознать один бабл; body: `bubble_id`, `bbox`, опц. `panel_abs_path`; в ответе `ocr_engine` |
+| POST | `/init` | создать проект из папки панелей (пустые `bubbles`, sync PNG в project) |
+| POST | `/process` | batch: YOLO + OCR по всей папке → JSON |
+| POST | `/sync_panels` | скопировать PNG из `panels_dir` в `project/panels/` (`replace`, удаляет старые файлы) |
+| GET | `/{project}?panels_dir=` | чтение JSON + `panel_paths` с учётом папки UI |
+| PUT | `/{project}` | сохранение правок (`output_path` опционально) |
+| POST | `/{project}/reocr` | один бабл; body: `bubble_id`, `bbox`, опц. `panel_abs_path` |
+| POST | `/{project}/ocr_panel` | OCR всех баблов **текущей** панели (ручной режим) |
+| POST | `/{project}/detect_panel` | YOLO только текущей панели, без OCR (`merge_mode`: append \| replace) |
+
+### 5.1. Пути к PNG (`panel_paths`)
+
+При запросе с непустым `panels_dir` (UI или query):
+
+1. PNG берутся **только** из указанной папки (`source_only` — без fallback на старые копии в `project/panels/`).
+2. «Загрузить проект» в UI сначала вызывает `POST /sync_panels`, затем `GET /{project}?panels_dir=…`.
+3. Смена поля «Папка панелей» при открытом проекте сбрасывает сессию редактора (`clearSession`); нужно создать/загрузить проект заново.
+
+Ответы `init`, `process`, `GET /{project}` содержат массив `panel_paths`: `{ panel_id, image_path, abs_path }`.
+
+Превью в Konva: `/api/image?path=…&v=<cache_bust>` (`Cache-Control: no-store`).
 
 ---
 
@@ -135,13 +155,17 @@ python scripts\test_siliconflow_api.py --vision debug\stage_2a\...\crop_00_raw.j
 
 ## 7. Интерактивный UI (HITL, июнь 2026)
 
-Вкладка **Story 2a** на `:8000` — полноценный редактор поверх Konva.
+Вкладка **ExText** на `:8000` — полноценный редактор поверх Konva.  
+Режимы и кнопки: [STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md).
 
 ### 7.1. Навигация и sidebar
 
 | Элемент | Поведение |
 |---------|-----------|
+| **Режим** | Radio **Ручной** \| **Авто** (`workflow_mode`, persist) |
 | Проект | Имя + папка панелей; persist в `ui_state.story2a` |
+| **Создать из папки** | `POST /init` — список панелей без баблов |
+| **Загрузить проект** | sync + `GET /{project}?panels_dir=` |
 | Навигация | «Панель N / M» (без `panel_id` в UI) |
 | Список баблов | Строка: **№ · точка · превью текста**; `panel_id` / `bubble_id` — только в tooltip |
 | Кнопки ↑↓ / клик по № | Изменение `reading_order` через `reading_order.js` |
@@ -163,7 +187,7 @@ Sidebar-кнопки «Пропустить» / «Перераспознать»
 
 - drag за title bar chrome;
 - resize за угол;
-- позиции хранятся в `S2.frameLayouts` (client-side, секция `story2a` в ui_state);
+- позиции хранятся в `S2.frameLayouts` (**только client-side**, не в `stage_2a.json` и не в `ui_state`);
 - в `stage_2a.json` сохраняются только bbox и текст.
 
 ### 7.4. Порядок чтения
@@ -176,9 +200,10 @@ Sidebar-кнопки «Пропустить» / «Перераспознать»
 
 Секция `story2a` в `config/ui_state.user.json`:
 
-- `project`, `panels_dir`, `output_dir`;
-- `frameLayouts` (позиции текстовых окон);
-- merge-логика не затирает пути пустыми строками после reload.
+- `project`, `panels_dir`, `output_json_path`, `workflow_mode` (`manual` \| `auto`);
+- сброс **↺ Сброс ExText** → заводские значения + `clearSession()` редактора;
+- пустая строка в `panels_dir` / `project` при persist — **явная очистка** поля (не «оставить старое»);
+- merge-логика `_merge_section_paths` для split / upscale / video / story2a.
 
 ---
 
