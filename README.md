@@ -1,4 +1,4 @@
-# ComicSplit
+﻿# ComicSplit
 
 Автоматическая нарезка панелей комиксов (YOLO + MobileSAM) и **оживление** панелей (апскейл, 16:9, MP4). Windows, Python 3.11.
 
@@ -85,6 +85,8 @@ python anim_pipeline.py output\exam_imgs story_out --mode tpsmm --tpsmm-driving-
 | [config/presets.yaml](config/presets.yaml) | Пресеты Стандарт / Качество |
 | [spec_s/README.md](spec_s/README.md) | Индекс `spec_s/` |
 | **[spec_s/MODELS_SETUP_GUIDE.md](spec_s/MODELS_SETUP_GUIDE.md)** | Установка моделей (split, anim, ExText) |
+| **[spec_s/WEB_LLM_GIT_WORKFLOW.md](spec_s/WEB_LLM_GIT_WORKFLOW.md)** | Web-LLM: GitHub + Sourcecraft, `REPO_MAP.md` |
+| **[REPO_MAP.md](REPO_MAP.md)** | Дерево проекта + Raw-ссылки (`python scripts/generate_repo_map.py`) |
 | [models/README.md](models/README.md) | Список файлов моделей |
 
 ---

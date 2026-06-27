@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 Все значимые изменения проекта ComicSplit (`SPLIT_PANELS_DEV`).  
 Формат ориентирован на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/).
@@ -7,7 +7,9 @@
 
 ### Добавлено
 
-- **ExText** — UI-название вкладки Stage 2a (внутренние id: `story2a`, `stage_2a`, `story_2a.js`)
+- **Web-LLM workflow:** `REPO_MAP.md`, `scripts/generate_repo_map.py`, [WEB_LLM_GIT_WORKFLOW.md](spec_s/WEB_LLM_GIT_WORKFLOW.md) — карта raw-ссылок + мануал GitHub/Sourcecraft
+
+### Добавлено (ранее в сессии)
 - Режимы **Ручной / Авто** (`workflow_mode`): init, OCR/detect по панели, batch process; см. `spec_s/STORY_ANALYZER_STAGE_2A_WORKFLOW.md`
 - API Stage 2a: `POST /init`, `POST /sync_panels`, `POST /{project}/ocr_panel`, `POST /{project}/detect_panel`
 - `GET /{project}?panels_dir=` — пути PNG с учётом папки UI (`source_only`, без stale fallback)

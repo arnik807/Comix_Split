@@ -1,4 +1,4 @@
-# ComicSplit — экспорт контекста для LLM (handoff)
+﻿# ComicSplit — экспорт контекста для LLM (handoff)
 
 **Дата:** июнь 2026  
 **Репозиторий:** `SPLIT_PANELS_DEV` (Windows, Python 3.11)  
@@ -152,11 +152,11 @@ Split UI:     reading_order панелей; snap grid/objects — блок S (н
 | `ROADMAP.md` | План блоков A/B/R1/**S** |
 | `STORY_ANALYZER_STAGE_2A.md` | ExText (Stage 2a): стек + HITL + API + пути PNG |
 | `STORY_ANALYZER_STAGE_2A_WORKFLOW.md` | Режимы Ручной / Авто |
-| `README.md` | Индекс spec_s/ |
+| `WEB_LLM_GIT_WORKFLOW.md` | Web-LLM: REPO_MAP, dual push, git-команды |
 | `LLM_HANDOFF_CONTEXT.md` | Этот handoff |
 | `archive/` | Устаревшие спеки (v2.0, SPLIT_DETECTORS, ROADMAP_QUALITY_BOOST и др.) |
 
-Корень: `README.md`, `CHANGELOG.md`.  
+Корень: `README.md`, `CHANGELOG.md`, **`REPO_MAP.md`**.  
 Вне spec_s: `models/README.md`, `scripts/readme.md`.
 
 Папка `spec_s/Claude_track_anliz/` — черновики слияния доков; канон — файлы в корне `spec_s/`.

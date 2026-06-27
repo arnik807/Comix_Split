@@ -1,4 +1,4 @@
-# Документация ComicSplit (`spec_s/`)
+﻿# Документация ComicSplit (`spec_s/`)
 
 **Обновлено:** июнь 2026 (ExText UI + manual/auto workflow + fix путей панелей)
 
@@ -15,6 +15,7 @@
 | **[STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md)** | Story Analyzer | ExText (Stage 2a): bbox + VLM OCR + HITL, API, пути PNG |
 | **[STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md)** | Story Analyzer | Режимы **Ручной / Авто**, кнопки, API по панели |
 | **[LLM_HANDOFF_CONTEXT.md](LLM_HANDOFF_CONTEXT.md)** | Handoff для LLM | Сводный контекст проекта для другой модели |
+| **[WEB_LLM_GIT_WORKFLOW.md](WEB_LLM_GIT_WORKFLOW.md)** | Web-LLM + Git | REPO_MAP, push GitHub/Sourcecraft, команды |
 
 > **ExText** — видимое имя вкладки на `:8000`. В коде, API и `ui_state` секция называется `story2a` (Stage 2a).
 

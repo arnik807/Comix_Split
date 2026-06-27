@@ -1,4 +1,4 @@
-## Что за файлы в этой папке:
+﻿## Что за файлы в этой папке:
 
 **`MODELS_SETUP_GUIDE.md`** перенесён в **`spec_s/MODELS_SETUP_GUIDE.md`** — полный справочник: split, anim, ExText, квантование, verify.
 
@@ -27,6 +27,14 @@ Split-модели — отдельно в `scripts/split_models_craft_scripts/`
 ## Бенчмарк апскейла (NCNN)
 
 `benchmark_upscale.ps1` / `benchmark_upscale.py` — прогон комбинаций модель × scale × GPU × tile на одной панели; таблица + PNG в `exam_img/_upscale_benchmark/`.
+
+## Web-LLM: карта репозитория
+
+```powershell
+python scripts\generate_repo_map.py
+```
+
+→ `REPO_MAP.md` (Raw-ссылки GitHub + Sourcecraft). Мануал: [spec_s/WEB_LLM_GIT_WORKFLOW.md](../spec_s/WEB_LLM_GIT_WORKFLOW.md).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\benchmark_upscale.ps1 -Quick
