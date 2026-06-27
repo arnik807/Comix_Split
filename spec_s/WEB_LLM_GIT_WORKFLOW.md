@@ -115,14 +115,36 @@ git pull origin main
 git pull
 ```
 
-### Локальная работа
+### Локальная работа — один файл или много
+
+**Git не коммитит «по одному файлу».** Один `git commit` = один снимок всего, что вы положили в **staging** (`git add`).
 
 ```powershell
-git add path\to\file.py
-git add REPO_MAP.md
-git restore path\to\file.py          # отменить unstaged
-git restore --staged path\to\file.py  # убрать из index
+# Один файл
+git add frontend/story_2a.js
+
+# Несколько файлов явно
+git add frontend/story_2a.js api/story_stage_2a.py spec_s/ARCHITECTURE.md
+
+# Вся папка (десятки файлов)
+git add frontend/
+git add spec_s/
+
+# Все изменённые отслеживаемые файлы в проекте (осторожно: проверьте git status!)
+git add .
+
+# Все изменения в уже отслеживаемых файлах, без новых untracked
+git add -u
 ```
+
+После `git add` смотрите **`git status`**: в блоке «Changes to be committed» — всё, что попадёт в **следующий один** коммит. Это может быть 1 файл или 200.
+
+```powershell
+git status
+git commit -m "feat: ExText + правки API и доков"
+```
+
+**Не путать:** два коммита в workflow ниже — это не «коммит на файл», а **два логических шага** (код → обновление `REPO_MAP` после push). Обычную задачу от LLM (много `.py`, `.js`, `.md`) делайте **одним** коммитом через `git add .` или `git add frontend/ api/ …`.
 
 ### Коммит
 
@@ -174,25 +196,53 @@ git reset --hard origin/main     # как на Sourcecraft (потеря лок�
 
 ## 5. Типовой цикл «задача от LLM»
 
+### 5.1. Обычная правка (много файлов → один коммит)
+
 ```powershell
-# 1. Актуальный код
+cd D:\DEVELOP\COMICS\SPLIT_PANELS_DEV
 git pull origin main
 
-# 2. Правки по инструкции LLM (в Cursor / IDE)
-# ...
+# … правки в Cursor / IDE …
 
-# 3. Обновить карту для следующей сессии LLM
 python scripts/generate_repo_map.py
 
-# 4. Коммит
 git add .
 git status
-git commit -m "fix: описание по задаче LLM"
-
-# 5. Оба сервера
-git push github main
-git push origin main
+git commit -m "fix: описание задачи от LLM"
+git push github main; git push origin main
 ```
+
+Перед `git add .` убедитесь, что в списке **нет** `.env`, `exam_imgs/`, `models/` — они не должны попасть в коммит.
+
+### 5.2. После изменения только `generate_repo_map.py` / REPO_MAP (два коммита)
+
+Sourcecraft Raw привязан к **hash коммита**. Поэтому иногда нужно:
+
+1. Закоммитить **код/скрипт/доки** (без финального REPO_MAP или с промежуточным).
+2. **Push** — hash появился на сервере.
+3. Перегенерировать `REPO_MAP.md` с актуальным hash.
+4. Второй коммит только для карты + push.
+
+**Выполнять сверху вниз, по одной строке** (в PowerShell многострочная вставка с `>>` может выполниться в обратном порядке):
+
+```powershell
+cd D:\DEVELOP\COMICS\SPLIT_PANELS_DEV
+git add scripts/generate_repo_map.py spec_s/WEB_LLM_GIT_WORKFLOW.md
+git status
+git commit -m "fix: описание изменения"
+git push github main; git push origin main
+python scripts/generate_repo_map.py
+git add REPO_MAP.md
+git status
+git commit -m "docs: refresh REPO_MAP Sourcecraft commit hash"
+git push github main; git push origin main
+```
+
+> **Зачем два коммита:** в `REPO_MAP` в Sourcecraft-URL подставляется hash **текущего** `HEAD`. После первого push hash известен; второй коммит обновляет ссылки в карте. Для **GitHub Raw** это не критично (там в URL ветка `main`).
+
+### 5.3. Старый упрощённый цикл (один коммит)
+
+Тот же §5.1: `generate_repo_map` → `git add .` → один `commit` → dual push. Подходит для большинства задач.
 
 ---
 
