@@ -194,9 +194,28 @@ git reset --hard origin/main     # как на Sourcecraft (потеря лок�
 
 ---
 
-## 5. Типовой цикл «задача от LLM»
+## 5. ⚠️ Проблема: битые Sourcecraft-ссылки в REPO_MAP
 
-### 5.1. Обычная правка (много файлов → один коммит)
+**Симптом:** ссылки вида `https://raw.sourcecraft.tech/raw/.../<hash>/CHANGELOG.md` возвращают **Not Found**, хотя файл существует на GitHub.
+
+**Причина:** `generate_repo_map.py` берёт хеш из `git rev-parse HEAD` — то есть хеш **уже существующего** коммита. Если запустить скрипт **до** коммита (или до push) — в REPO_MAP попадёт хеш предыдущего коммита, который может отсутствовать на Sourcecraft.
+
+| Ситуация | Результат |
+|----------|-----------|
+| `generate_repo_map` → `git commit` → `push` | ❌ REPO_MAP содержит хеш **предыдущего** коммита — если тот не на Sourcecraft, ссылки битые |
+| `git commit` → `push` → `generate_repo_map` → `git commit` → `push` | ✅ REPO_MAP содержит хеш **текущего** коммита — ссылки рабочие |
+
+**Правило:** сначала закоммитить код и запушить, потом генерировать REPO_MAP.
+
+> GitHub Raw-ссылки от этого **не страдают** — они ссылаются на ветку `main`, а не на хеш. Но REPO_MAP пишется для обеих платформ, поэтому порядок важен.
+
+---
+
+## 6. Типовой цикл «задача от LLM»
+
+### 6.1. Стандартный workflow (два коммита)
+
+Это **основной способ** для любых задач, где менялись файлы проекта.
 
 ```powershell
 cd D:\DEVELOP\COMICS\SPLIT_PANELS_DEV
@@ -204,49 +223,49 @@ git pull origin main
 
 # … правки в Cursor / IDE …
 
+# Шаг 1: коммит кода (без REPO_MAP.md)
+git add .
+git status                          # убедитесь: нет .env, exam_imgs/, models/
+git commit -m "feat: описание задачи от LLM"
+
+# Шаг 2: push — хеш появился на обоих серверах
+git push github main; git push origin main
+
+# Шаг 3: генерация REPO_MAP с актуальным хешем
 python scripts/generate_repo_map.py
 
-git add .
-git status
-git commit -m "fix: описание задачи от LLM"
+# Шаг 4: второй коммит для карты
+git add REPO_MAP.md
+git commit -m "docs: refresh REPO_MAP"
+
+# Шаг 5: push карты
 git push github main; git push origin main
 ```
 
-Перед `git add .` убедитесь, что в списке **нет** `.env`, `exam_imgs/`, `models/` — они не должны попасть в коммит.
+**Зачем два коммита:** Sourcecraft Raw требует полный commit hash в URL. После первого push хеш известен серверу; второй коммит фиксирует его в `REPO_MAP.md`. GitHub Raw-ссылки (по ветке `main`) работают и так.
 
-### 5.2. После изменения только `generate_repo_map.py` / REPO_MAP (два коммита)
+### 6.2. GitHub-only (один коммит, без Sourcecraft)
 
-Sourcecraft Raw привязан к **hash коммита**. Поэтому иногда нужно:
-
-1. Закоммитить **код/скрипт/доки** (без финального REPO_MAP или с промежуточным).
-2. **Push** — hash появился на сервере.
-3. Перегенерировать `REPO_MAP.md` с актуальным hash.
-4. Второй коммит только для карты + push.
-
-**Выполнять сверху вниз, по одной строке** (в PowerShell многострочная вставка с `>>` может выполниться в обратном порядке):
+Если Sourcecraft-ссылки **неважны** (например, чистый backend без изменений структуры файлов), можно обойтись одним коммитом:
 
 ```powershell
 cd D:\DEVELOP\COMICS\SPLIT_PANELS_DEV
-git add scripts/generate_repo_map.py spec_s/WEB_LLM_GIT_WORKFLOW.md
+git pull origin main
+
+# … правки …
+
+python scripts/generate_repo_map.py      # хеш будет «на один коммит позади» — нормально для GitHub
+git add .
 git status
-git commit -m "fix: описание изменения"
-git push github main; git push origin main
-python scripts/generate_repo_map.py
-git add REPO_MAP.md
-git status
-git commit -m "docs: refresh REPO_MAP Sourcecraft commit hash"
+git commit -m "fix: описание"
 git push github main; git push origin main
 ```
 
-> **Зачем два коммита:** в `REPO_MAP` в Sourcecraft-URL подставляется hash **текущего** `HEAD`. После первого push hash известен; второй коммит обновляет ссылки в карте. Для **GitHub Raw** это не критично (там в URL ветка `main`).
-
-### 5.3. Старый упрощённый цикл (один коммит)
-
-Тот же §5.1: `generate_repo_map` → `git add .` → один `commit` → dual push. Подходит для большинства задач.
+> Sourcecraft-ссылки в этом случае могут быть битыми до следующего корректного push (§6.1).
 
 ---
 
-## 6. Raw-URL — как LLM читает файл
+## 7. Raw-URL — как LLM читает файл
 
 **GitHub** (ветка `main`, после push):
 
@@ -264,14 +283,14 @@ Web-LLM с доступом в интернет открывает URL и пол
 
 ---
 
-## 7. Что не попадает в REPO_MAP
+## 8. Что не попадает в REPO_MAP
 
 Как в `.gitignore`: `models/**`, `venv_*`, `output/`, `story_out/`, `.env`, бинарники, тестовые прогоны `exam_img/`.  
 LLM не увидит локальные веса и секреты — это нормально.
 
 ---
 
-## 8. Аутентификация
+## 9. Аутентификация
 
 | Сервер | Push |
 |--------|------|
@@ -282,7 +301,7 @@ LLM не увидит локальные веса и секреты — это �
 
 ---
 
-## 9. Связанные документы
+## 10. Связанные документы
 
 | Файл | Зачем LLM / вам |
 |------|-----------------|
@@ -294,7 +313,7 @@ LLM не увидит локальные веса и секреты — это �
 
 ---
 
-## 10. Чеклист перед push
+## 11. Чеклист перед push
 
 - [ ] Код запускается / тесты по возможности
 - [ ] Нет `.env`, `models/`, `exam_img/` в `git add`
