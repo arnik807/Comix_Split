@@ -110,15 +110,105 @@
         }
         .path-browse:hover { border-color: var(--accent); color: var(--text); }
         .path-browse:disabled { opacity: .45; cursor: not-allowed; }
-        select.inp, input.inp-num {
+        select.inp, input.inp, input.inp-num {
             width: 100%; padding: 6px 8px; margin-bottom: 6px;
             background: var(--surface2); border: 1px solid var(--border);
             border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 10px;
-            min-height: var(--ctl-h); line-height: 1.25;
+            min-height: var(--ctl-h); line-height: 1.25; box-sizing: border-box;
+            outline: none; transition: border-color .15s, box-shadow .15s;
         }
-        select.inp { cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%); background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
-        select.inp:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 1px rgba(240,192,64,.25); }
+        select.inp {
+            cursor: pointer;
+            appearance: none;
+            background-color: var(--surface2);
+            background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+            background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%;
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+            padding-right: 28px;
+        }
+        select.inp:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(240,192,64,.25);
+        }
         select.inp option { background: #1a1a1f; color: var(--text); }
+
+        /* Combobox «Имя проекта» — поле как select.inp, список на всю ширину */
+        .project-combo {
+            position: relative;
+            width: 100%;
+            margin-bottom: 4px;
+        }
+        .project-combo-input.inp {
+            margin-bottom: 0;
+            cursor: text;
+            appearance: none;
+            background-color: var(--surface2);
+            background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+            background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%;
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+            padding-right: 28px;
+        }
+        .project-combo-input.inp:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(240,192,64,.25);
+        }
+        .project-combo-menu {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 2px);
+            z-index: 200;
+            max-height: 240px;
+            overflow-y: auto;
+            margin: 0;
+            padding: 4px 0;
+            list-style: none;
+            background: #1a1a1f;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        }
+        .project-combo-menu[hidden] { display: none; }
+        .project-combo-menu li {
+            display: block;
+            width: 100%;
+            padding: 6px 8px;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--text);
+            cursor: pointer;
+            min-height: var(--ctl-h);
+            line-height: 1.25;
+            box-sizing: border-box;
+        }
+        .project-combo-menu li:hover,
+        .project-combo-menu li.active {
+            background: rgba(240, 192, 64, 0.12);
+            color: var(--accent);
+        }
+        .project-combo-menu li.selected {
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .project-combo-menu li.empty {
+            color: var(--muted);
+            cursor: default;
+            pointer-events: none;
+        }
+        .project-combo-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 28px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+        }
+
         .field-hint { font-size: 9px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
         .range-row { margin-bottom: 8px; }
         .range-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
@@ -569,6 +659,11 @@
         .ro-popup-input { width: 100%; margin-bottom: 10px; }
         .ro-popup-actions { display: flex; gap: 8px; justify-content: flex-end; }
         .s2a-footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .project-bar-sec { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 4px; }
+        .path-readonly { opacity: 0.85; background: rgba(255,255,255,0.04); }
+        .split-page-nav { margin-top: 8px; }
+        .split-page-nav .action-stack-row { display: flex; gap: 6px; align-items: center; }
+        #split-page-nav-label { flex: 1; text-align: center; font-size: 11px; color: var(--muted); }
         .s2a-mode-radio label { cursor: pointer; font-size: 10px; line-height: 1; }
         .s2a-mode-radio { display: flex; flex-direction: column; gap: 6px; width: 100%; }
         .s2a-mode-radio-inline {
@@ -664,12 +759,39 @@
         <div class="tab-reset-row">
             <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('split')">↺ Сброс Split</button>
         </div>
+        <div class="sec project-bar-sec">
+            <div class="trow">
+                <span class="tlbl">Проект</span>
+                <label class="tog"><input type="checkbox" id="split-use-project"><span class="sl"></span></label>
+            </div>
+            <label class="lbl">Имя проекта</label>
+            <div class="project-combo">
+                <input type="text" id="split-project" class="inp project-combo-input" autocomplete="off" placeholder="Выберите / Введите имя проекта" />
+                <button type="button" class="project-combo-toggle" tabindex="-1" aria-label="Список проектов"></button>
+                <ul class="project-combo-menu" role="listbox" hidden></ul>
+            </div>
+        </div>
         <div class="sec">
             <div class="sec-title"><span class="sec-num">①</span><span>Источник</span></div>
-            <label class="lbl" data-tip="img_path">Путь к изображению</label>
+            <label class="lbl" data-tip="img_path">Папка / CBZ / страница</label>
+            <div class="path-row">
+                <input type="text" id="split-folder-path" placeholder="exam_imgs\mycomic или page.jpg" />
+                <button type="button" class="path-browse" onclick="pickPath('split-folder-path','folder','Папка с страницами')">Обзор…</button>
+            </div>
+            <div class="action-stack" style="margin-top:6px">
+                <button type="button" class="btn btn-s" id="split-btn-load-pages" onclick="loadSplitPages()">📂 Загрузить список страниц</button>
+            </div>
+            <label class="lbl" style="margin-top:8px">Текущая страница</label>
             <div class="path-row">
                 <input type="text" id="img-path" value="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" placeholder="exam_imgs\01_Asterix_the_Gaul_page-0004.jpg" />
                 <button type="button" class="path-browse" onclick="pickPath('img-path','file','Выберите страницу')">Обзор…</button>
+            </div>
+            <div class="split-page-nav">
+                <div class="action-stack-row">
+                    <button type="button" class="btn btn-s" id="split-page-prev">◀ Пред.</button>
+                    <span id="split-page-nav-label">Нет страниц</span>
+                    <button type="button" class="btn btn-s" id="split-page-next">След. ▶</button>
+                </div>
             </div>
         </div>
 
@@ -764,6 +886,18 @@
             <div class="tab-reset-row">
                 <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('upscale')">↺ Сброс Upscale</button>
             </div>
+            <div class="sec project-bar-sec">
+                <div class="trow">
+                    <span class="tlbl">Проект</span>
+                    <label class="tog"><input type="checkbox" id="up-use-project"><span class="sl"></span></label>
+                </div>
+                <label class="lbl">Имя проекта</label>
+                <div class="project-combo">
+                    <input type="text" id="up-project" class="inp project-combo-input" autocomplete="off" placeholder="Выберите / Введите имя проекта" />
+                    <button type="button" class="project-combo-toggle" tabindex="-1" aria-label="Список проектов"></button>
+                    <ul class="project-combo-menu" role="listbox" hidden></ul>
+                </div>
+            </div>
             <div class="sec">
                 <div class="sec-title-row">
                     <span class="sec-title"><span class="sec-num">①</span><span>Пути</span></span>
@@ -837,6 +971,18 @@
         <div id="tab-video" class="tab-panel">
             <div class="tab-reset-row">
                 <button type="button" class="btn-reset" onclick="ComicSplitUiState.resetSection('video')">↺ Сброс Video</button>
+            </div>
+            <div class="sec project-bar-sec">
+                <div class="trow">
+                    <span class="tlbl">Проект</span>
+                    <label class="tog"><input type="checkbox" id="vid-use-project"><span class="sl"></span></label>
+                </div>
+                <label class="lbl">Имя проекта</label>
+                <div class="project-combo">
+                    <input type="text" id="vid-project" class="inp project-combo-input" autocomplete="off" placeholder="Выберите / Введите имя проекта" />
+                    <button type="button" class="project-combo-toggle" tabindex="-1" aria-label="Список проектов"></button>
+                    <ul class="project-combo-menu" role="listbox" hidden></ul>
+                </div>
             </div>
             <div class="sec">
                 <div class="sec-title-row">
@@ -983,10 +1129,17 @@
                     <label><input type="radio" name="s2a-workflow-mode" id="s2a-mode-auto" value="auto"> Авто</label>
                 </div>
             </div>
-            <div class="sec">
-                <div class="sec-title"><span class="sec-num">②</span><span>Проект</span></div>
+            <div class="sec project-bar-sec">
+                <div class="trow">
+                    <span class="tlbl">Проект</span>
+                    <label class="tog"><input type="checkbox" id="s2a-use-project"><span class="sl"></span></label>
+                </div>
                 <label class="lbl" data-tip="s2a_project">Имя проекта</label>
-                <input type="text" id="s2a-project" class="inp" placeholder="test_2a" />
+                <div class="project-combo">
+                    <input type="text" id="s2a-project" class="inp project-combo-input" autocomplete="off" placeholder="Выберите / Введите имя проекта" />
+                    <button type="button" class="project-combo-toggle" tabindex="-1" aria-label="Список проектов"></button>
+                    <ul class="project-combo-menu" role="listbox" hidden></ul>
+                </div>
                 <label class="lbl" data-tip="s2a_panels_dir">Папка панелей (PNG)</label>
                 <div class="path-row">
                     <input type="text" id="s2a-panels-dir" placeholder="exam_img\manga_test_1\manga_test_1_upscaled" />
@@ -1095,6 +1248,8 @@
 <div id="toast"></div>
 
 <script src="ui_state.js"></script>
+<script src="workspace.js"></script>
+<script src="panel_nav.js"></script>
 <script src="reading_order.js"></script>
 <script src="story_2a.js"></script>
 <script>
@@ -1829,6 +1984,48 @@ function setVideoLinks(files, storyboard) {
     });
 }
 
+let splitPageNav = null;
+
+function initSplitPageNav() {
+    if (!window.ComicSplitPanelNav) return;
+    splitPageNav = ComicSplitPanelNav.createNav({
+        labelEl: $('split-page-nav-label'),
+        prevBtn: $('split-page-prev'),
+        nextBtn: $('split-page-next'),
+        emptyLabel: 'Нет страниц',
+        onChange(pagePath) {
+            if (!pagePath) return;
+            $('img-path').value = pagePath.replace(/\//g, '\\');
+            if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
+        },
+    });
+    if ($('split-page-prev')) $('split-page-prev').onclick = () => splitPageNav.prev();
+    if ($('split-page-next')) $('split-page-next').onclick = () => splitPageNav.next();
+}
+
+async function loadSplitPages() {
+    const source = ($('split-folder-path')?.value || $('img-path')?.value || '').trim();
+    if (!source) { toast('Укажите папку, CBZ или файл страницы', 'err'); return; }
+    try {
+        const r = await fetch('/api/split/list_pages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({ source_path: source }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || r.statusText);
+        if (!splitPageNav) initSplitPageNav();
+        splitPageNav.setItems(data.pages || [], 0);
+        if (data.pages && data.pages[0]) {
+            $('img-path').value = data.pages[0].replace(/\//g, '\\');
+            toast(`Загружено страниц: ${data.pages.length}`);
+        }
+        if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
+    } catch (e) {
+        toast(e.message, 'err');
+    }
+}
+
 async function runUpscale() {
     const panels_dir = $('up-panels').value.trim();
     const output_dir = $('up-output').value.trim() || 'output_upscaled';
@@ -1850,6 +2047,9 @@ async function runUpscale() {
                 panels_dir,
                 output_dir,
                 scale,
+                project_name: window.ComicSplitWorkspace
+                    ? ComicSplitWorkspace.projectPayloadForApi('up')
+                    : null,
                 ...upscalePayloadFields('up'),
             }),
         });
@@ -1864,7 +2064,11 @@ async function runUpscale() {
         );
         setStatus(`✓ Апскейл: ${data.count} файлов`, 'ok');
         toast(`Апскейл: ${data.count} файлов`);
-        if ($('vid-panels').value.trim() === '') $('vid-panels').value = panels_dir;
+        if (data.project && window.ComicSplitWorkspace && ComicSplitWorkspace.isProjectMode('s2a')) {
+            const layout = await ComicSplitWorkspace.fetchLayout(data.project);
+            if (layout) $('s2a-panels-dir').value = ComicSplitWorkspace.toWinPath(layout.upscale);
+        }
+        if ($('vid-panels').value.trim() === '') $('vid-panels').value = data.output_dir || panels_dir;
         if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
     } catch (e) {
         setBatchLog(`Ошибка:\n${e.message}`);
@@ -1895,6 +2099,9 @@ async function runVideo() {
             body: JSON.stringify({
                 panels_dir,
                 output_dir,
+                project_name: window.ComicSplitWorkspace
+                    ? ComicSplitWorkspace.projectPayloadForApi('vid')
+                    : null,
                 mode: $('vid-mode').value,
                 do_upscale: $('vid-upscale').checked,
                 scale: parseInt($('vid-scale').value, 10) || 2,
@@ -2000,6 +2207,10 @@ async function runDetection() {
 }
 
 async function exportPanels() {
+    if (window.ComicSplitWorkspace && ComicSplitWorkspace.isProjectMode('split')) {
+        const layout = await ComicSplitWorkspace.applyProjectPaths('split');
+        if (!layout) return;
+    }
     const outDir = $('out-dir').value.trim();
     if (!outDir) { toast('Укажите папку вывода','err'); return; }
     const btn=$('btn-exp');
@@ -2023,16 +2234,28 @@ async function exportPanels() {
                 image_path: S.imgPath,
                 panels,
                 output_dir: outDir,
+                project_name: window.ComicSplitWorkspace
+                    ? ComicSplitWorkspace.projectPayloadForApi('split')
+                    : null,
+                flat_export: !!(window.ComicSplitWorkspace && ComicSplitWorkspace.isProjectMode('split')),
             }),
         });
         if (!r.ok) { const e=await r.json(); throw new Error(e.detail); }
         const d = await r.json();
         setStatus(`✓ Сохранено ${d.count} PNG`,'ok');
         toast(`Экспорт: ${d.count} файлов`);
-        const outRoot = d.saved && d.saved[0] ? d.saved[0].replace(/[/\\][^/\\]+$/, '') : '';
+        const outRoot = d.output_dir || (d.saved && d.saved[0] ? d.saved[0].replace(/[/\\][^/\\]+$/, '') : '');
         if (outRoot) {
             $('up-panels').value = outRoot;
             $('vid-panels').value = outRoot;
+            if (window.ComicSplitWorkspace) {
+                const proj = ComicSplitWorkspace.projectPayloadForApi('split');
+                if (proj) {
+                    const layout = await ComicSplitWorkspace.fetchLayout(proj);
+                    ComicSplitWorkspace.propagateAfterSplitExport(layout);
+                    ComicSplitWorkspace.loadProjectSelects();
+                }
+            }
             if (window.ComicSplitUiState) ComicSplitUiState.scheduleSave();
         }
     } catch(e) {
@@ -2697,6 +2920,8 @@ async function initApp() {
     await loadSplitOptions(true);
     syncVideoAdvancedVisibility();
     applyPresetModeUI();
+    initSplitPageNav();
+    if (window.ComicSplitWorkspace) ComicSplitWorkspace.init();
     if (window.ComicSplitUiState) ComicSplitUiState.bindAutoSave();
 }
 

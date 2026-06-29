@@ -33,6 +33,7 @@ def default_global() -> dict[str, Any]:
         "active_preset": "standard",
         "preset_persist": False,
         "active_tab": "split",
+        "current_project": "",
     }
 
 
@@ -43,6 +44,8 @@ def default_split() -> dict[str, Any]:
         "source_path": "exam_imgs\\01_Asterix_the_Gaul_page-0004.jpg",
         "folder_path": "",
         "output_dir": "output",
+        "use_project": False,
+        "project": "",
         "panel_detector": normalize_detector(cfg.panel_detector),
         "use_sam": cfg.quality_mode == "accurate",
         "reading_order": bool(cfg.reading_order),
@@ -59,6 +62,8 @@ def default_upscale() -> dict[str, Any]:
     return {
         "panels_dir": "",
         "output_dir": "output_upscaled",
+        "use_project": False,
+        "project": "",
         "scale": int(u.scale),
         "backend": normalize_upscale_backend(u.backend),
         "model": u.model,
@@ -77,6 +82,8 @@ def default_video() -> dict[str, Any]:
     return {
         "panels_dir": "",
         "output_dir": "story_out",
+        "use_project": False,
+        "project": "",
         "mode": a.mode,
         "upscale_enabled": bool(u.enabled),
         "scale": int(u.scale),
@@ -103,6 +110,7 @@ def default_story2a() -> dict[str, Any]:
         "panels_dir": "exam_img\\manga_test_1\\manga_test_1_upscaled",
         "workflow_mode": "manual",
         "output_json_path": "",
+        "use_project": False,
     }
 
 

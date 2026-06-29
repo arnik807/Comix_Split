@@ -1,6 +1,6 @@
 ﻿# Документация ComicSplit (`spec_s/`)
 
-**Обновлено:** июнь 2026 (ExText UI + manual/auto workflow + fix путей панелей)
+**Обновлено:** июнь 2026 (Workspace / project mode ✅; ExText UI + manual/auto workflow)
 
 ## Актуальные документы
 
@@ -14,6 +14,8 @@
 | **[ROADMAP.md](ROADMAP.md)** | План работ | Блоки A, B0, B1, B4 ✅; B2 🟡; B3 📋; **R1 ExText** 🟡; **S snap** 📋 |
 | **[STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md)** | Story Analyzer | ExText (Stage 2a): bbox + VLM OCR + HITL, API, пути PNG |
 | **[STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md)** | Story Analyzer | Режимы **Ручной / Авто**, кнопки, API по панели |
+| **[WORKSPACE_REFACTORING_SPEC.md](WORKSPACE_REFACTORING_SPEC.md)** | Workspace | Спека: единый проект, batch Split, dedup ExText |
+| **[WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md)** | Workspace | Отчёт реализации project mode (API v1.5, UI combobox) |
 | **[LLM_HANDOFF_CONTEXT.md](LLM_HANDOFF_CONTEXT.md)** | Handoff для LLM | Сводный контекст проекта для другой модели |
 | **[WEB_LLM_GIT_WORKFLOW.md](WEB_LLM_GIT_WORKFLOW.md)** | Web-LLM + Git | REPO_MAP, push GitHub/Sourcecraft, команды |
 

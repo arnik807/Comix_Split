@@ -52,8 +52,12 @@
     }
 
     function readUiFields() {
+        let project = ($('s2a-project') || {}).value?.trim() || '';
+        if (window.ComicSplitWorkspace) {
+            project = ComicSplitWorkspace.readProjectForTab('s2a') || project;
+        }
         return {
-            project: ($('s2a-project') || {}).value?.trim() || '',
+            project,
             panelsDir: ($('s2a-panels-dir') || {}).value?.trim() || '',
         };
     }
@@ -888,6 +892,13 @@
         return `Панелей: ${s.panels}, баблов: ${s.bubbles}, YOLO: ${s.yolo_ms}ms, OCR: ${s.ocr_ms}ms${eng}`;
     }
 
+    function copyPanelsPayload() {
+        if (window.ComicSplitWorkspace && ComicSplitWorkspace.isProjectMode('s2a')) {
+            return { copy_panels: false };
+        }
+        return {};
+    }
+
     async function initProject2a() {
         syncFieldsFromUi();
         const { project, panelsDir } = readUiFields();
@@ -902,7 +913,7 @@
             const r = await fetch('/api/story/stage_2a/init', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({ project, panels_dir: panelsDir }),
+                body: JSON.stringify({ project, panels_dir: panelsDir, ...copyPanelsPayload() }),
             });
             const data = await r.json();
             if (!r.ok) throw new Error(formatApiError(data, r.statusText));
@@ -1041,7 +1052,7 @@
             const r = await fetch('/api/story/stage_2a/process', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({ project, panels_dir: panelsDir }),
+                body: JSON.stringify({ project, panels_dir: panelsDir, ...copyPanelsPayload() }),
             });
             const data = await r.json();
             if (!r.ok) throw new Error(formatApiError(data, r.statusText));
@@ -1071,7 +1082,7 @@
                 const sr = await fetch('/api/story/stage_2a/sync_panels', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                    body: JSON.stringify({ project, panels_dir: panelsDir }),
+                    body: JSON.stringify({ project, panels_dir: panelsDir, ...copyPanelsPayload() }),
                 });
                 const syncData = await sr.json();
                 if (!sr.ok) throw new Error(formatApiError(syncData, sr.statusText));

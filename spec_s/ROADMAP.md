@@ -1,4 +1,4 @@
-# ComicSplit — Roadmap качества
+﻿# ComicSplit — Roadmap качества
 
 **Версия:** 2.0 (июнь 2026)  
 **Целевое железо:** Ryzen 5 5600H, AMD Radeon iGPU, 16 GB RAM, Windows, без CUDA
@@ -16,6 +16,7 @@
 | **B2** | TPSMM motion transfer | 🟡 **Интегрировано** — нужны тесты на реальных панелях + B3 segment |
 | **B3** | Сегментация + SAM2-tiny | 📋 В планах (зависит от B2) |
 | **R1** | Story Analyzer ExText (Stage 2a: bbox + OCR + HITL) | 🟡 **Интерактив ✅** — formal ACCEPTANCE ⏳ |
+| **W** | Workspace project mode (:8000): единый проект, batch Split, dedup ExText | ✅ **Закрыт** — см. [WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md) |
 | **S** | Split: snap grid / snap to objects | 📋 **Следующий UX-шаг** после polish R1 |
 
 Подробнее R1: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md), roadmap: [../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md](../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md).

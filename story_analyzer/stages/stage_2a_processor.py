@@ -14,7 +14,14 @@ import numpy as np
 
 from anim.io_utils import IMAGE_EXTS, list_images
 from story_analyzer.config import Stage2aConfig, load_stage_2a_config
-from story_analyzer.paths import panels_dir, project_dir, sanitize_project_name, stage_2a_json_path
+from story_analyzer.paths import (
+    panels_dir,
+    panels_dir_is_source,
+    project_dir,
+    sanitize_project_name,
+    should_sync_panels,
+    stage_2a_json_path,
+)
 from story_analyzer.schemas import Bubble, BubbleType, Panel2a, Stage2aDocument
 from story_analyzer.stages.bubble_detector import detect_text_bubbles
 from story_analyzer.stages.ocr_reader import crop_with_padding, ocr_bubble_crop
@@ -88,9 +95,11 @@ def sync_panels_to_project(
     copy: bool = True,
     replace: bool = False,
 ) -> Path:
-    """Copy panel PNGs into story_out/projects/<project>/panels/."""
+    """Sync panel PNGs into story_out/projects/<project>/panels/ (optional copy)."""
     dest = panels_dir(project)
     dest.mkdir(parents=True, exist_ok=True)
+    if panels_dir_is_source(source_dir, project):
+        return dest
     if replace:
         for existing in dest.iterdir():
             if existing.is_file():
@@ -98,14 +107,51 @@ def sync_panels_to_project(
                     existing.unlink()
                 except OSError:
                     pass
+    if not copy:
+        return source_dir
     for src in list_images(source_dir):
         target = dest / src.name
-        if copy:
-            if not target.exists() or src.resolve() != target.resolve():
-                shutil.copy2(src, target)
-        elif not target.exists():
+        if not target.exists() or src.resolve() != target.resolve():
             shutil.copy2(src, target)
     return dest
+
+
+def normalize_panel_image_path(project: str, image_path: str) -> str:
+    """Store portable relative path panels/<filename>."""
+    raw = (image_path or "").strip()
+    if not raw:
+        return raw
+    name = Path(raw).name
+    rel = f"panels/{name}"
+    try:
+        resolve_panel_abs_path(project, rel)
+        return rel
+    except FileNotFoundError:
+        pass
+    if Path(raw).is_absolute():
+        try:
+            base = project_dir(sanitize_project_name(project)).resolve()
+            candidate = Path(raw).resolve()
+            if candidate.is_file():
+                try:
+                    rel_to = candidate.relative_to(base)
+                    return rel_to.as_posix().replace("/", "\\") if "\\" in raw else rel_to.as_posix()
+                except ValueError:
+                    return rel
+        except OSError:
+            return rel
+    return raw if raw.startswith("panels/") else rel
+
+
+def normalize_document_image_paths(doc: Stage2aDocument) -> Stage2aDocument:
+    panels_out: List[Panel2a] = []
+    for panel in doc.panels:
+        panels_out.append(
+            panel.model_copy(
+                update={"image_path": normalize_panel_image_path(doc.project, panel.image_path)}
+            )
+        )
+    return doc.model_copy(update={"panels": panels_out})
 
 
 def _unique_panel_id(stem: str, used: set[str]) -> str:
@@ -174,19 +220,28 @@ def process_panels_dir(
     project: str,
     *,
     cfg: Optional[Stage2aConfig] = None,
-    sync_panels: bool = True,
+    sync_panels: bool | None = None,
+    copy_panels: bool | None = None,
 ) -> tuple[Stage2aDocument, ProcessStats]:
     t0 = time.perf_counter()
     cfg = cfg or load_stage_2a_config()
     project_name = sanitize_project_name(project)
     project_dir(project_name).mkdir(parents=True, exist_ok=True)
 
-    if sync_panels:
-        work_dir = sync_panels_to_project(panels_folder, project_name, replace=True)
+    do_sync = should_sync_panels(panels_folder, project_name, copy=copy_panels)
+    if sync_panels is not None:
+        do_sync = bool(sync_panels)
+    if do_sync:
+        work_dir = sync_panels_to_project(
+            panels_folder,
+            project_name,
+            copy=copy_panels if copy_panels is not None else True,
+            replace=True,
+        )
     else:
         work_dir = Path(panels_folder)
 
-    images = list_images(panels_folder if sync_panels else work_dir)
+    images = list_images(work_dir)
     stats = ProcessStats()
     doc_panels: List[Panel2a] = []
     used_ids: set[str] = set()
@@ -259,6 +314,7 @@ def save_stage_2a(
     output_path: Optional[str | Path] = None,
 ) -> Path:
     name = sanitize_project_name(project or doc.project)
+    doc = normalize_document_image_paths(doc.model_copy(update={"project": name}))
     if output_path is not None and str(output_path).strip():
         raw = str(output_path).strip()
         candidate = Path(raw)
@@ -358,16 +414,28 @@ def init_project_from_panels_dir(
     project: str,
     *,
     cfg: Optional[Stage2aConfig] = None,
-    sync_panels: bool = True,
+    sync_panels: bool | None = None,
+    copy_panels: bool | None = None,
 ) -> Stage2aDocument:
     """Create stage_2a.json with empty bubbles (manual-first workflow)."""
     _ = cfg or load_stage_2a_config()
     project_name = sanitize_project_name(project)
     project_dir(project_name).mkdir(parents=True, exist_ok=True)
 
-    if sync_panels:
-        sync_panels_to_project(panels_folder, project_name, replace=True)
-    images = list_images(panels_folder)
+    do_sync = should_sync_panels(panels_folder, project_name, copy=copy_panels)
+    if sync_panels is not None:
+        do_sync = bool(sync_panels)
+    if do_sync:
+        sync_panels_to_project(
+            panels_folder,
+            project_name,
+            copy=copy_panels if copy_panels is not None else True,
+            replace=True,
+        )
+        work_dir = panels_dir(project_name)
+    else:
+        work_dir = Path(panels_folder)
+    images = list_images(work_dir)
     doc_panels: List[Panel2a] = []
     used_ids: set[str] = set()
     for img_path in images:

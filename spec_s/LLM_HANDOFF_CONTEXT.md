@@ -80,14 +80,15 @@ CBZ / PNG страницы → PNG панели (split) → апскейл → 1
 | **B2** | TPSMM motion transfer | 🟡 Код + UI + `anim_pipeline` — нужны тесты на реальных панелях |
 | **B3** | Сегментация персонажа для TPSMM, SAM2-tiny | 📋 В планах |
 | **R1** | Story Analyzer ExText (Stage 2a: bbox + VLM OCR + HITL) | 🟡 Интерактив ✅; formal ACCEPTANCE ⏳ |
+| **W** | Workspace project mode (:8000) | ✅ Закрыт — [WORKSPACE_REFACTORING_REPORT.md](spec_s/WORKSPACE_REFACTORING_REPORT.md) |
 | **S** | Split snap grid / snap to objects | 📋 Следующий UX-шаг — см. ROADMAP блок S |
 
 **Не сделано / отложено:** OpenCV fast-path split, Wails, gRPC, benchmark <600 ms/стр., PyInstaller сборка «из коробки», `tests/test_tpsmm.py`, B1.4 benchmark детекторов (опционально).
 
 **ExText OCR:** основной путь — **SiliconFlow VLM**, не EasyOCR/Paddle primary. UI-имя вкладки **ExText**; API/id: `story2a`. См. `spec_s/STORY_ANALYZER_STAGE_2A.md`, `STORY_ANALYZER_STAGE_2A_WORKFLOW.md`.
 
-**API:** FastAPI **v1.3.0** (`api/server.py`).  
-**Тесты:** ~**67** pytest.
+**API:** FastAPI **v1.5.0** (`api/server.py`).  
+**Тесты:** ~**68+** pytest.
 
 ---
 

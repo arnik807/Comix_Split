@@ -7,6 +7,7 @@
 
 ### Добавлено
 
+- **Workspace / project mode (:8000):** единый проект на всех вкладках (Split, Upscale, Video, ExText); layout `story_out/projects/<имя>/`; API v1.5 (`GET /api/projects`, `GET /api/projects/{name}/layout`, `POST /api/split/list_pages`); batch Split по папке/CBZ; combobox «Имя проекта» (как `select.inp`); чекбокс **«Проект»**; авто-пути при выборе/Enter; ExText без копирования PNG в проектном режиме — см. [WORKSPACE_REFACTORING_REPORT.md](spec_s/WORKSPACE_REFACTORING_REPORT.md)
 - **Web-LLM workflow:** `REPO_MAP.md`, `scripts/generate_repo_map.py`, [WEB_LLM_GIT_WORKFLOW.md](spec_s/WEB_LLM_GIT_WORKFLOW.md) — карта raw-ссылок + мануал GitHub/Sourcecraft
 
 ### Добавлено (ранее в сессии)

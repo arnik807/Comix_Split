@@ -1,4 +1,4 @@
-# ComicSplit — Техническая архитектура
+﻿# ComicSplit — Техническая архитектура
 
 **Версия:** 1.0 (июнь 2026)  
 **Отражает:** фактическую реализацию MVP (split + anim + пресеты)  
@@ -166,13 +166,16 @@ SPLIT_PANELS_DEV/
 │   ├── path_dialog.py        # Нативные диалоги выбора файла/папки
 │   ├── models_registry.py    # Проверка установки моделей
 │   ├── panel_detector.py     # Выбор comic / manga YOLO
-│   ├── ui_state.py           # Память UI v1 (split/upscale/video/story2a)
+│   ├── ui_state.py           # Память UI v1 (split/upscale/video/story2a + current_project)
+│   ├── workspace_paths.py    # Пути project mode для export/upscale/video
+│   ├── split_pages.py        # list_split_pages() для batch Split
 │   └── gradio_ui_state.py    # Восстановление Gradio из ui_state
 │
 ├── api/
-│   ├── server.py             # FastAPI v1.3.0 (:8000)
+│   ├── server.py             # FastAPI v1.5.0 (:8000)
 │   └── story_stage_2a.py     # Story Analyzer Stage 2a API
 ├── story_analyzer/           # Story Analyzer (Stage 2a+)
+│   ├── paths.py              # Layout workspace: story_out/projects/<name>/
 │   ├── stages/               # bubble_detector, ocr_*, stage_2a_processor
 │   ├── providers/            # siliconflow_ocr
 │   └── config.py
@@ -180,6 +183,8 @@ SPLIT_PANELS_DEV/
 ├── frontend/
 │   ├── index.html            # Konva + вкладки Split/Upscale/Video/ExText
 │   ├── ui_state.js           # localStorage + sync /api/ui/state
+│   ├── workspace.js          # Project mode (combobox, layout, paths)
+│   ├── panel_nav.js          # Batch Split: prev/next страниц
 │   ├── reading_order.js      # Порядок чтения (Split панели + Stage 2a баблы)
 │   └── story_2a.js           # UI ExText (Stage 2a)
 │
@@ -215,15 +220,18 @@ SPLIT_PANELS_DEV/
 
 ---
 
-## 7. API (FastAPI v1.3.0)
+## 7. API (FastAPI v1.5.0)
 
 | Эндпоинт | Метод | Назначение |
 |----------|-------|-----------|
 | `/api/process` | POST | Детекция панелей (`panel_detector`: comic \| manga) |
-| `/api/export` | POST | Сохранить PNG (rect или polygon) |
-| `/api/upscale` | POST | Апскейл (`backend`, CUGAN/SPAN поля) |
-| `/api/animate` | POST | Анимация → MP4 (`mode` incl. `tpsmm`, `tpsmm_driving_video`) |
+| `/api/export` | POST | Сохранить PNG (rect или polygon); `project_name`, `flat_export` |
+| `/api/upscale` | POST | Апскейл (`backend`, CUGAN/SPAN поля); `project_name` |
+| `/api/animate` | POST | Анимация → MP4 (`mode` incl. `tpsmm`, `tpsmm_driving_video`); `project_name` |
 | `/api/video` | GET | Отдать MP4 для превью |
+| `/api/projects` | GET | Список проектов в `story_out/projects/` |
+| `/api/projects/{name}/layout` | GET | Пути `panels/`, `upscale/`, `video/`, `stage_2a.json` |
+| `/api/split/list_pages` | POST | Список страниц из папки / файла / CBZ-ZIP |
 | `/api/presets` | GET | Список пресетов |
 | `/api/presets/{name}` | GET | Конкретный пресет |
 | `/api/presets/apply` | POST | Применить пресет |
@@ -265,7 +273,7 @@ panels/ (upscaled PNG)
 | Конфиг | `config/story_stage_2a.yaml`, секреты `.env` |
 | Модули | `story_analyzer/`, `api/story_stage_2a.py`, `frontend/story_2a.js` |
 
-**Split (та же вкладка :8000):** порядок панелей через `reading_order.js`; технические метаданные (`panel_id`, bbox, %) скрыты в sidebar — только № и «Панель».
+**Split (та же вкладка :8000):** порядок панелей через `reading_order.js`; batch по папке/CBZ (`split-folder-path`, prev/next); **project mode** — единый проект на Split/Upscale/Video/ExText, layout `story_out/projects/<имя>/` — см. [WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md).
 
 **Следующий UX-шаг Split:** snap grid / snap to objects — блок S в [ROADMAP.md](ROADMAP.md).
 

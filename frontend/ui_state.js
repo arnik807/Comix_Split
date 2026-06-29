@@ -18,17 +18,22 @@
     function collectGlobal() {
         const cp = typeof window.currentPreset !== 'undefined' ? window.currentPreset : 'standard';
         const at = typeof window.activeTab !== 'undefined' ? window.activeTab : 'split';
-        return {
+        const base = {
             active_preset: cp,
             preset_persist: !!$('preset-persist')?.checked,
             active_tab: at,
+            current_project: '',
         };
+        if (window.ComicSplitWorkspace) {
+            Object.assign(base, ComicSplitWorkspace.collectWorkspaceGlobal());
+        }
+        return base;
     }
 
     function collectSplit() {
-        return {
+        const base = {
             source_path: $('img-path')?.value?.trim() || '',
-            folder_path: '',
+            folder_path: $('split-folder-path')?.value?.trim() || '',
             output_dir: $('out-dir')?.value?.trim() || '',
             panel_detector: $('panel-detector')?.value || 'comic',
             use_sam: !!$('use-sam')?.checked,
@@ -37,12 +42,19 @@
             confidence_threshold: parseFloat($('conf-thr')?.value || '0.35'),
             iou_threshold: parseFloat($('iou-thr')?.value || '0.45'),
             poly_mode: !!$('poly-mode')?.checked,
+            use_project: false,
+            project: '',
         };
+        if (window.ComicSplitWorkspace) {
+            Object.assign(base, ComicSplitWorkspace.collectWorkspaceSection('split'));
+        }
+        return base;
     }
 
     function collectUpscale(prefix) {
         const p = prefix || 'up';
-        return {
+        const tabKey = p === 'vid' ? 'vid' : 'up';
+        const base = {
             panels_dir: $(`${p}-panels`)?.value?.trim() || '',
             output_dir: $(`${p}-output`)?.value?.trim() || '',
             scale: parseInt($(`${p}-scale`)?.value, 10) || 2,
@@ -51,7 +63,13 @@
             gpu_id: parseInt($(`${p}-gpu`)?.value, 10) || 0,
             cugan_noise: parseInt($(`${p}-cugan-noise`)?.value, 10),
             cugan_syncgap: parseInt($(`${p}-cugan-syncgap`)?.value, 10),
+            use_project: false,
+            project: '',
         };
+        if (window.ComicSplitWorkspace) {
+            Object.assign(base, ComicSplitWorkspace.collectWorkspaceSection(tabKey));
+        }
+        return base;
     }
 
     function collectVideo() {
@@ -74,12 +92,17 @@
     function collectStory2a() {
         const manual = $('s2a-mode-manual');
         const mode = (manual && manual.checked) ? 'manual' : 'auto';
-        return {
+        const base = {
             project: $('s2a-project')?.value?.trim() || '',
             panels_dir: $('s2a-panels-dir')?.value?.trim() || '',
             workflow_mode: mode,
             output_json_path: $('s2a-json-path')?.value?.trim() || '',
+            use_project: false,
         };
+        if (window.ComicSplitWorkspace) {
+            Object.assign(base, ComicSplitWorkspace.collectWorkspaceSection('s2a'));
+        }
+        return base;
     }
 
     function collectStory2aForPersist() {
@@ -205,9 +228,15 @@
 
         if (g.active_preset && hooks().setPresetActive) hooks().setPresetActive(g.active_preset);
         if ($('preset-persist')) $('preset-persist').checked = !!g.preset_persist;
+        if (window.ComicSplitWorkspace) ComicSplitWorkspace.applyWorkspaceGlobal(g);
 
         if ($('img-path')) $('img-path').value = s.source_path != null ? s.source_path : '';
+        if ($('split-folder-path')) $('split-folder-path').value = s.folder_path != null ? s.folder_path : '';
         if ($('out-dir')) $('out-dir').value = s.output_dir != null ? s.output_dir : '';
+        if (window.ComicSplitWorkspace) {
+            if (s.use_project != null && $('split-use-project')) $('split-use-project').checked = !!s.use_project;
+            if (s.project) ComicSplitWorkspace.setCurrentProject(s.project, { syncInputs: true });
+        }
         if ($('panel-detector')) $('panel-detector').value = s.panel_detector || 'comic';
         if ($('use-sam')) $('use-sam').checked = !!s.use_sam;
         if ($('reading-order')) $('reading-order').checked = s.reading_order !== false;
@@ -221,6 +250,12 @@
 
         applyUpscaleSection(u, 'up');
         applyUpscaleSection(v, 'vid');
+        if (window.ComicSplitWorkspace) {
+            if (u.use_project != null && $('up-use-project')) $('up-use-project').checked = !!u.use_project;
+            if (u.project) ComicSplitWorkspace.setProjectInputValue('up-project', u.project);
+            if (v.use_project != null && $('vid-use-project')) $('vid-use-project').checked = !!v.use_project;
+            if (v.project) ComicSplitWorkspace.setProjectInputValue('vid-project', v.project);
+        }
 
         if ($('vid-mode')) $('vid-mode').value = v.mode || 'opencv_zoom';
         if ($('vid-upscale')) $('vid-upscale').checked = v.upscale_enabled !== false;
@@ -234,9 +269,16 @@
         setRange('vid-fps', v.fps ?? 24);
         if ($('vid-concat')) $('vid-concat').checked = v.do_concat !== false;
 
-        if ($('s2a-project')) $('s2a-project').value = s2.project != null ? s2.project : '';
+        if ($('s2a-project')) {
+            if (window.ComicSplitWorkspace && s2.project) {
+                ComicSplitWorkspace.setProjectInputValue('s2a-project', s2.project);
+            }
+        }
         if ($('s2a-panels-dir')) $('s2a-panels-dir').value = s2.panels_dir != null ? s2.panels_dir : '';
         if ($('s2a-json-path')) $('s2a-json-path').value = s2.output_json_path != null ? s2.output_json_path : '';
+        if (window.ComicSplitWorkspace && s2.use_project != null && $('s2a-use-project')) {
+            $('s2a-use-project').checked = !!s2.use_project;
+        }
         const mode = s2.workflow_mode === 'auto' ? 'auto' : 'manual';
         const rm = $('s2a-mode-manual');
         const ra = $('s2a-mode-auto');
@@ -250,6 +292,15 @@
         if (hooks().syncVideoAdvancedVisibility) hooks().syncVideoAdvancedVisibility();
         if (hooks().applyPresetModeUI) hooks().applyPresetModeUI();
         if (hooks().loadSplitOptions) hooks().loadSplitOptions(true);
+
+        if (window.ComicSplitWorkspace) {
+            const anyUseProject = [s, u, v, s2].some((sec) => sec && sec.use_project);
+            const projectName =
+                g.current_project || s.project || u.project || v.project || s2.project;
+            if (anyUseProject && projectName) {
+                ComicSplitWorkspace.activateProjectGlobally(projectName);
+            }
+        }
 
         restoring = false;
         window.__uiRestoring = false;

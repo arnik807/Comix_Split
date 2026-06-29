@@ -1,7 +1,7 @@
-# ComicSplit — документация (актуальная)
+﻿# ComicSplit — документация (актуальная)
 
 **Версия документа:** 1.7 (июнь 2026) — блоки A, B0, B1, B4; TPSMM (B2); **ExText HITL** (Stage 2a); manual/auto workflow; fix путей панелей; Split reading_order  
-**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.3**, вкладки Split / Upscale / Video / **ExText**); опционально Go CLI.
+**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.5**, вкладки Split / Upscale / Video / **ExText**); **workspace project mode**; опционально Go CLI.
 
 Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video / ExText), **Go CLI**.
 
@@ -69,7 +69,7 @@ SPLIT_PANELS_DEV/
 ├── models/anim/            # NCNN, MiDaS, TPSMM, ffmpeg (не в git)
 ├── anim/                   # upscale, harmonize, render, animate_*
 ├── utils/                  # config, anim_config, presets, io_helpers, path_resolve, ui_tooltips, path_dialog
-├── api/server.py           # FastAPI v1.3 (:8000)
+├── api/server.py           # FastAPI v1.5 (:8000)
 ├── frontend/index.html     # Konva + вкладки Split/Upscale/Video/ExText
 ├── scripts/                # модели split + anim
 ├── cmd/comicsplit/         # Go CLI
@@ -326,7 +326,20 @@ PNG с альфа-каналом: фон прозрачный, панель вы
 
 ## 9. Способ 3 — веб-редактор (порт 8000)
 
-Split с ручной правкой + апскейл, видео и **ExText** без Gradio. FastAPI **v1.3** + `frontend/index.html`. Функционал **согласован с Gradio** (пресеты, tooltips, детектор comic/manga, backend апскейла, TPSMM + driving MP4).
+Split с ручной правкой + апскейл, видео и **ExText** без Gradio. FastAPI **v1.5** + `frontend/index.html`. Функционал **согласован с Gradio** (пресеты, tooltips, детектор comic/manga, backend апскейла, TPSMM + driving MP4).
+
+### 9.0. Workspace / project mode
+
+На каждой вкладке (Split, Upscale, Video, ExText) — блок **«Проект»**:
+
+| Элемент | Поведение |
+|---------|-----------|
+| **Чекбокс «Проект»** | Вкл/выкл project mode; при вкл — пути readonly и указывают на `story_out/projects/<имя>/…` |
+| **Имя проекта** | Combobox (как `select.inp`): полный список при открытии; клик по имени или **Enter** — перестройка путей на **всех** вкладках |
+| **Layout** | `panels/` (Split), `upscale/`, `video/`, `stage_2a.json` (ExText) |
+| **ExText** | В project mode PNG **не копируются** в `panels/` — используется исходная папка (`copy_panels: false`) |
+
+Подробнее: [WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md).
 
 ### 9.1. Запуск
 
@@ -348,17 +361,19 @@ uvicorn api.server:app --reload --port 8000
 | **Пути** | Ручной ввод в текстовое поле (относительные пути предпочтительны при кириллице) |
 | **Память UI** | Пути, настройки и активная вкладка сохраняются (`localStorage` + `config/ui_state.user.json`) |
 | **↺ Сброс** | Кнопки сброса Split / Upscale / Video / **ExText** — заводские значения; ExText также очищает открытый проект в редакторе |
+| **Проект** | Единое имя и layout на всех вкладках; см. §9.0 |
 
 ### 9.3. Вкладка Split
 
 | Элемент | Поведение |
 |---------|-----------|
+| **Папка / CBZ** | `split-folder-path` + «Загрузить список страниц» → prev/next по страницам (`POST /api/split/list_pages`) |
 | **Детекция** | `POST /api/process` — только координаты в память, **файлы на диск не пишет** |
 | **Детектор** | `comic` / `manga`; `GET /api/split/options` |
 | **Accurate (YOLO + SAM)** | Точный контур; блок «Качество» |
 | **Пороги YOLO** | Слайдеры confidence / IoU — режим «Качество» |
 | **Полигон (ломаная форма)** | Редактирование вершин; **экспорт по маске** только при включённом полигоне или после ручной правки |
-| **Экспорт PNG** | `POST /api/export` → ваша папка `output_dir\<имя_страницы>\` |
+| **Экспорт PNG** | `POST /api/export` → `output_dir\<имя_страницы>\` или `story_out/projects/<проект>/panels/` (project mode) |
 | **Порядок панелей** | № на канвасе и в sidebar; ↑↓ и popup №; экспорт в порядке `reading_order` |
 | **Sidebar** | Только **№ · точка · «Панель»**; `panel_id` и координаты — в tooltip при наведении |
 
@@ -404,7 +419,10 @@ uvicorn api.server:app --reload --port 8000
 | Метод | Путь | Назначение |
 |-------|------|------------|
 | POST | `/api/process` | Детекция (пороги YOLO в теле запроса) |
-| POST | `/api/export` | PNG панелей |
+| POST | `/api/export` | PNG панелей (`project_name`, `flat_export`) |
+| POST | `/api/split/list_pages` | Список страниц (папка / файл / CBZ-ZIP) |
+| GET | `/api/projects` | Список workspace-проектов |
+| GET | `/api/projects/{name}/layout` | Пути layout проекта |
 | POST | `/api/upscale` | Апскейл (`backend`, model, scale, CUGAN/SPAN…) |
 | POST | `/api/animate` | Видео (`mode`, `tpsmm_driving_video`, harmonize, depthflow…) |
 | GET | `/api/split/options` | Детекторы + статус моделей split |

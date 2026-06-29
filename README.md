@@ -2,7 +2,7 @@
 
 Автоматическая нарезка панелей комиксов (YOLO + MobileSAM) и **оживление** панелей (апскейл, 16:9, MP4). Windows, Python 3.11.
 
-**Пресеты качества:** «Стандарт» (YOLO + videov3 ×2) и «Качество» (SAM + x4plus-anime ×4 + DepthFlow dolly) — Gradio :7860 и веб :8000 (Split / Upscale / Video / **ExText**).
+**Пресеты качества:** «Стандарт» (YOLO + videov3 ×2) и «Качество» (SAM + x4plus-anime ×4 + DepthFlow dolly) — Gradio :7860 и веб :8000 (Split / Upscale / Video / **ExText**). **Project mode** — единый проект на всех вкладках `:8000` (`story_out/projects/<имя>/`).
 
 **ExText** — UI-название вкладки извлечения текста (Story Analyzer Stage 2a); в коде и API по-прежнему `story2a`, `stage_2a`.
 
@@ -75,7 +75,8 @@ python anim_pipeline.py output\exam_imgs story_out --mode tpsmm --tpsmm-driving-
 | **[spec_s/ARCHITECTURE.md](spec_s/ARCHITECTURE.md)** | Технический стек, архитектура, API, структура проекта |
 | **[spec_s/IMPLEMENTATION_STATUS.md](spec_s/IMPLEMENTATION_STATUS.md)** | Статус модулей, файловая карта, известные ограничения |
 | **[spec_s/MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md)** | Все модели: ссылки, параметры, оценка под Ryzen 5600H + AMD iGPU |
-| **[spec_s/ROADMAP.md](spec_s/ROADMAP.md)** | Roadmap: A/B блоки + **R1 ExText (Stage 2a)** 🟡 + **S snap** 📋 |
+| **[spec_s/WORKSPACE_REFACTORING_REPORT.md](spec_s/WORKSPACE_REFACTORING_REPORT.md)** | Workspace project mode: единый проект, batch Split, API v1.5 |
+| **[spec_s/ROADMAP.md](spec_s/ROADMAP.md)** | Roadmap: A/B/W блоки + **R1 ExText (Stage 2a)** 🟡 + **S snap** 📋 |
 | **[spec_s/STORY_ANALYZER_STAGE_2A.md](spec_s/STORY_ANALYZER_STAGE_2A.md)** | ExText (Stage 2a): bbox + SiliconFlow VLM OCR |
 | **[spec_s/STORY_ANALYZER_STAGE_2A_WORKFLOW.md](spec_s/STORY_ANALYZER_STAGE_2A_WORKFLOW.md)** | Режимы **Ручной / Авто**, кнопки, API по панели |
 | [problems_fix/bubbles_detect_problems/](problems_fix/bubbles_detect_problems/) | Roadmap Stage 2a, LEGACY локального OCR |
@@ -99,8 +100,8 @@ python anim_pipeline.py output\exam_imgs story_out --mode tpsmm --tpsmm-driving-
 | `pipeline.py` | Split ML + CLI |
 | `anim_pipeline.py` | Anim CLI |
 | `anim/` | upscale, harmonize, render, animate_* |
-| `api/` + `frontend/` | Веб :8000 (FastAPI v1.3) |
-| `utils/` | config, presets, io, paths, tooltips, path_dialog, models_registry, panel_detector |
+| `api/` + `frontend/` | Веб :8000 (FastAPI v1.5, workspace.js, panel_nav.js) |
+| `utils/` | config, presets, io, paths, tooltips, path_dialog, models_registry, panel_detector, workspace_paths, split_pages |
 | `config/presets.yaml` | Пресеты Стандарт / Качество |
 | `models/` | Split ONNX (не в git) |
 | `models/paddleocr/` | PaddleOCR whl (не в git) |

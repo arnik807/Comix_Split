@@ -1,6 +1,6 @@
-# ComicSplit — статус реализации
+﻿# ComicSplit — статус реализации
 
-**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован; R1 ExText — HITL + manual/auto + fix путей ✅)  
+**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован; R1 ExText — HITL + manual/auto ✅; **Workspace project mode ✅**)  
 **Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)  
 **Технологический стек и архитектура:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -21,12 +21,13 @@
 | Anim модули (`anim/`: upscale, harmonize, opencv, depthflow, render) | ✅ **Готово** |
 | Backend апскейла: Real-ESRGAN / Real-CUGAN / SPAN (NCNN) | ✅ **Готово** (`anim/upscale.py`) |
 | Веб-редактор FastAPI + Konva (`:8000`) — Split / Upscale / Video / **ExText** | ✅ **Готово** |
+| **Workspace project mode** (единый проект, layout `story_out/projects/`, batch Split, combobox UI) | ✅ **Готово** |
 | Память UI (localStorage + `ui_state.user.json`, секции split/upscale/video/story2a) | ✅ **Готово** — сброс секций, явная очистка путей |
 | Split: порядок чтения панелей (№, reorder в sidebar и на канвасе) | ✅ **Готово** (`frontend/reading_order.js`) |
 | Подсказки (tooltips) во всех настройках | ✅ **Готово** (`utils/ui_tooltips.py`) |
 | Выбор путей (диалог + ручной ввод) | ✅ **Готово** (`utils/path_dialog.py`) |
 | Реестр моделей + статус установки в UI | ✅ **Готово** (`config/models_registry.yaml`, `utils/models_registry.py`) |
-| API v1.3 (presets, tooltips, path/pick, models/setup, split/options, upscale/options) | ✅ **Готово** |
+| API v1.5 (presets, tooltips, path/pick, models/setup, split/options, upscale/options, **projects**, **split/list_pages**) | ✅ **Готово** |
 | TPSMM animate (`mode: tpsmm` + driving MP4) | 🟡 **Готово в коде/UI** — медленно на CPU; сегментация (B3) опциональна |
 | Go CLI (`comicsplit.exe`) | 🟡 **Частично** — CBZ/папка/JPG; CBR только Python |
 | OpenCV fast-path каскад (split) | ❌ **Нет** |
@@ -62,14 +63,18 @@
 | `utils/path_dialog.py` | Нативные диалоги Windows (tkinter) |
 | `utils/models_registry.py` | Проверка наличия моделей перед запуском |
 | `utils/panel_detector.py` | Выбор детектора `comic` \| `manga` |
-| `utils/ui_state.py` | Память UI v1: split / upscale / video / story2a / global |
+| `utils/ui_state.py` | Память UI v1: split / upscale / video / story2a / global; `current_project`, `use_project` |
+| `utils/workspace_paths.py` | Resolve путей export/upscale/video в project mode |
+| `utils/split_pages.py` | `list_split_pages()` — папка, файл, CBZ/ZIP для batch Split |
 | `utils/gradio_ui_state.py` | Восстановление полей Gradio из `ui_state.user.json` |
 | `frontend/ui_state.js` | localStorage + sync `PUT /api/ui/state` для :8000 |
+| `frontend/workspace.js` | Project mode: combobox, layout, авто-пути на всех вкладках |
+| `frontend/panel_nav.js` | Prev/next навигация по страницам Split (batch) |
 | `frontend/reading_order.js` | Общий модуль порядка чтения (Split панели, Stage 2a баблы) |
 | `utils/io_helpers.py` | CBZ, CBR, ZIP, папка, imdecode (кириллица) |
 | `utils/path_resolve.py` | Пути с кириллицей и mojibake |
 | `main.py` | Gradio 5.x, 3 вкладки |
-| `api/server.py` v1.3.0 | FastAPI REST |
+| `api/server.py` v1.5.0 | FastAPI REST (+ projects, split/list_pages, project_name в export/upscale/animate) |
 | `frontend/index.html` | Konva-редактор Split/Upscale/Video/ExText + пресеты + tooltips |
 | `ml_worker/main.py` | IPC для Go |
 | `cmd/comicsplit/` + `internal/*` | Go CLI |
@@ -79,7 +84,9 @@
 | `scripts/quantize_animate_models.py` | INT8 квантование + verify |
 | `scripts/verify_upscale_backends.py` | Проверка CUGAN/SPAN |
 | `scripts/benchmark_upscale.ps1` | Бенчмарк всех NCNN backend |
-| `tests/` | pytest (~67 тестов: split, anim, ui_state, stage 2a OCR/det) |
+| `story_analyzer/paths.py` | Layout проекта: `panels/`, `upscale/`, `video/`, `stage_2a.json`; `list_workspace_projects` |
+| `tests/test_workspace_paths.py` | layout, list_pages, should_sync_panels |
+| `tests/` | pytest (~68+ тестов: split, anim, ui_state, stage 2a, workspace) |
 | `packaging/comicsplit.spec` | PyInstaller |
 | `story_analyzer/stages/stage_2a_processor.py` | Stage 2a: detect + OCR → JSON |
 | `story_analyzer/stages/bubble_detector.py` | Tiled YOLO manga class 1 |

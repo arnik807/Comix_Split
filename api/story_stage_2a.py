@@ -33,6 +33,7 @@ router = APIRouter(prefix="/api/story/stage_2a", tags=["story-stage-2a"])
 class Stage2aProcessRequest(BaseModel):
     project: str
     panels_dir: str
+    copy_panels: Optional[bool] = None
 
 
 class Stage2aSaveRequest(BaseModel):
@@ -58,6 +59,7 @@ class Stage2aReocrRequest(BaseModel):
 class Stage2aInitRequest(BaseModel):
     project: str
     panels_dir: str
+    copy_panels: Optional[bool] = None
 
 
 class Stage2aPanelActionRequest(BaseModel):
@@ -141,7 +143,11 @@ def stage_2a_process(req: Stage2aProcessRequest):
         raise HTTPException(404, detail=f"Папка не найдена: {req.panels_dir}")
 
     try:
-        doc, stats = process_panels_dir(panels_path, req.project)
+        doc, stats = process_panels_dir(
+            panels_path,
+            req.project,
+            copy_panels=req.copy_panels,
+        )
         out_path = save_stage_2a(doc)
     except FileNotFoundError as exc:
         raise HTTPException(404, detail=str(exc)) from exc
@@ -176,7 +182,11 @@ def stage_2a_init(req: Stage2aInitRequest):
     if not panels_path.is_dir():
         raise HTTPException(404, detail=f"Папка не найдена: {req.panels_dir}")
     try:
-        doc = init_project_from_panels_dir(panels_path, req.project)
+        doc = init_project_from_panels_dir(
+            panels_path,
+            req.project,
+            copy_panels=req.copy_panels,
+        )
         out_path = stage_2a_json_path(doc.project)
     except Exception as exc:
         raise HTTPException(500, detail=str(exc)) from exc
@@ -194,6 +204,7 @@ def stage_2a_init(req: Stage2aInitRequest):
 class Stage2aSyncRequest(BaseModel):
     project: str
     panels_dir: str
+    copy_panels: Optional[bool] = True
 
 
 @router.post("/sync_panels")
@@ -209,7 +220,12 @@ def stage_2a_sync_panels(req: Stage2aSyncRequest):
         doc = load_stage_2a(req.project)
     except FileNotFoundError as exc:
         raise HTTPException(404, detail=str(exc)) from exc
-    sync_panels_to_project(panels_path, doc.project, replace=True)
+    sync_panels_to_project(
+        panels_path,
+        doc.project,
+        copy=req.copy_panels if req.copy_panels is not None else True,
+        replace=True,
+    )
     paths = _panel_paths_for_doc(doc, req.panels_dir)
     return {
         "ok": True,

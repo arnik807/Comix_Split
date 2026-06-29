@@ -53,6 +53,12 @@ from utils.ui_state import (  # noqa: E402
     patch_ui_state,
     reset_ui_section,
 )
+from utils.workspace_paths import (  # noqa: E402
+    resolve_export_output_dir,
+    resolve_project_name,
+    resolve_upscale_dirs,
+    resolve_video_dirs,
+)
 
 load_config()
 
@@ -82,11 +88,18 @@ class ExportRequest(BaseModel):
     image_path: str
     panels: List[PanelExport]
     output_dir: str
+    project_name: Optional[str] = None
+    flat_export: bool = False
+
+
+class SplitListPagesRequest(BaseModel):
+    source_path: str
 
 
 class UpscaleRequest(BaseModel):
     panels_dir: str
     output_dir: str = "output_upscaled"
+    project_name: Optional[str] = None
     scale: int = 2
     upscale_backend: Optional[str] = None  # realesrgan | realcugan | span
     upscale_model: Optional[str] = None
@@ -100,6 +113,7 @@ class UpscaleRequest(BaseModel):
 class AnimateRequest(BaseModel):
     panels_dir: str
     output_dir: str = "story_out"
+    project_name: Optional[str] = None
     mode: str = "opencv_zoom"
     do_upscale: bool = True
     scale: int = 2
@@ -137,7 +151,7 @@ class PathPickRequest(BaseModel):
 # App
 # ══════════════════════════════════════════════════════════════════════════════
 
-app = FastAPI(title="ComicSplit API", version="1.4.0")
+app = FastAPI(title="ComicSplit API", version="1.5.0")
 
 from story_analyzer.env_loader import load_dotenv  # noqa: E402
 
@@ -251,6 +265,37 @@ def _crop_polygon(img: np.ndarray, polygon: List[List[int]]) -> np.ndarray:
 # ══════════════════════════════════════════════════════════════════════════════
 # API Routes
 # ══════════════════════════════════════════════════════════════════════════════
+
+
+@app.get("/api/projects")
+def api_projects_list():
+    """Scan story_out/projects/ for existing workspace projects."""
+    from story_analyzer.paths import list_workspace_projects
+
+    return JSONResponse({"projects": list_workspace_projects()})
+
+
+@app.get("/api/projects/{name}/layout")
+def api_projects_layout(name: str):
+    from utils.workspace_paths import layout_for_project, resolve_project_name
+
+    project = resolve_project_name(name)
+    if not project:
+        raise HTTPException(400, detail="Invalid project name")
+    return JSONResponse(layout_for_project(project))
+
+
+@app.post("/api/split/list_pages")
+def api_split_list_pages(req: SplitListPagesRequest):
+    from utils.split_pages import list_split_pages
+
+    try:
+        payload = list_split_pages(req.source_path)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
+    return JSONResponse(payload)
 
 
 @app.get("/api/upscale/options")
@@ -505,14 +550,19 @@ def api_export(req: ExportRequest):
             detail=f"Файл не найден или не читается: {req.image_path}",
         )
 
-    out_base = resolve_dir_path(req.output_dir, ROOT)
-    out_dir = out_base / img_path.stem
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_base = resolve_export_output_dir(req.project_name, req.output_dir)
+    if req.project_name or req.flat_export:
+        out_dir = out_base
+        out_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        out_dir = out_base / img_path.stem
+        out_dir.mkdir(parents=True, exist_ok=True)
 
     saved: List[str] = []
+    page_prefix = f"{img_path.stem}_" if (req.project_name or req.flat_export) else ""
 
     for i, panel in enumerate(req.panels, start=1):
-        filename = f"{i:03d}_{panel.panel_id}_panel.png"
+        filename = f"{page_prefix}{i:03d}_{panel.panel_id}_panel.png"
         out_path = out_dir / filename
 
         if panel.polygon and len(panel.polygon) >= 3:
@@ -526,14 +576,21 @@ def api_export(req: ExportRequest):
         if _imwrite(str(out_path), crop):
             saved.append(str(out_path))
 
-    return JSONResponse({"saved": saved, "count": len(saved)})
+    return JSONResponse(
+        {
+            "saved": saved,
+            "count": len(saved),
+            "output_dir": str(out_dir.resolve()),
+        }
+    )
 
 
 @app.post("/api/upscale")
 def api_upscale(req: UpscaleRequest):
     """Апскейл всех PNG/JPG в папке (Real-ESRGAN / Real-CUGAN / SPAN)."""
+    project = resolve_project_name(req.project_name)
     try:
-        panels_dir = resolve_dir_path(req.panels_dir, ROOT)
+        panels_dir, out_base = resolve_upscale_dirs(project, req.panels_dir, req.output_dir)
     except OSError as exc:
         raise HTTPException(404, detail=str(exc)) from exc
 
@@ -543,12 +600,7 @@ def api_upscale(req: UpscaleRequest):
 
     images = list_images(panels_dir)
     if not images:
-        raise HTTPException(404, detail=f"Нет изображений в: {req.panels_dir}")
-
-    try:
-        out_base = resolve_dir_path(req.output_dir, ROOT)
-    except OSError:
-        out_base = pathlib.Path(req.output_dir)
+        raise HTTPException(404, detail=f"Нет изображений в: {panels_dir}")
 
     cfg = load_anim_config()
     cfg.upscale.enabled = True
@@ -565,6 +617,8 @@ def api_upscale(req: UpscaleRequest):
             "ok": True,
             "count": len(files),
             "output_dir": str(out_base.resolve()),
+            "panels_dir": str(panels_dir.resolve()),
+            "project": project or "",
             "files": files[:100],
         }
     )
@@ -573,8 +627,9 @@ def api_upscale(req: UpscaleRequest):
 @app.post("/api/animate")
 def api_animate(req: AnimateRequest):
     """Панели → harmonize + анимация → MP4 (+ storyboard)."""
+    project = resolve_project_name(req.project_name)
     try:
-        panels_dir = resolve_dir_path(req.panels_dir, ROOT)
+        panels_dir, out_base = resolve_video_dirs(project, req.panels_dir, req.output_dir)
     except OSError as exc:
         raise HTTPException(404, detail=str(exc)) from exc
 
@@ -583,12 +638,7 @@ def api_animate(req: AnimateRequest):
     from utils.anim_config import load_anim_config
 
     if not list_images(panels_dir):
-        raise HTTPException(404, detail=f"Нет изображений в: {req.panels_dir}")
-
-    try:
-        out_base = resolve_dir_path(req.output_dir, ROOT)
-    except OSError:
-        out_base = pathlib.Path(req.output_dir)
+        raise HTTPException(404, detail=f"Нет изображений в: {panels_dir}")
 
     cfg = _cfg_from_animate_request(req)
 
@@ -602,6 +652,8 @@ def api_animate(req: AnimateRequest):
             "ok": True,
             "panels_processed": result.panels_processed,
             "output_dir": str(out_base.resolve()),
+            "panels_dir": str(panels_dir.resolve()),
+            "project": project or "",
             "panel_videos": result.panel_videos,
             "storyboard_path": result.storyboard_path,
         }
