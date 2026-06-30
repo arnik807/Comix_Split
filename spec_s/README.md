@@ -1,21 +1,21 @@
 # Документация ComicSplit (`spec_s/`)
 
-**Обновлено:** июнь 2026 (Workspace / project mode ✅; ExText UI + manual/auto workflow)
+**Обновлено:** июнь 2026 (API v1.5, Workspace project mode, ARCHITECTURE v2.0)
 
 ## Актуальные документы
 
 | Документ | Для кого | Содержание |
 |----------|----------|------------|
 | **[ComicSplit_Documentation.md](ComicSplit_Documentation.md)** | Пользователь | Установка, Gradio, CLI, веб :8000, Go, параметры |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Разработчик | Стек, потоки данных, API v1.3, структура проекта |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Разработчик | Стек, потоки данных, API v1.5, workspace, Stage 2a, пресеты (v2.0) |
 | **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** | Разработчик | Статус модулей, файловая карта, ограничения |
 | **[MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md)** | ML / инференс | Все модели, ссылки, Ryzen 5600H + AMD iGPU |
 | **[MODELS_SETUP_GUIDE.md](MODELS_SETUP_GUIDE.md)** | Установка | Split, anim, ExText — скачивание, INT8, verify |
-| **[ROADMAP.md](ROADMAP.md)** | План работ | Блоки A, B0, B1, B4 ✅; B2 🟡; B3 📋; **R1 ExText** 🟡; **S snap** 📋 |
+| **[ROADMAP.md](ROADMAP.md)** | План работ | Блоки A, B0, B1, B4 ✅; B2 🟡; B3 📋; **R1 ExText** ✅; **S snap** 📋 |
 | **[STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md)** | Story Analyzer | ExText (Stage 2a): bbox + VLM OCR + HITL, API, пути PNG |
 | **[STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md)** | Story Analyzer | Режимы **Ручной / Авто**, кнопки, API по панели |
-| **[WORKSPACE_REFACTORING_SPEC.md](WORKSPACE_REFACTORING_SPEC.md)** | Workspace | Спека: единый проект, batch Split, dedup ExText |
-| **[WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md)** | Workspace | Отчёт реализации project mode (API v1.5, UI combobox) |
+| **[WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md)** | Workspace | Реализация project mode (API v1.5, UI combobox, batch Split) |
+| **[FREE_Story_Analyzer.md](FREE_Story_Analyzer.md)** | Story Analyzer | Целевая спецификация Stage 2b–7 (бесплатные модели) |
 | **[LLM_HANDOFF_CONTEXT.md](LLM_HANDOFF_CONTEXT.md)** | Handoff для LLM | Сводный контекст проекта для другой модели |
 | **[WEB_LLM_GIT_WORKFLOW.md](WEB_LLM_GIT_WORKFLOW.md)** | Web-LLM + Git | REPO_MAP, push GitHub/Sourcecraft, команды |
 
@@ -33,16 +33,16 @@
 
 ## Архив
 
-Устаревшие и поглощённые документы: **[archive/](archive/)** (спека v2.0, MVP-план, `SPLIT_DETECTORS.md`, `UPSCALE_UI_PARAMS.md`, `ROADMAP_QUALITY_BOOST.md` и др.).
+Устаревшие и поглощённые документы: **[archive/](archive/)** (спека v2.0, MVP-план, `SPLIT_DETECTORS.md`, `UPSCALE_UI_PARAMS.md`, `ROADMAP_QUALITY_BOOST.md`, `DopFunc.txt`, `webLLM+ GitHub= devWorkFlow.md`, `qwen_spec_for_*`, `Claude_track_anliz/`, `SplitTabRefactoring*.md`).
 
-Черновики слияния: `Claude_track_anliz/`, `qwen_spec_for_*` — **целевые** спеки Story Analyzer; факт Stage 2a OCR — канон в `STORY_ANALYZER_STAGE_2A.md`.
+> `WORKSPACE_REFACTORING_SPEC.md` полностью реализована и удалена; конечный результат — [WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md).
 
 ## Способы работы
 
 | # | Задача | Команда |
 |---|--------|---------|
 | 1 | Split Gradio | `python main.py` → :7860 |
-| 2 | Split CLI | `python pipeline.py <источник> output --order` |
+| 2 | Split CLI | `python pipeline.py <order>` |
 | 3 | Редактор + anim + ExText | `uvicorn api.server:app --port 8000` |
 | 4 | Anim CLI | `python anim_pipeline.py <panels_dir> story_out --mode opencv_zoom` |
 | 5 | Go batch split | `.\comicsplit.exe --input exam_imgs --output panels ...` |

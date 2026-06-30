@@ -76,7 +76,7 @@ python anim_pipeline.py output\exam_imgs story_out --mode tpsmm --tpsmm-driving-
 | **[spec_s/IMPLEMENTATION_STATUS.md](spec_s/IMPLEMENTATION_STATUS.md)** | Статус модулей, файловая карта, известные ограничения |
 | **[spec_s/MODELS_SPECIFICATION.md](spec_s/MODELS_SPECIFICATION.md)** | Все модели: ссылки, параметры, оценка под Ryzen 5600H + AMD iGPU |
 | **[spec_s/WORKSPACE_REFACTORING_REPORT.md](spec_s/WORKSPACE_REFACTORING_REPORT.md)** | Workspace project mode: единый проект, batch Split, API v1.5 |
-| **[spec_s/ROADMAP.md](spec_s/ROADMAP.md)** | Roadmap: A/B/W блоки + **R1 ExText (Stage 2a)** 🟡 + **S snap** 📋 |
+| **[spec_s/ROADMAP.md](spec_s/ROADMAP.md)** | Roadmap: A/B/W блоки + **R1 ExText (Stage 2a)** ✅ + **S snap** 📋 |
 | **[spec_s/STORY_ANALYZER_STAGE_2A.md](spec_s/STORY_ANALYZER_STAGE_2A.md)** | ExText (Stage 2a): bbox + SiliconFlow VLM OCR |
 | **[spec_s/STORY_ANALYZER_STAGE_2A_WORKFLOW.md](spec_s/STORY_ANALYZER_STAGE_2A_WORKFLOW.md)** | Режимы **Ручной / Авто**, кнопки, API по панели |
 | [problems_fix/bubbles_detect_problems/](problems_fix/bubbles_detect_problems/) | Roadmap Stage 2a, LEGACY локального OCR |
@@ -106,6 +106,6 @@ python anim_pipeline.py output\exam_imgs story_out --mode tpsmm --tpsmm-driving-
 | `models/` | Split ONNX (не в git) |
 | `models/paddleocr/` | PaddleOCR whl (не в git) |
 | `models/anim/` | NCNN, MiDaS, TPSMM, ffmpeg (не в git) |
-| `spec_s/` | Документация (9 активных + archive/) |
+| `spec_s/` | Документация (13 активных + archive/) |
 | `story_analyzer/` | Stage 2a+ Story Analyzer (ExText) |
 | `frontend/story_2a.js`, `reading_order.js`, `ui_state.js` | Веб :8000 ExText + persist |
