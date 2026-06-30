@@ -1,8 +1,8 @@
 ﻿# ComicSplit — статус реализации
 
-**Обновлено:** июнь 2026 (блок A закрыт; B1/B4 готовы; B2 интегрирован; R1 ExText — HITL + manual/auto ✅; **Workspace project mode ✅**)  
-**Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)  
-**Технологический стек и архитектура:** [ARCHITECTURE.md](ARCHITECTURE.md)
+**Обновлено:** июнь 2026 (Workspace project mode ✅; API v1.5; ExText Stage 2a HITL; пресеты)
+**Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)
+**Технологический стек и архитектура:** [ARCHITECTURE.md](ARCHITECTURE.md) (v2.0)
 
 ---
 
@@ -35,10 +35,11 @@
 | gRPC Go↔Python | ❌ **Нет** |
 | PyInstaller EXE | 🟡 Spec есть, сборка вручную |
 | Benchmark < 600 ms/стр. | 🟡 Цель не закрыта |
-| **Story Analyzer ExText (Stage 2a)** (bbox + VLM OCR + HITL + manual/auto) | 🟡 **Готово в коде/UI** — SiliconFlow VLM; formal ACCEPTANCE ⏳ |
+| **Story Analyzer ExText (Stage 2a)** (bbox + VLM OCR + HITL + manual/auto) | ✅ **Готово в коде/UI** — SiliconFlow VLM; formal ACCEPTANCE ⏳ |
 | Split: snap grid / snap to objects | 📋 **В roadmap** — см. [ROADMAP.md](ROADMAP.md) блок S |
 
 Подробнее: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
+Целевая спецификация Stage 2b–7: [FREE_Story_Analyzer.md](FREE_Story_Analyzer.md).
 
 ---
 
@@ -98,6 +99,7 @@
 | `api/story_stage_2a.py` | REST Stage 2a |
 | `frontend/story_2a.js` | UI Konva ExText (Stage 2a): boundPanelsDir, panel_paths, workflow_mode |
 | `tests/test_stage_2a_sync.py` | sync_panels, panel_paths source_only, reocr |
+| `scripts/generate_repo_map.py` | Слепок кодовой базы → `REPO_MAP.md` (Sourcecraft) |
 | `scripts/diagnose_stage_2a.py` | Диагностика bbox + OCR |
 | `scripts/test_siliconflow_api.py` | Smoke-test SiliconFlow |
 

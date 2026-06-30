@@ -1,4 +1,4 @@
-﻿# Документация ComicSplit (`spec_s/`)
+# Документация ComicSplit (`spec_s/`)
 
 **Обновлено:** июнь 2026 (Workspace / project mode ✅; ExText UI + manual/auto workflow)
 
