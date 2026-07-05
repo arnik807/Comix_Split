@@ -1,7 +1,7 @@
 ﻿# ComicSplit — документация (актуальная)
 
-**Версия документа:** 1.7 (июнь 2026) — блоки A, B0, B1, B4; TPSMM (B2); **ExText HITL** (Stage 2a); manual/auto workflow; fix путей панелей; Split reading_order  
-**Статус приложения:** рабочий MVP — split (YOLO comic/manga + SAM) + anim (Real-ESRGAN / CUGAN / SPAN, 16:9, OpenCV / DepthFlow / TPSMM); пресеты **Стандарт / Качество**; Gradio :7860 и веб :8000 (API **v1.5**, вкладки Split / Upscale / Video / **ExText**); **workspace project mode**; опционально Go CLI.
+**Версия документа:** 1.8 (июль 2026) — блоки A, B0, B1, B4; TPSMM (B2); ExText HITL; workspace project mode; Split reading_order; **snap grid/objects (S1–S3)**  
+**Статус приложения:** рабочий MVP — split + anim; пресеты Стандарт/Качество; Gradio :7860 и веб :8000 (API v1.5); **workspace project mode**; **snap** в rect-редакторе Split; опционально Go CLI.
 
 Этот документ описывает **текущую** сборку: установку и способы работы — **Gradio** (3 вкладки), **CLI split/anim**, **веб-редактор :8000** (Split / Upscale / Video / ExText), **Go CLI**.
 
@@ -373,7 +373,8 @@ uvicorn api.server:app --reload --port 8000
 | **Accurate (YOLO + SAM)** | Точный контур; блок «Качество» |
 | **Пороги YOLO** | Слайдеры confidence / IoU — режим «Качество» |
 | **Полигон (ломаная форма)** | Редактирование вершин; **экспорт по маске** только при включённом полигоне или после ручной правки |
-| **Экспорт PNG** | `POST /api/export` → `output_dir\<имя_страницы>\` или `story_out/projects/<проект>/panels/` (project mode) |
+| **Привязка (snap)** | Radio **Выкл / Сетка / Объекты**; шаг сетки 2–40 px (дефолт 8); магнит к краям соседних панелей и страницы; **Arrow↑↓←→** — сдвиг выбранной панели |
+| **Экспорт PNG** | `POST /api/export` → указанная **Папка вывода** (или project layout, если поле пустое в project mode) |
 | **Порядок панелей** | № на канвасе и в sidebar; ↑↓ и popup №; экспорт в порядке `reading_order` |
 | **Sidebar** | Только **№ · точка · «Панель»**; `panel_id` и координаты — в tooltip при наведении |
 

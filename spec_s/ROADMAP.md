@@ -1,6 +1,6 @@
 ﻿# ComicSplit — Roadmap качества
 
-**Версия:** 2.0 (июнь 2026)  
+**Версия:** 2.1 (июль 2026)  
 **Целевое железо:** Ryzen 5 5600H, AMD Radeon iGPU, 16 GB RAM, Windows, без CUDA
 
 ---
@@ -17,7 +17,7 @@
 | **B3** | Сегментация + SAM2-tiny | 📋 В планах (зависит от B2) |
 | **R1** | Story Analyzer ExText (Stage 2a: bbox + OCR + HITL) | 🟡 **Интерактив ✅** — formal ACCEPTANCE ⏳ |
 | **W** | Workspace project mode (:8000): единый проект, batch Split, dedup ExText | ✅ **Закрыт** — см. [WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md) |
-| **S** | Split: snap grid / snap to objects | 📋 **Следующий UX-шаг** после polish R1 |
+| **S** | Split: snap grid / snap to objects | ✅ **Закрыт** (S1–S3, 5 июля 2026) — [ROADMAP_STAGE_S_SNAP.md](Snap%20grid+Snap%20to%20objects/ROADMAP_STAGE_S_SNAP.md) |
 
 Подробнее R1: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md), roadmap: [../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md](../problems_fix/bubbles_detect_problems/ROADMAP_STAGE_2A.md).
 
@@ -137,22 +137,18 @@
 
 ---
 
-## Блок S — Split: привязка к сетке / объектам 📋
+## Блок S — Split: привязка к сетке / объектам ✅
 
-**Следующий UX-шаг** после polish R1 (rect-режим Split на :8000). Идея: radio **Выкл / Сетка / Объекты** — ускорить ручную правку bbox без «плавающих» координат.
+**S1–S3 закрыты** (5 июля 2026): radio Выкл/Сетка/Объекты, шаг сетки 2–40 px, object-snap со всех сторон, стрелки, persist. S4–S6 — backlog.
 
-| # | Задача | Детали |
+| # | Задача | Статус |
 |---|--------|--------|
-| S1 | Radio + persist | Выкл / Сетка / Объекты; сохранение в `ui_state.split.snap_mode` |
-| S2 | Snap to grid | Шаг сетки по умолчанию 8 px (image coords); настройка шага в UI |
-| S3 | Snap to objects | Края соседних панелей + границы страницы; порог ~8 px |
-| S4 | (опц.) Match size | При resize — match width/height с соседом; guide-lines на канвасе |
-| S5 | (опц.) Shift bypass | Удержание Shift — временно без snap |
-| S6 | (опц.) Stage 2a | Переиспользование snap-модуля для bbox баблов |
-
-**MVP:** S1–S3 (rect-режим Split). S4–S6 — после обратной связи по MVP.
-
-**Не начинать** до закрытия R1.3 (formal ACCEPTANCE) или явного приоритета пользователя.
+| S1 | Radio + persist | ✅ |
+| S2 | Snap to grid + настройка шага | ✅ |
+| S3 | Snap to objects | ✅ |
+| S4 | (опц.) Guide-lines / match size | 📋 После обратной связи |
+| S5 | (опц.) Shift bypass | 📋 После обратной связи |
+| S6 | (опц.) Stage 2a | 📋 Отдельная веха |
 
 ---
 
@@ -175,7 +171,7 @@
 | TPSMM + driving video | ✅ | ✅ | — |
 | ExText / Stage 2a (bbox + OCR HITL) | — | ✅ | — |
 | Память UI (paths, story2a) | ✅ | ✅ | — |
-| Split snap grid/objects | S 📋 | S 📋 | — |
+| Split snap grid/objects | S ✅ | S ✅ | — |
 | Сегментация объектов | B3 📋 | B3 📋 | — |
 
 ---

@@ -7,6 +7,7 @@
 
 ### Добавлено
 
+- **Split snap grid/objects (блок S, :8000):** radio Выкл / Сетка / Объекты; шаг сетки 2–40 px (дефолт 8); object-snap со всех сторон bbox; Arrow↑↓←→ nudge с отлипанием; persist `snap_mode` / `snap_grid_step` в `ui_state`; см. [ROADMAP_STAGE_S_SNAP.md](spec_s/Snap%20grid+Snap%20to%20objects/ROADMAP_STAGE_S_SNAP.md)
 - **Workspace / project mode (:8000):** единый проект на всех вкладках (Split, Upscale, Video, ExText); layout `story_out/projects/<имя>/`; API v1.5 (`GET /api/projects`, `GET /api/projects/{name}/layout`, `POST /api/split/list_pages`); batch Split по папке/CBZ; combobox «Имя проекта» (как `select.inp`); чекбокс **«Проект»**; авто-пути при выборе/Enter; ExText без копирования PNG в проектном режиме — см. [WORKSPACE_REFACTORING_REPORT.md](spec_s/WORKSPACE_REFACTORING_REPORT.md)
 - **Web-LLM workflow:** `REPO_MAP.md`, `scripts/generate_repo_map.py`, [WEB_LLM_GIT_WORKFLOW.md](spec_s/WEB_LLM_GIT_WORKFLOW.md) — карта raw-ссылок + мануал GitHub/Sourcecraft
 
@@ -19,6 +20,8 @@
 
 ### Исправлено
 
+- **Split export:** произвольная папка `out-dir` не затирается project layout при экспорте (`resolve_export_output_dir`, `workspace.js`)
+- **Split UI:** масштаб sidebar (--fs-base 15px, --fw 380px) — читаемость без 150% zoom браузера
 - Смешение PNG из разных папок после смены `panels_dir` / сброса ExText
 - Сброс и persist путей: пустая строка явно очищает `panels_dir` / `project` (секции split, upscale, video, story2a)
 - `sync_panels` с `replace=True` удаляет все файлы в `project/panels/` перед копированием

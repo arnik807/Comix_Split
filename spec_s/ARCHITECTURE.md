@@ -361,9 +361,7 @@ ExText в проектном режиме **не копирует** PNG (`copy_p
 | Пути PNG | `panel_paths` + `panels_dir` query (`source_only`); `sync_panels` replace |
 | Persist | `utils/ui_state.py` секция `story2a` |
 
-**Split (та же вкладка :8000):** порядок панелей через `reading_order.js`; batch по папке/CBZ (`split-folder-path`, prev/next); **project mode** — единый проект на Split/Upscale/Video/ExText — см. [WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md).
-
-**Следующий UX-шаг Split:** snap grid / snap to objects — блок S в [ROADMAP.md](ROADMAP.md).
+**Split (та же вкладка :8000):** порядок панелей через `reading_order.js`; batch по папке/CBZ (`split-folder-path`, prev/next); **project mode** — единый проект на Split/Upscale/Video/ExText; **snap grid/objects (S1–S3)** — radio Выкл/Сетка/Объекты, шаг сетки 2–40 px, Arrow nudge, persist `snap_mode` — см. [Snap grid+Snap to objects/ROADMAP_STAGE_S_SNAP.md](Snap%20grid+Snap%20to%20objects/ROADMAP_STAGE_S_SNAP.md), [WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md).
 
 Локальный PaddleOCR как основной OCR **заморожен** — см. `problems_fix/bubbles_detect_problems/LEGACY_LOCAL_OCR.md`.
 

@@ -1,4 +1,4 @@
-# Story Analyzer — Stage 2a (актуальное состояние)
+﻿# Story Analyzer — Stage 2a (актуальное состояние)
 
 **Обновлено:** июнь 2026  
 **Проект:** `D:\DEVELOP\COMICS\SPLIT_PANELS_DEV`  
@@ -228,7 +228,7 @@ Sidebar-кнопки «Пропустить» / «Перераспознать»
 - **Стоимость:** зависит от тарифа SiliconFlow; учитывать при больших проектах.
 - **Детектор:** manga YOLO class 1 — слабее на западных комиксах; этап ogkalu — опционально (см. roadmap).
 - **Пути:** репозиторий и `PADDLE_OCR_BASE_DIR` — только ASCII (Windows + Paddle C++).
-- **Snap grid/objects:** не реализовано; запланировано в [ROADMAP.md](ROADMAP.md) блок S (опц. S6 для Stage 2a).
+- **Snap grid/objects (Split):** ✅ S1–S3 на `:8000` — см. [ROADMAP.md](ROADMAP.md) блок S; опц. **S6** — snap для bbox баблов ExText (backlog).
 
 ---
 

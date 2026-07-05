@@ -1,6 +1,6 @@
 ﻿# ComicSplit — экспорт контекста для LLM (handoff)
 
-**Дата:** июнь 2026  
+**Дата:** июль 2026  
 **Репозиторий:** `SPLIT_PANELS_DEV` (Windows, Python 3.11)  
 **Назначение файла:** дать другой модели исчерпывающее представление о проекте без доступа к истории чата.
 
@@ -81,7 +81,7 @@ CBZ / PNG страницы → PNG панели (split) → апскейл → 1
 | **B3** | Сегментация персонажа для TPSMM, SAM2-tiny | 📋 В планах |
 | **R1** | Story Analyzer ExText (Stage 2a: bbox + VLM OCR + HITL) | 🟡 Интерактив ✅; formal ACCEPTANCE ⏳ |
 | **W** | Workspace project mode (:8000) | ✅ Закрыт — [WORKSPACE_REFACTORING_REPORT.md](spec_s/WORKSPACE_REFACTORING_REPORT.md) |
-| **S** | Split snap grid / snap to objects | 📋 Следующий UX-шаг — см. ROADMAP блок S |
+| **S** | Split snap grid / snap to objects (S1–S3) | ✅ Закрыт 5.07.2026 — [ROADMAP_STAGE_S_SNAP.md](spec_s/Snap%20grid+Snap%20to%20objects/ROADMAP_STAGE_S_SNAP.md) |
 
 **Не сделано / отложено:** OpenCV fast-path split, Wails, gRPC, benchmark <600 ms/стр., PyInstaller сборка «из коробки», `tests/test_tpsmm.py`, B1.4 benchmark детекторов (опционально).
 
@@ -105,7 +105,7 @@ Anim:         NCNN Vulkan (Real-ESRGAN / CUGAN / SPAN)
 Story 2a:     YOLO manga tiled (bbox) + SiliconFlow VLM OCR (default)  # UI: ExText
               Paddle/EasyOCR — offline fallback only
               HITL: bbox drag/resize, reading_order, detached text frame
-Split UI:     reading_order панелей; snap grid/objects — блок S (не реализовано)
+Split UI:     reading_order; **snap grid/objects ✅** (S1–S3); стрелки nudge; persist snap_mode
 ```
 
 Ключевые конфиги:
@@ -225,7 +225,7 @@ ExText подробно: `spec_s/STORY_ANALYZER_STAGE_2A.md`.
 8. **Stage 2a** — tiled YOLO + локальный Paddle (низкое качество OCR) → pivot на **SiliconFlow VLM**; см. `LEGACY_LOCAL_OCR.md`.
 9. **ExText (Stage 2a) HITL** — интерактивный редактор: bbox, reading_order, detached text frame; manual/auto workflow.
 10. **ExText paths fix** — `panels_dir` + `source_only`, `sync_panels`, сброс сессии при смене папки; ui_state reset/persist путей.
-11. **Snap grid/objects** — обсуждено, разложено в ROADMAP блок S (не реализовано).
+11. **Snap grid/objects (блок S)** — S1–S3 ✅ (5.07.2026): radio Выкл/Сетка/Объекты, persist, стрелки, object-snap все стороны; см. `spec_s/Snap grid+Snap to objects/`.
 
 ---
 
@@ -247,8 +247,8 @@ ExText подробно: `spec_s/STORY_ANALYZER_STAGE_2A.md`.
 ## 13. Что делать дальше (приоритеты для следующей LLM)
 
 1. **R1.3:** formal ACCEPTANCE Stage 2a (10 панелей americ + manga).
-2. **Блок S:** Split snap grid / snap to objects (S1–S3 MVP) — см. `ROADMAP.md`.
-3. **R1.4:** Stage 2b (panel captions) — после закрытия R1.
+2. **R1.4:** Stage 2b (panel captions) — после закрытия R1.
+3. **S4–S6:** guide-lines, Shift-bypass, snap для ExText (backlog) — см. `ROADMAP.md` блок S.
 4. **B2:** `tests/test_tpsmm.py`, прогон с реальным driving MP4, замеры времени на CPU.
 5. **B3:** `anim/segment.py` для отделения персонажа (улучшение TPSMM).
 6. **B1.4:** `scripts/benchmark_split_detectors.py` (опционально).

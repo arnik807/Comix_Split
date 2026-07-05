@@ -1,6 +1,6 @@
 # Документация ComicSplit (`spec_s/`)
 
-**Обновлено:** июнь 2026 (API v1.5, Workspace project mode, ARCHITECTURE v2.0)
+**Обновлено:** июль 2026 (блок **S** snap ✅; API v1.5, Workspace project mode, ARCHITECTURE v2.0; ExText UI + manual/auto)
 
 ## Актуальные документы
 
@@ -11,7 +11,8 @@
 | **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** | Разработчик | Статус модулей, файловая карта, ограничения |
 | **[MODELS_SPECIFICATION.md](MODELS_SPECIFICATION.md)** | ML / инференс | Все модели, ссылки, Ryzen 5600H + AMD iGPU |
 | **[MODELS_SETUP_GUIDE.md](MODELS_SETUP_GUIDE.md)** | Установка | Split, anim, ExText — скачивание, INT8, verify |
-| **[ROADMAP.md](ROADMAP.md)** | План работ | Блоки A, B0, B1, B4 ✅; B2 🟡; B3 📋; **R1 ExText** ✅; **S snap** 📋 |
+| **[ROADMAP.md](ROADMAP.md)** | План работ | A, B0, B1, B4, W, **S** ✅; B2 🟡; B3 📋; **R1 ExText** ✅ |
+| **[Snap grid+Snap to objects/](Snap%20grid+Snap%20to%20objects/ROADMAP_STAGE_S_SNAP.md)** | Split snap S1–S3 | Спека, reference, чек-лист приёмки |
 | **[STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md)** | Story Analyzer | ExText (Stage 2a): bbox + VLM OCR + HITL, API, пути PNG |
 | **[STORY_ANALYZER_STAGE_2A_WORKFLOW.md](STORY_ANALYZER_STAGE_2A_WORKFLOW.md)** | Story Analyzer | Режимы **Ручной / Авто**, кнопки, API по панели |
 | **[WORKSPACE_REFACTORING_REPORT.md](WORKSPACE_REFACTORING_REPORT.md)** | Workspace | Реализация project mode (API v1.5, UI combobox, batch Split) |

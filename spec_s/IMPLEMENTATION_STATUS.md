@@ -1,7 +1,7 @@
 ﻿# ComicSplit — статус реализации
 
-**Обновлено:** июнь 2026 (Workspace project mode ✅; API v1.5; ExText Stage 2a HITL; пресеты)
-**Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)
+**Обновлено:** июль 2026 (блок **S** snap ✅; Workspace project mode ✅; API v1.5; ExText Stage 2a HITL; пресеты)  
+**Установка и запуск:** [ComicSplit_Documentation.md](ComicSplit_Documentation.md)  
 **Технологический стек и архитектура:** [ARCHITECTURE.md](ARCHITECTURE.md) (v2.0)
 
 ---
@@ -36,7 +36,7 @@
 | PyInstaller EXE | 🟡 Spec есть, сборка вручную |
 | Benchmark < 600 ms/стр. | 🟡 Цель не закрыта |
 | **Story Analyzer ExText (Stage 2a)** (bbox + VLM OCR + HITL + manual/auto) | ✅ **Готово в коде/UI** — SiliconFlow VLM; formal ACCEPTANCE ⏳ |
-| Split: snap grid / snap to objects | 📋 **В roadmap** — см. [ROADMAP.md](ROADMAP.md) блок S |
+| Split: snap grid / snap to objects (S1–S3) | ✅ **Готово** — radio Выкл/Сетка/Объекты, шаг сетки 2–40 px; см. [ROADMAP_STAGE_S_SNAP.md](Snap%20grid+Snap%20to%20objects/ROADMAP_STAGE_S_SNAP.md) |
 
 Подробнее: [STORY_ANALYZER_STAGE_2A.md](STORY_ANALYZER_STAGE_2A.md).
 Целевая спецификация Stage 2b–7: [FREE_Story_Analyzer.md](FREE_Story_Analyzer.md).
@@ -60,12 +60,12 @@
 | `utils/config.py` | AppConfig, load_config() |
 | `utils/anim_config.py` | AnimConfig, load_anim_config() |
 | `utils/presets.py` | load / apply / snapshot / diff пресетов |
+| `utils/workspace_paths.py` | layout проекта; resolve export/upscale/video; явный `output_dir` важнее project default |
 | `utils/ui_tooltips.py` | Тексты подсказок для Gradio и веб-UI |
 | `utils/path_dialog.py` | Нативные диалоги Windows (tkinter) |
 | `utils/models_registry.py` | Проверка наличия моделей перед запуском |
 | `utils/panel_detector.py` | Выбор детектора `comic` \| `manga` |
-| `utils/ui_state.py` | Память UI v1: split / upscale / video / story2a / global; `current_project`, `use_project` |
-| `utils/workspace_paths.py` | Resolve путей export/upscale/video в project mode |
+| `utils/ui_state.py` | Память UI v1: split (+ **snap_mode**, snap_grid_step) / upscale / video / story2a / global |
 | `utils/split_pages.py` | `list_split_pages()` — папка, файл, CBZ/ZIP для batch Split |
 | `utils/gradio_ui_state.py` | Восстановление полей Gradio из `ui_state.user.json` |
 | `frontend/ui_state.js` | localStorage + sync `PUT /api/ui/state` для :8000 |
@@ -76,7 +76,7 @@
 | `utils/path_resolve.py` | Пути с кириллицей и mojibake |
 | `main.py` | Gradio 5.x, 3 вкладки |
 | `api/server.py` v1.5.0 | FastAPI REST (+ projects, split/list_pages, project_name в export/upscale/animate) |
-| `frontend/index.html` | Konva-редактор Split/Upscale/Video/ExText + пресеты + tooltips |
+| `frontend/index.html` | Konva Split/Upscale/Video/ExText; **snap grid/objects (S1–S3)**; пресеты; tooltips |
 | `ml_worker/main.py` | IPC для Go |
 | `cmd/comicsplit/` + `internal/*` | Go CLI |
 | `scripts/split_models_craft_scripts/` | Скачивание + квантование split моделей |
@@ -241,4 +241,4 @@ go build -o comicsplit.exe ./cmd/comicsplit
 | ExText UI | Detached text frame; `frameLayouts` только в памяти браузера |
 | ExText paths | Смена `panels_dir` сбрасывает сессию; load + sync обязателен для новой папки |
 | PaddleOCR local | Fallback only; на ru-комиксах не годится как primary — см. LEGACY_LOCAL_OCR.md |
-| Split snap | Не реализовано; следующий UX-шаг — блок S в ROADMAP |
+| Split snap | S1–S3 ✅ (grid step 2–40 px, objects threshold 8 px); S4–S6 в backlog |
