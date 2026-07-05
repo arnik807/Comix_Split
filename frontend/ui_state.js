@@ -31,6 +31,7 @@
     }
 
     function collectSplit() {
+        const snapModeEl = document.querySelector('input[name="split-snap-mode"]:checked');
         const base = {
             source_path: $('img-path')?.value?.trim() || '',
             folder_path: $('split-folder-path')?.value?.trim() || '',
@@ -42,6 +43,8 @@
             confidence_threshold: parseFloat($('conf-thr')?.value || '0.35'),
             iou_threshold: parseFloat($('iou-thr')?.value || '0.45'),
             poly_mode: !!$('poly-mode')?.checked,
+            snap_mode: snapModeEl ? snapModeEl.value : 'off',
+            snap_grid_step: parseInt($('split-snap-step')?.value, 10) || 8,
             use_project: false,
             project: '',
         };
@@ -117,6 +120,7 @@
     };
 
     const SECTION_ENUM_FIELDS = {
+        split: { snap_mode: ['off', 'grid', 'objects'] },
         story2a: { workflow_mode: ['manual', 'auto'] },
     };
 
@@ -163,7 +167,7 @@
         return {
             version: VERSION,
             global: { ...(base.global || {}), ...(local.global || {}) },
-            split: mergePathSection(base.split, local.split, SECTION_PATH_KEYS.split),
+            split: mergePathSection(base.split, local.split, SECTION_PATH_KEYS.split, SECTION_ENUM_FIELDS.split),
             upscale: mergePathSection(base.upscale, local.upscale, SECTION_PATH_KEYS.upscale),
             video: mergePathSection(base.video, local.video, SECTION_PATH_KEYS.video),
             story2a: mergeStory2aSection(base.story2a, local.story2a),
@@ -246,6 +250,16 @@
         if ($('poly-mode')) {
             $('poly-mode').checked = !!s.poly_mode;
             if (typeof window.S !== 'undefined') window.S.polyMode = !!s.poly_mode;
+        }
+        {
+            const snapMode = ['off', 'grid', 'objects'].includes(s.snap_mode) ? s.snap_mode : 'off';
+            const snapRadio = document.querySelector(`input[name="split-snap-mode"][value="${snapMode}"]`);
+            if (snapRadio) snapRadio.checked = true;
+            setRange('split-snap-step', s.snap_grid_step ?? 8);
+            if (typeof window.S !== 'undefined') {
+                window.S.snapMode = snapMode;
+                window.S.snapGridStep = s.snap_grid_step ?? 8;
+            }
         }
 
         applyUpscaleSection(u, 'up');

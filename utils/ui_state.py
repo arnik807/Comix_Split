@@ -53,6 +53,8 @@ def default_split() -> dict[str, Any]:
         "confidence_threshold": float(cfg.confidence_threshold),
         "iou_threshold": float(cfg.iou_threshold),
         "poly_mode": False,
+        "snap_mode": "off",
+        "snap_grid_step": 8,
     }
 
 
@@ -170,6 +172,15 @@ def _merge_story2a(base: dict[str, Any], patch: dict[str, Any] | None) -> dict[s
     )
 
 
+def _merge_split(base: dict[str, Any], patch: dict[str, Any] | None) -> dict[str, Any]:
+    return _merge_section_paths(
+        base,
+        patch,
+        _SPLIT_PATH_KEYS,
+        enum_fields={"snap_mode": frozenset({"off", "grid", "objects"})},
+    )
+
+
 def load_ui_state() -> dict[str, Any]:
     defaults = default_state()
     if not UI_STATE_PATH.is_file():
@@ -218,7 +229,7 @@ def patch_ui_state(
     if global_:
         state["global"] = _merge_section(state["global"], global_)
     if split:
-        state["split"] = _merge_section_paths(state["split"], split, _SPLIT_PATH_KEYS)
+        state["split"] = _merge_split(state["split"], split)
     if upscale:
         state["upscale"] = _merge_section_paths(state["upscale"], upscale, _UPSCALE_PATH_KEYS)
     if video:

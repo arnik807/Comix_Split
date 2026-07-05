@@ -57,6 +57,26 @@ def test_resolve_project_name_empty():
     assert resolve_project_name("  ") is None
 
 
+def test_resolve_export_output_dir_custom_overrides_project(tmp_path, monkeypatch):
+    from utils import workspace_paths as wp
+
+    monkeypatch.setattr(wp, "ROOT", tmp_path)
+    custom = tmp_path / "my_export"
+    custom.mkdir()
+    resolved = wp.resolve_export_output_dir("my_proj", str(custom))
+    assert resolved.resolve() == custom.resolve()
+
+
+def test_resolve_export_output_dir_project_default(tmp_path, monkeypatch):
+    from story_analyzer import paths
+    from utils import workspace_paths as wp
+
+    monkeypatch.setattr(paths, "STORY_PROJECTS_ROOT", tmp_path / "projects")
+    monkeypatch.setattr(wp, "ROOT", tmp_path)
+    resolved = wp.resolve_export_output_dir("my_proj", "")
+    assert resolved == paths.panels_dir("my_proj")
+
+
 def test_list_workspace_projects(tmp_path, monkeypatch):
     monkeypatch.setattr(paths, "STORY_PROJECTS_ROOT", tmp_path / "projects")
     root = paths.STORY_PROJECTS_ROOT

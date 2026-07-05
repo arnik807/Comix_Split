@@ -37,6 +37,25 @@ def test_patch_and_reset_story2a(tmp_path, monkeypatch):
     assert us.load_ui_state()["story2a"] == us.default_story2a()
 
 
+def test_default_split_snap_defaults():
+    s = us.default_split()
+    assert s["snap_mode"] == "off"
+    assert s["snap_grid_step"] == 8
+
+
+def test_patch_snap_mode(tmp_path, monkeypatch):
+    path = tmp_path / "ui_state.user.json"
+    monkeypatch.setattr(us, "UI_STATE_PATH", path)
+    us.patch_ui_state(split={"snap_mode": "grid", "snap_grid_step": 3})
+    loaded = us.load_ui_state()["split"]
+    assert loaded["snap_mode"] == "grid"
+    assert loaded["snap_grid_step"] == 3
+    us.patch_ui_state(split={"snap_mode": "invalid"})
+    assert us.load_ui_state()["split"]["snap_mode"] == "grid"
+    us.reset_ui_section("split")
+    assert us.load_ui_state()["split"]["snap_mode"] == "off"
+
+
 def test_patch_and_reset_split(tmp_path, monkeypatch):
     path = tmp_path / "ui_state.user.json"
     monkeypatch.setattr(us, "UI_STATE_PATH", path)

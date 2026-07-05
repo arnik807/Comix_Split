@@ -251,7 +251,12 @@
     function applyLayoutToTab(tabKey, layout) {
         if (!layout) return;
         if (tabKey === 'split') {
-            setPathFields(['out-dir'], layout.panels, true);
+            const el = $('out-dir');
+            if (el) {
+                if (!el.value.trim()) el.value = toWinPath(layout.panels);
+                el.readOnly = false;
+                el.classList.remove('path-readonly');
+            }
         } else if (tabKey === 'up') {
             setPathFields(['up-panels', 'up-output'], null, true);
             $('up-panels').value = toWinPath(layout.panels);

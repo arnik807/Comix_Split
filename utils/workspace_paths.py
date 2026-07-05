@@ -54,7 +54,10 @@ def resolve_export_output_dir(
     project_name: Optional[str],
     output_dir_raw: str,
 ) -> Path:
+    raw = (output_dir_raw or "").strip()
+    if raw:
+        return resolve_dir_path(raw, ROOT)
     if project_name:
         ensure_project_layout(project_name)
         return panels_dir(project_name)
-    return resolve_dir_path(output_dir_raw, ROOT)
+    return resolve_dir_path(output_dir_raw or "output", ROOT)
