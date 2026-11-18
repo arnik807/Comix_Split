@@ -19,6 +19,8 @@
 | **[FREE_Story_Analyzer.md](FREE_Story_Analyzer.md)** | Story Analyzer | Целевая спецификация Stage 2b–7 (бесплатные модели) |
 | **[LLM_HANDOFF_CONTEXT.md](LLM_HANDOFF_CONTEXT.md)** | Handoff для LLM | Сводный контекст проекта для другой модели |
 | **[WEB_LLM_GIT_WORKFLOW.md](WEB_LLM_GIT_WORKFLOW.md)** | Web-LLM + Git | REPO_MAP, push GitHub/Sourcecraft, команды |
+| **[NEW_MACHINE_SETUP_CHECKLIST.md](NEW_MACHINE_SETUP_CHECKLIST.md)** | Перенос на др. ПК | venv, models, .env, smoke, handoff для Cursor |
+| **[COMICSPLIT_SPEC.md](COMICSPLIT_SPEC.md)** | Продукт / рынок | Desk research, v1.x, монетизация, архитектура |
 
 > **ExText** — видимое имя вкладки на `:8000`. В коде, API и `ui_state` секция называется `story2a` (Stage 2a).
 

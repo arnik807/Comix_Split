@@ -495,12 +495,12 @@ with gr.Blocks(title="ComicSplit") as demo:
             gr.Markdown(
                 "Страница (JPG/PNG), CBZ/ZIP или папка со страницами → PNG-панели."
             )
-    with gr.Row():
-        with gr.Column(scale=1):
-            source = gr.File(
+            with gr.Row():
+                with gr.Column(scale=1):
+                    source = gr.File(
                         label="Источник (JPG/PNG, CBZ, ZIP)",
-                type="filepath",
-            )
+                        type="filepath",
+                    )
                     gr.Markdown(f"<sub>ⓘ {TIP['split_source']}</sub>")
                     source_path_box = gr.Textbox(
                         label="Или путь к файлу/архиву",
@@ -514,8 +514,8 @@ with gr.Blocks(title="ComicSplit") as demo:
                     )
                     folder_browse_btn = gr.Button("Обзор папки страниц", size="sm")
                     split_output = gr.Textbox(
-                label="Папка вывода",
-                value="output",
+                        label="Папка вывода",
+                        value="output",
                         info=TIP["split_output"],
                     )
                     split_out_browse_btn = gr.Button("Обзор папки вывода", size="sm")
@@ -526,7 +526,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                         info=TIP["panel_detector"],
                     )
                     panel_detector_hint = gr.Markdown("")
-            use_sam = gr.Checkbox(
+                    use_sam = gr.Checkbox(
                         label="Точные контуры (SAM)",
                         value=use_sam_def,
                         info=TIP["use_sam"],
@@ -536,14 +536,14 @@ with gr.Blocks(title="ComicSplit") as demo:
                         "<sub>На `exam_imgs` без SAM ~10–15 с; с SAM часто 1–3 мин. "
                         "Контуры на холсте — только в веб-редакторе (:8000), режим «Полигон».</sub>",
                         visible=False,
-            )
-            reading_order = gr.Checkbox(
-                label="Сортировать по порядку чтения",
+                    )
+                    reading_order = gr.Checkbox(
+                        label="Сортировать по порядку чтения",
                         value=order_def,
                         info=TIP["reading_order"],
-            )
-            rtl = gr.Checkbox(
-                label="Порядок справа-налево (манга)",
+                    )
+                    rtl = gr.Checkbox(
+                        label="Порядок справа-налево (манга)",
                         value=rtl_def,
                         info=TIP["rtl"],
                     )
@@ -900,7 +900,7 @@ with gr.Blocks(title="ComicSplit") as demo:
                     vid_reset_btn = gr.Button("↺ Сброс настроек Video", size="sm")
                     vid_btn = gr.Button("Создать видео", variant="primary")
 
-        with gr.Column(scale=2):
+                with gr.Column(scale=2):
                     vid_status = gr.Textbox(
                         label="Результат",
                         interactive=False,
